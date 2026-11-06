@@ -1,0 +1,9 @@
+target/
+node_modules/
+dist/
+.idea/
+*.iml
+*.log
+logs/
+.env
+方案.md
