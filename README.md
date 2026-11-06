@@ -59,7 +59,7 @@ Spring Boot 3.5 · MyBatis-Plus · MySQL 8 · Redis · JWT · Vue 3 + Vite + Typ
 - 拼场（W7）：发起付全场、份子钱平台托管、开赛结算、取消全退
 - 会员营销（W8）：四档会员充值升级、折扣与券择优、积分抵扣与完成发放、全退返券返积分
 - AI 前台（W9–W10）：mock/GLM 双模型（`AI_PROVIDER`/`GLM_API_KEY`）、12 工具白名单、锁位需用户确认凭证、规则库引用、会话/工具/工单落库、SSE、40 条评测门禁（注入 100% 拦截）
-- 单元 + 集成测试 61 个（含 AI 评测门禁），CI 见 `.github/workflows/ci.yml`
+- 单元 + 集成测试 64 个（含 AI 评测门禁、6 线程并发抢场、越权隔离、E2E 旅程），CI 见 `.github/workflows/ci.yml`
 
 ## 约定
 
