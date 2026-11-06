@@ -77,3 +77,16 @@ VALUES (@sess, 'USER', '我临时有事，今晚的场能退吗？', NOW()),
        (@sess, 'ASSISTANT', '按场馆规则：开场前 24 小时以上取消全额退款；2–24 小时退 70%；不足 2 小时不退。如需办理，我帮你转前台。', NOW());
 INSERT INTO ai_handoff (session_id, user_id, reason, summary, status, created_at)
 VALUES (@sess, @u1, 'PAYMENT', '顾客要求退今晚的场地费', 'OPEN', NOW());
+
+-- 演示：小林持有一张新人券
+INSERT INTO user_coupon (user_id, template_id, status, received_at, expires_at)
+SELECT @u1, id, 'UNUSED', NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY)
+FROM coupon_template WHERE name = '新人场地券' LIMIT 1;
+
+-- 演示：前台近期操作留痕
+INSERT INTO admin_audit_log (actor_id, actor_name, action, target_type, target_id, detail, created_at)
+SELECT id, nickname, 'CUSTOMER_GRANT_COUPON', 'USER', @u1, '发券：新人场地券', NOW()
+FROM user WHERE phone = '13800000000';
+INSERT INTO admin_audit_log (actor_id, actor_name, action, target_type, target_id, detail, created_at)
+SELECT id, nickname, 'SLOT_PRICE', 'SLOT', @s2, '改价 10000 → 12000 分', NOW()
+FROM user WHERE phone = '13800000000';

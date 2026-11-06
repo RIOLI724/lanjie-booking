@@ -85,9 +85,9 @@
 | POST `/api/v1/ai/messages/{id}/feedback` | 点赞/点踩 |
 | POST `/api/v1/ai/sessions/{id}/handoff` | 转人工 |
 
-## 第 6 组 管理端（当前已实现 32）
+## 第 6 组 管理端（当前已实现 36）
 
-> 进度：核销 / 看板 / 排期 / 订单处置 / 教练排班请假 / 团课 / 退款 / 用户 / AI 运营均已实现；批量价格规则、审计日志查询、财务流水属 P1 后续。
+> 进度：核销 / 看板 / 排期 / 订单处置 / 教练排班请假 / 团课 / 客户运营 / 审计 / 退款 / 用户 / AI 运营均已实现；财务流水属 P1 后续。
 
 | 接口 | 说明 |
 |---|---|
@@ -116,6 +116,10 @@
 | POST `/api/v1/admin/group-classes` | 创建团课（占用教练档期与场地） |
 | POST `/api/v1/admin/group-classes/{id}/cancel` | 取消整班：全员全退、候补取消、释放资源 |
 | POST `/api/v1/admin/coupons/grant` | 发券 |
+| GET `/api/v1/admin/coupons/templates` | 可用券模板 |
+| POST `/api/v1/admin/customers/{userId}/packages` | 补课包（补偿赠送，12 个月有效） |
+| GET `/api/v1/admin/customers/{userId}/coupons` | 客户已持券 |
+| GET `/api/v1/admin/audit-logs?date=&action=` | 操作审计：关场/改价/退款/排班/发券/封禁 |
 | GET `/api/v1/admin/ai/summary` | AI 质量摘要 |
 | GET `/api/v1/admin/ai/handoffs` | 转人工工单 |
 | GET `/api/v1/admin/ai/handoffs/{id}/detail` | 工单对话详情 |

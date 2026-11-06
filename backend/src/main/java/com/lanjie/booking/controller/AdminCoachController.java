@@ -3,6 +3,8 @@ package com.lanjie.booking.controller;
 import com.lanjie.booking.common.Result;
 import com.lanjie.booking.entity.CoachScheduleRule;
 import com.lanjie.booking.entity.CoachService;
+import com.lanjie.booking.security.LoginUser;
+import com.lanjie.booking.service.AdminAuditService;
 import com.lanjie.booking.service.AdminCoachOpsService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -11,6 +13,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,9 +39,11 @@ import java.util.Map;
 public class AdminCoachController {
 
     private final AdminCoachOpsService opsService;
+    private final AdminAuditService auditService;
 
-    public AdminCoachController(AdminCoachOpsService opsService) {
+    public AdminCoachController(AdminCoachOpsService opsService, AdminAuditService auditService) {
         this.opsService = opsService;
+        this.auditService = auditService;
     }
 
     @GetMapping
@@ -47,17 +52,25 @@ public class AdminCoachController {
     }
 
     @PostMapping
-    public Result<Long> create(@Valid @RequestBody CreateCoachRequest request) {
-        return Result.ok(opsService.createCoach(request.getPhone(), request.getPassword(),
+    public Result<Long> create(@AuthenticationPrincipal LoginUser actor,
+                               @Valid @RequestBody CreateCoachRequest request) {
+        Long coachId = opsService.createCoach(request.getPhone(), request.getPassword(),
                 request.getDisplayName(), request.getSpecialties(), request.getBasePriceCents(),
-                request.getBio(), request.getCommissionRate()));
+                request.getBio(), request.getCommissionRate());
+        auditService.record(actor.userId(), "COACH_CREATE", "COACH", coachId,
+                "新增教练 " + request.getDisplayName() + "（" + request.getPhone() + "）");
+        return Result.ok(coachId);
     }
 
     @PutMapping("/{id}")
-    public Result<Void> update(@PathVariable Long id, @RequestBody UpdateCoachRequest request) {
+    public Result<Void> update(@PathVariable Long id, @AuthenticationPrincipal LoginUser actor,
+                               @RequestBody UpdateCoachRequest request) {
         opsService.updateCoach(id, request.getDisplayName(), request.getSpecialties(),
                 request.getBasePriceCents(), request.getBio(), request.getCommissionRate(),
                 request.getStatus());
+        auditService.record(actor.userId(), "COACH_UPDATE", "COACH", id,
+                "编辑教练资料" + (request.getStatus() == null ? "" : "，状态 " + request.getStatus())
+                        + (request.getBasePriceCents() == null ? "" : "，课时价 " + request.getBasePriceCents() + " 分"));
         return Result.ok();
     }
 
@@ -67,7 +80,8 @@ public class AdminCoachController {
     }
 
     @PutMapping("/{id}/schedule")
-    public Result<Void> updateSchedule(@PathVariable Long id, @RequestBody ScheduleRequest request) {
+    public Result<Void> updateSchedule(@PathVariable Long id, @AuthenticationPrincipal LoginUser actor,
+                                       @RequestBody ScheduleRequest request) {
         List<CoachScheduleRule> rules = new ArrayList<>();
         for (RuleItem item : request.getRules()) {
             CoachScheduleRule rule = new CoachScheduleRule();
@@ -77,18 +91,31 @@ public class AdminCoachController {
             rules.add(rule);
         }
         opsService.updateSchedule(id, rules);
+        auditService.record(actor.userId(), "COACH_SCHEDULE", "COACH", id,
+                "更新周排班，共 " + rules.size() + " 条规则，重建未来档期");
         return Result.ok();
     }
 
     @PostMapping("/{id}/time-off")
-    public Result<Map<String, Object>> timeOff(@PathVariable Long id, @RequestBody TimeOffRequest request) {
-        return Result.ok(opsService.timeOff(id, request.getStartAt(), request.getEndAt(),
-                request.getReason(), request.isForce()));
+    public Result<Map<String, Object>> timeOff(@PathVariable Long id,
+                                               @AuthenticationPrincipal LoginUser actor,
+                                               @RequestBody TimeOffRequest request) {
+        Map<String, Object> data = opsService.timeOff(id, request.getStartAt(), request.getEndAt(),
+                request.getReason(), request.isForce());
+        if (!Boolean.TRUE.equals(data.get("blocked"))) {
+            auditService.record(actor.userId(), "COACH_TIME_OFF", "COACH", id,
+                    "请假 " + request.getStartAt() + " 至 " + request.getEndAt()
+                            + "，原因：" + request.getReason());
+        }
+        return Result.ok(data);
     }
 
     @DeleteMapping("/{id}/time-offs/{timeOffId}")
-    public Result<Void> cancelTimeOff(@PathVariable Long id, @PathVariable Long timeOffId) {
+    public Result<Void> cancelTimeOff(@PathVariable Long id, @PathVariable Long timeOffId,
+                                      @AuthenticationPrincipal LoginUser actor) {
         opsService.cancelTimeOff(id, timeOffId);
+        auditService.record(actor.userId(), "COACH_TIME_OFF_CANCEL", "COACH", id,
+                "撤销请假 " + timeOffId);
         return Result.ok();
     }
 

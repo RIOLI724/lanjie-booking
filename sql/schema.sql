@@ -717,3 +717,21 @@ CREATE TABLE IF NOT EXISTS `ai_eval_result`
     PRIMARY KEY (`id`),
     KEY `idx_eval_result_run` (`run_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 评测结果';
+
+-- ---------------------------------------------------------------------------
+-- 前台操作审计（P1）
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `admin_audit_log`
+(
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `actor_id`    BIGINT UNSIGNED NULL,
+    `actor_name`  VARCHAR(50)     NOT NULL DEFAULT '',
+    `action`      VARCHAR(40)     NOT NULL,
+    `target_type` VARCHAR(30)     NOT NULL DEFAULT '',
+    `target_id`   BIGINT UNSIGNED NULL,
+    `detail`      VARCHAR(500)    NOT NULL DEFAULT '',
+    `created_at`  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_audit_created` (`created_at`),
+    KEY `idx_audit_action` (`action`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '前台操作审计';

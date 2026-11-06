@@ -21,10 +21,13 @@ import com.lanjie.booking.mapper.PayOrderMapper;
 import com.lanjie.booking.mapper.RefundOrderMapper;
 import com.lanjie.booking.mapper.SlotMapper;
 import com.lanjie.booking.mapper.UserMapper;
+import com.lanjie.booking.service.AdminAuditService;
 import com.lanjie.booking.service.BookingAuditService;
 import com.lanjie.booking.service.RefundService;
+import com.lanjie.booking.security.LoginUser;
 import lombok.Data;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -59,11 +62,13 @@ public class AdminOpsController {
     private final UserMapper userMapper;
     private final RefundService refundService;
     private final BookingAuditService audit;
+    private final AdminAuditService adminAudit;
 
     public AdminOpsController(BookingMapper bookingMapper, BookingItemMapper bookingItemMapper,
                               BookingStatusHistoryMapper historyMapper, PayOrderMapper payOrderMapper,
                               RefundOrderMapper refundOrderMapper, SlotMapper slotMapper,
-                              UserMapper userMapper, RefundService refundService, BookingAuditService audit) {
+                              UserMapper userMapper, RefundService refundService, BookingAuditService audit,
+                              AdminAuditService adminAudit) {
         this.bookingMapper = bookingMapper;
         this.bookingItemMapper = bookingItemMapper;
         this.historyMapper = historyMapper;
@@ -73,6 +78,7 @@ public class AdminOpsController {
         this.userMapper = userMapper;
         this.refundService = refundService;
         this.audit = audit;
+        this.adminAudit = adminAudit;
     }
 
     /** 场地订单列表：按日期（默认今天）或状态筛选，前台一眼看清今天要处理谁 */
@@ -166,7 +172,9 @@ public class AdminOpsController {
 
     /** 强制取消：场馆原因全退，写审计 */
     @PostMapping("/orders/{id}/force-cancel")
-    public Result<Map<String, Object>> forceCancel(@PathVariable Long id, @RequestBody(required = false) CancelRequest req) {
+    public Result<Map<String, Object>> forceCancel(@PathVariable Long id,
+                                                   @RequestBody(required = false) CancelRequest req,
+                                                   @AuthenticationPrincipal LoginUser actor) {
         Booking booking = bookingMapper.selectById(id);
         if (booking == null) {
             throw new BusinessException(ErrorCode.BOOKING_NOT_FOUND);
@@ -197,6 +205,8 @@ public class AdminOpsController {
         slotMapper.releaseBookedByBooking(id);
         slotMapper.releaseByBooking(id);
         audit.write(id, booking.getStatus().name(), BookingStatus.CANCELLED.name(), "ADMIN", reason);
+        adminAudit.record(actor.userId(), "BOOKING_FORCE_CANCEL", "BOOKING", id,
+                "强制取消，退款 " + refund + " 分，原因：" + reason);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("refundCents", refund);
         data.put("bookingId", id);
@@ -206,7 +216,8 @@ public class AdminOpsController {
     /** 关场：占用中必须先看受影响订单；force=true 时全退并取消 */
     @PostMapping("/slots/{slotId}/close")
     public Result<Map<String, Object>> closeSlot(@PathVariable Long slotId,
-                                                 @RequestBody(required = false) CloseRequest req) {
+                                                 @RequestBody(required = false) CloseRequest req,
+                                                 @AuthenticationPrincipal LoginUser actor) {
         Slot slot = slotMapper.selectById(slotId);
         if (slot == null) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "时段不存在");
@@ -236,7 +247,7 @@ public class AdminOpsController {
                 return Result.ok(data);
             }
             for (Map<String, Object> row : affected) {
-                forceCancel((Long) row.get("bookingId"), cancelRequest(reason));
+                forceCancel((Long) row.get("bookingId"), cancelRequest(reason), actor);
             }
         }
         slot.setStatus(SlotStatus.CLOSED);
@@ -245,6 +256,9 @@ public class AdminOpsController {
         slot.setOwnerType(null);
         slot.setOwnerId(null);
         slotMapper.updateById(slot);
+        adminAudit.record(actor.userId(), "SLOT_CLOSE", "SLOT", slotId,
+                "关场 " + slot.getSlotDate() + " " + slot.getStartAt().toLocalTime()
+                        + "，原因：" + reason + (force ? "（含已售订单全退）" : ""));
         data.put("blocked", false);
         data.put("closed", true);
         data.put("slotId", slotId);
@@ -252,7 +266,8 @@ public class AdminOpsController {
     }
 
     @PostMapping("/slots/{slotId}/reopen")
-    public Result<Void> reopenSlot(@PathVariable Long slotId) {
+    public Result<Void> reopenSlot(@PathVariable Long slotId,
+                                   @AuthenticationPrincipal LoginUser actor) {
         Slot slot = slotMapper.selectById(slotId);
         if (slot == null) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "时段不存在");
@@ -262,12 +277,15 @@ public class AdminOpsController {
         }
         slot.setStatus(SlotStatus.AVAILABLE);
         slotMapper.updateById(slot);
+        adminAudit.record(actor.userId(), "SLOT_REOPEN", "SLOT", slotId,
+                "重新开放 " + slot.getSlotDate() + " " + slot.getStartAt().toLocalTime());
         return Result.ok();
     }
 
     /** 改价：只改当前格子的价格快照，不影响已售出生效规则 */
     @PatchMapping("/slots/{slotId}/price")
-    public Result<Void> changePrice(@PathVariable Long slotId, @RequestBody PriceRequest req) {
+    public Result<Void> changePrice(@PathVariable Long slotId, @RequestBody PriceRequest req,
+                                    @AuthenticationPrincipal LoginUser actor) {
         Slot slot = slotMapper.selectById(slotId);
         if (slot == null) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "时段不存在");
@@ -278,8 +296,11 @@ public class AdminOpsController {
         if (req.getPriceCents() == null || req.getPriceCents() <= 0) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "价格必须大于 0");
         }
+        int oldPrice = slot.getPriceCents();
         slot.setPriceCents(req.getPriceCents());
         slotMapper.updateById(slot);
+        adminAudit.record(actor.userId(), "SLOT_PRICE", "SLOT", slotId,
+                "改价 " + oldPrice + " → " + req.getPriceCents() + " 分");
         return Result.ok();
     }
 

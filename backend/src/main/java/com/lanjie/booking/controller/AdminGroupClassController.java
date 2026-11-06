@@ -15,11 +15,14 @@ import com.lanjie.booking.mapper.CoachMapper;
 import com.lanjie.booking.mapper.GroupClassMapper;
 import com.lanjie.booking.mapper.GroupEnrollmentMapper;
 import com.lanjie.booking.mapper.UserMapper;
+import com.lanjie.booking.security.LoginUser;
+import com.lanjie.booking.service.AdminAuditService;
 import com.lanjie.booking.service.GroupClassService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -48,16 +51,19 @@ public class AdminGroupClassController {
     private final CoachMapper coachMapper;
     private final UserMapper userMapper;
     private final BookingMapper bookingMapper;
+    private final AdminAuditService auditService;
 
     public AdminGroupClassController(GroupClassService groupClassService, GroupClassMapper classMapper,
                                      GroupEnrollmentMapper enrollmentMapper, CoachMapper coachMapper,
-                                     UserMapper userMapper, BookingMapper bookingMapper) {
+                                     UserMapper userMapper, BookingMapper bookingMapper,
+                                     AdminAuditService auditService) {
         this.groupClassService = groupClassService;
         this.classMapper = classMapper;
         this.enrollmentMapper = enrollmentMapper;
         this.coachMapper = coachMapper;
         this.userMapper = userMapper;
         this.bookingMapper = bookingMapper;
+        this.auditService = auditService;
     }
 
     @GetMapping
@@ -129,14 +135,19 @@ public class AdminGroupClassController {
     }
 
     @PostMapping
-    public Result<GroupClass> create(@Valid @RequestBody CreateGroupClassRequest request) {
-        return Result.ok(groupClassService.createClass(request.getCoachId(), request.getServiceId(),
-                request.getStartAt(), request.getCourtId()));
+    public Result<GroupClass> create(@AuthenticationPrincipal LoginUser actor,
+                                     @Valid @RequestBody CreateGroupClassRequest request) {
+        GroupClass clazz = groupClassService.createClass(request.getCoachId(), request.getServiceId(),
+                request.getStartAt(), request.getCourtId());
+        auditService.record(actor.userId(), "GROUP_CLASS_CREATE", "GROUP_CLASS", clazz.getId(),
+                "开团课 " + clazz.getTitle() + " " + clazz.getStartAt());
+        return Result.ok(clazz);
     }
 
     /** 取消整班：已报名全员全退，释放教练档期与场地 */
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable Long id,
+                               @AuthenticationPrincipal LoginUser actor,
                                @RequestBody(required = false) CancelRequest request) {
         GroupClass clazz = classMapper.selectById(id);
         if (clazz == null) {
@@ -149,6 +160,8 @@ public class AdminGroupClassController {
         String reason = request == null || request.getReason() == null || request.getReason().isBlank()
                 ? "场馆原因取消团课" : request.getReason();
         groupClassService.cancelClass(clazz, reason);
+        auditService.record(actor.userId(), "GROUP_CLASS_CANCEL", "GROUP_CLASS", id,
+                "取消团课 " + clazz.getTitle() + "，原因：" + reason);
         return Result.ok();
     }
 

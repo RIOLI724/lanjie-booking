@@ -16,8 +16,11 @@ import com.lanjie.booking.mapper.RefundOrderMapper;
 import com.lanjie.booking.mapper.SlotMapper;
 import com.lanjie.booking.mapper.UserBanMapper;
 import com.lanjie.booking.mapper.UserMapper;
+import com.lanjie.booking.security.LoginUser;
+import com.lanjie.booking.service.AdminAuditService;
 import lombok.Data;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -45,16 +48,19 @@ public class AdminConsoleController {
     private final RefundOrderMapper refundOrderMapper;
     private final UserMapper userMapper;
     private final UserBanMapper userBanMapper;
+    private final AdminAuditService auditService;
 
     public AdminConsoleController(BookingMapper bookingMapper, BookingItemMapper bookingItemMapper,
                                   SlotMapper slotMapper, RefundOrderMapper refundOrderMapper,
-                                  UserMapper userMapper, UserBanMapper userBanMapper) {
+                                  UserMapper userMapper, UserBanMapper userBanMapper,
+                                  AdminAuditService auditService) {
         this.bookingMapper = bookingMapper;
         this.bookingItemMapper = bookingItemMapper;
         this.slotMapper = slotMapper;
         this.refundOrderMapper = refundOrderMapper;
         this.userMapper = userMapper;
         this.userBanMapper = userBanMapper;
+        this.auditService = auditService;
     }
 
     @GetMapping("/dashboard")
@@ -152,11 +158,13 @@ public class AdminConsoleController {
     }
 
     @PostMapping("/users/{id}/ban")
-    public Result<Void> ban(@PathVariable Long id, @RequestBody BanRequest request) {
+    public Result<Void> ban(@PathVariable Long id, @AuthenticationPrincipal LoginUser actor,
+                            @RequestBody BanRequest request) {
         if (request.isUnban()) {
             userMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<User>()
                     .eq(User::getId, id).set(User::getStatus,
                             com.lanjie.booking.enums.UserStatus.ACTIVE));
+            auditService.record(actor.userId(), "CUSTOMER_UNBAN", "USER", id, "解除封禁");
             return Result.ok();
         }
         userMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<User>()
@@ -170,6 +178,9 @@ public class AdminConsoleController {
             ban.setEndAt(LocalDateTime.now().plusDays(request.getDays()));
             userBanMapper.insert(ban);
         }
+        auditService.record(actor.userId(), "CUSTOMER_BAN", "USER", id,
+                "封禁 " + request.getDays() + " 天，原因："
+                        + (request.getReason() == null ? "管理员封禁" : request.getReason()));
         return Result.ok();
     }
 

@@ -15,6 +15,7 @@ import com.lanjie.booking.entity.Court;
 import com.lanjie.booking.entity.RefundOrder;
 import com.lanjie.booking.entity.Slot;
 import com.lanjie.booking.entity.User;
+import com.lanjie.booking.entity.UserBan;
 import com.lanjie.booking.entity.WalletAccount;
 import com.lanjie.booking.enums.BookingStatus;
 import com.lanjie.booking.enums.PackageStatus;
@@ -32,6 +33,7 @@ import com.lanjie.booking.mapper.CourtMapper;
 import com.lanjie.booking.mapper.RefundOrderMapper;
 import com.lanjie.booking.mapper.SlotMapper;
 import com.lanjie.booking.mapper.UserMapper;
+import com.lanjie.booking.mapper.UserBanMapper;
 import com.lanjie.booking.mapper.WalletAccountMapper;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -60,6 +62,7 @@ public class AdminTodayController {
     private final SlotMapper slotMapper;
     private final CourtMapper courtMapper;
     private final UserMapper userMapper;
+    private final UserBanMapper userBanMapper;
     private final AiHandoffMapper handoffMapper;
     private final AiMessageMapper messageMapper;
     private final AiSessionMapper sessionMapper;
@@ -72,6 +75,7 @@ public class AdminTodayController {
 
     public AdminTodayController(BookingMapper bookingMapper, BookingItemMapper bookingItemMapper,
                                 SlotMapper slotMapper, CourtMapper courtMapper, UserMapper userMapper,
+                                UserBanMapper userBanMapper,
                                 AiHandoffMapper handoffMapper, AiMessageMapper messageMapper,
                                 AiSessionMapper sessionMapper, RefundOrderMapper refundOrderMapper,
                                 WalletAccountMapper walletMapper, CoachPackageMapper packageMapper,
@@ -82,6 +86,7 @@ public class AdminTodayController {
         this.slotMapper = slotMapper;
         this.courtMapper = courtMapper;
         this.userMapper = userMapper;
+        this.userBanMapper = userBanMapper;
         this.handoffMapper = handoffMapper;
         this.messageMapper = messageMapper;
         this.sessionMapper = sessionMapper;
@@ -243,9 +248,17 @@ public class AdminTodayController {
             bookings.add(row);
         }
         Map<String, Object> data = new LinkedHashMap<>();
+        data.put("userId", user.getId());
         data.put("userName", user.getNickname());
         data.put("phone", user.getPhone());
         data.put("role", user.getRole().name());
+        data.put("status", user.getStatus().name());
+        UserBan activeBan = userBanMapper.selectOne(new LambdaQueryWrapper<UserBan>()
+                .eq(UserBan::getUserId, user.getId())
+                .gt(UserBan::getEndAt, LocalDateTime.now())
+                .orderByDesc(UserBan::getId)
+                .last("LIMIT 1"));
+        data.put("bannedUntil", activeBan != null ? activeBan.getEndAt() : null);
         data.put("walletCents", wallet != null ? wallet.getBalanceCents() : 0);
         data.put("packages", packages);
         data.put("bookings", bookings);

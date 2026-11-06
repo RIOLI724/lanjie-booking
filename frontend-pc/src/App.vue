@@ -8,7 +8,7 @@ const phone = ref('13800000000')
 const password = ref('admin123')
 const error = ref('')
 const loading = ref(false)
-const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'customer' | 'refunds' | 'users' | 'health'>('today')
+const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'customer' | 'refunds' | 'users' | 'audit' | 'health'>('today')
 
 const today = ref<Record<string, any>>({})
 const schedule = ref<Array<Record<string, any>>>([])
@@ -34,6 +34,13 @@ const refunds = ref<Array<Record<string, any>>>([])
 const users = ref<Array<Record<string, any>>>([])
 const customerPhone = ref('')
 const customer = ref<Record<string, any> | null>(null)
+const customerCoupons = ref<Array<Record<string, any>>>([])
+const couponTemplates = ref<Array<Record<string, any>>>([])
+const grantTemplateId = ref<number | ''>('')
+const grantCoachId = ref<number | ''>('')
+const grantSessions = ref(5)
+const auditLogs = ref<Array<Record<string, any>>>([])
+const auditDate = ref(localToday())
 const health = ref<Record<string, any>>({})
 const evalRuns = ref<Array<Record<string, any>>>([])
 const handoffDetail = ref<Record<string, any> | null>(null)
@@ -53,6 +60,17 @@ const CELL_TEXT: Record<string, string> = { BOOKED: '已订', HELD: '锁定', CL
 const CLASS_TEXT: Record<string, string> = { OPEN: '报名中', FULL: '已满', CANCELLED: '已取消', COMPLETED: '已完成' }
 const ENROLL_TEXT: Record<string, string> = { CONFIRMED: '已报名', WAITLIST: '候补', CANCELLED: '已取消' }
 const COACH_STATUS_TEXT: Record<string, string> = { ACTIVE: '在岗', DISABLED: '停用' }
+const ACTION_TEXT: Record<string, string> = {
+  SLOT_CLOSE: '关场', SLOT_REOPEN: '重新开放', SLOT_PRICE: '单格改价',
+  BOOKING_FORCE_CANCEL: '强制取消订单',
+  COACH_CREATE: '新增教练', COACH_UPDATE: '编辑教练', COACH_SCHEDULE: '调整排班',
+  COACH_TIME_OFF: '教练请假', COACH_TIME_OFF_CANCEL: '撤销请假',
+  GROUP_CLASS_CREATE: '开团课', GROUP_CLASS_CANCEL: '取消团课',
+  CUSTOMER_GRANT_COUPON: '发券', CUSTOMER_GRANT_PACKAGE: '补课包',
+  CUSTOMER_BAN: '封禁客户', CUSTOMER_UNBAN: '解除封禁',
+}
+const AUDIT_ACTIONS = Object.keys(ACTION_TEXT)
+const COUPON_STATUS: Record<string, string> = { UNUSED: '未使用', USED: '已使用', EXPIRED: '已过期' }
 
 async function api<T = any>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const response = await fetch(BASE + path, {
@@ -104,6 +122,7 @@ async function openTab(next: typeof tab.value) {
     }
     if (next === 'refunds') refunds.value = await api('/admin/refunds')
     if (next === 'users') users.value = await api('/admin/users')
+    if (next === 'audit') auditLogs.value = await api(`/admin/audit-logs?date=${auditDate.value}`)
     if (next === 'health') {
       health.value = await api('/admin/ai/summary')
       evalRuns.value = await api('/admin/ai/evals')
@@ -234,6 +253,13 @@ function historyText(row: Record<string, any>): string {
   const from = BSTATUS_TEXT[row.fromStatus] ?? row.fromStatus ?? '创建'
   const to = BSTATUS_TEXT[row.toStatus] ?? row.toStatus
   return from ? `${from} → ${to}` : to
+}
+
+function targetText(row: Record<string, any>): string {
+  const label: Record<string, string> = {
+    SLOT: '时段', BOOKING: '订单', COACH: '教练', GROUP_CLASS: '团课', USER: '客户',
+  }
+  return `${label[row.targetType] ?? row.targetType ?? ''} #${row.targetId ?? '—'}`
 }
 
 // ---- 教练管理 ----
@@ -472,8 +498,80 @@ async function resolveHandoff(row: Record<string, any>) {
 
 async function searchCustomer() {
   if (!customerPhone.value.trim()) return
-  customer.value = await api(`/admin/customer?phone=${encodeURIComponent(customerPhone.value.trim())}`)
-  if (!customer.value?.userName) customer.value = null
+  const data = await api(`/admin/customer?phone=${encodeURIComponent(customerPhone.value.trim())}`)
+  if (!data?.userName) {
+    customer.value = null
+    customerCoupons.value = []
+    return
+  }
+  customer.value = data
+  customerCoupons.value = await api(`/admin/customers/${data.userId}/coupons`)
+  if (!couponTemplates.value.length) couponTemplates.value = await api('/admin/coupons/templates')
+  if (!coachList.value.length) coachList.value = await api('/admin/coaches')
+  grantTemplateId.value = couponTemplates.value[0]?.id ?? ''
+  grantCoachId.value = coachList.value[0]?.id ?? ''
+  grantSessions.value = 5
+}
+
+async function toggleCustomerBan() {
+  const current = customer.value
+  if (!current) return
+  const unban = current.status === 'FROZEN'
+  if (!window.confirm(unban ? '解除封禁，恢复订场？' : '封禁 7 天？封禁期间不能订场。')) return
+  try {
+    await api(`/admin/users/${current.userId}/ban`, {
+      method: 'POST',
+      body: { unban, days: unban ? 0 : 7, reason: unban ? '' : '前台手动封禁' },
+    })
+    await searchCustomer()
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '操作失败')
+  }
+}
+
+async function grantCoupon() {
+  if (!customer.value || !grantTemplateId.value) {
+    alert('先选一张券')
+    return
+  }
+  try {
+    await api('/admin/coupons/grant', {
+      method: 'POST',
+      body: { userId: customer.value.userId, templateId: Number(grantTemplateId.value) },
+    })
+    customerCoupons.value = await api(`/admin/customers/${customer.value.userId}/coupons`)
+    alert('已发券')
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '发券失败')
+  }
+}
+
+async function grantPackage() {
+  if (!customer.value || !grantCoachId.value) {
+    alert('先选教练')
+    return
+  }
+  try {
+    const services = await api(`/admin/coaches/${grantCoachId.value}/services`)
+    const service = services.find((s: Record<string, any>) => s.type === 'PRIVATE') ?? services[0]
+    if (!service) {
+      alert('该教练还没有可用服务')
+      return
+    }
+    await api(`/admin/customers/${customer.value.userId}/packages`, {
+      method: 'POST',
+      body: {
+        coachId: Number(grantCoachId.value),
+        serviceId: service.id,
+        sessions: Number(grantSessions.value),
+        reason: '前台补偿',
+      },
+    })
+    await searchCustomer()
+    alert(`已补 ${grantSessions.value} 节课`)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '补课包失败')
+  }
 }
 
 async function toggleBan(row: Record<string, any>) {
@@ -545,6 +643,7 @@ onMounted(() => {
       <button :class="{ active: tab === 'customer' }" @click="openTab('customer')">客户查询</button>
       <button :class="{ active: tab === 'refunds' }" @click="openTab('refunds')">退款记录</button>
       <button :class="{ active: tab === 'users' }" @click="openTab('users')">用户管理</button>
+      <button :class="{ active: tab === 'audit' }" @click="openTab('audit')">操作审计</button>
       <button :class="{ active: tab === 'health' }" @click="openTab('health')">系统健康</button>
       <button style="margin-top: 18px; color: #8fa294" @click="logout">退出登录</button>
     </aside>
@@ -711,6 +810,61 @@ onMounted(() => {
             <div class="stat"><small>身份</small><b>{{ ROLE_TEXT[customer.role] ?? customer.role }}</b></div>
             <div class="stat"><small>课包</small><b>{{ customer.packages?.length ?? 0 }} 个</b></div>
           </div>
+
+          <div class="action-panel">
+            <div class="action-title">
+              <b>客户运营</b>
+              <span v-if="customer.status === 'FROZEN'" class="chip bad">
+                已封禁<template v-if="customer.bannedUntil">至 {{ String(customer.bannedUntil).slice(5, 10) }}</template>
+              </span>
+            </div>
+            <div class="action-grid">
+              <button class="btn sm ghost" @click="toggleCustomerBan">
+                {{ customer.status === 'FROZEN' ? '解除封禁' : '封禁 7 天' }}
+              </button>
+              <div class="inline-form">
+                <select v-model.number="grantTemplateId">
+                  <option v-for="t in couponTemplates" :key="t.id" :value="t.id">{{ t.name }}</option>
+                </select>
+                <button class="btn sm ghost" @click="grantCoupon">发券</button>
+              </div>
+              <div class="inline-form">
+                <select v-model.number="grantCoachId">
+                  <option v-for="c in coachList.filter((x) => x.status === 'ACTIVE')" :key="c.id" :value="c.id">{{ c.displayName }}</option>
+                </select>
+                <input v-model.number="grantSessions" type="number" min="1" max="50" style="width: 64px" />
+                <button class="btn sm ghost" @click="grantPackage">补课包</button>
+              </div>
+            </div>
+          </div>
+
+          <h4>课包</h4>
+          <table>
+            <thead><tr><th>剩余课时</th><th>总课时</th><th>到期时间</th><th>购课金额</th></tr></thead>
+            <tbody>
+              <tr v-for="p in customer.packages" :key="p.id">
+                <td>{{ p.remainingSessions }} 节</td>
+                <td>{{ p.totalSessions }} 节</td>
+                <td>{{ String(p.expiresAt).slice(0, 10) }}</td>
+                <td>{{ money(p.priceCents) }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-if="!customer.packages?.length" class="empty">还没有课包</p>
+
+          <h4>优惠券</h4>
+          <table>
+            <thead><tr><th>券</th><th>状态</th><th>到期时间</th></tr></thead>
+            <tbody>
+              <tr v-for="c in customerCoupons" :key="c.id">
+                <td>{{ c.name }}</td>
+                <td>{{ COUPON_STATUS[c.status] ?? c.status }}</td>
+                <td>{{ c.expiresAt ? String(c.expiresAt).slice(0, 10) : '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-if="!customerCoupons.length" class="empty">还没有券</p>
+
           <h4>最近订单</h4>
           <table>
             <thead><tr><th>内容</th><th>状态</th><th>金额</th></tr></thead>
@@ -758,6 +912,27 @@ onMounted(() => {
             </tr>
           </tbody>
         </table>
+      </template>
+
+      <template v-if="tab === 'audit'">
+        <h3>操作审计</h3>
+        <div class="toolbar">
+          <input type="date" v-model="auditDate" @change="openTab('audit')" />
+          <span class="hint-inline">关场、改价、退款、教练排班、发券、封禁等敏感操作都会留痕。</span>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>操作人</th><th>动作</th><th>对象</th><th>详情</th></tr></thead>
+          <tbody>
+            <tr v-for="row in auditLogs" :key="row.id">
+              <td>{{ String(row.createdAt).slice(5, 16).replace('T', ' ') }}</td>
+              <td>{{ row.actorName }}</td>
+              <td>{{ ACTION_TEXT[row.action] ?? row.action }}</td>
+              <td>{{ targetText(row) }}</td>
+              <td>{{ row.detail }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="!auditLogs.length" class="empty">这天还没有敏感操作</p>
       </template>
 
       <template v-if="tab === 'health'">
