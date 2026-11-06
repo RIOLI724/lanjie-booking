@@ -4,6 +4,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 const canvas = ref<HTMLCanvasElement | null>(null)
 let raf = 0
 let disposed = false
+const mouse = { x: 0, y: 0, tx: 0, ty: 0 }
 
 type V3 = [number, number, number]
 
@@ -54,6 +55,8 @@ const HEX = (hex: string): V3 => {
 
 const TRI: number[] = []
 const LINE: number[] = []
+const GLOW_TRI: number[] = []
+const GLOW_LINE: number[] = []
 
 function tri(a: V3, b: V3, c: V3, color: V3) {
   TRI.push(a[0], a[1], a[2], color[0], color[1], color[2])
@@ -69,6 +72,24 @@ function quad(a: V3, b: V3, c: V3, d: V3, color: V3) {
 function line(a: V3, b: V3, color: V3) {
   LINE.push(a[0], a[1], a[2], color[0], color[1], color[2])
   LINE.push(b[0], b[1], b[2], color[0], color[1], color[2])
+}
+
+function glowLine(a: V3, b: V3, color: V3) {
+  GLOW_LINE.push(a[0], a[1], a[2], color[0], color[1], color[2])
+  GLOW_LINE.push(b[0], b[1], b[2], color[0], color[1], color[2])
+}
+
+function glowDisc(cx: number, y: number, cz: number, r: number, color: V3, steps = 28) {
+  for (let i = 0; i < steps; i++) {
+    const a0 = (Math.PI * 2 * i) / steps
+    const a1 = (Math.PI * 2 * (i + 1)) / steps
+    const c: V3 = [cx, y, cz]
+    const p0: V3 = [cx + Math.cos(a0) * r, y, cz + Math.sin(a0) * r]
+    const p1: V3 = [cx + Math.cos(a1) * r, y, cz + Math.sin(a1) * r]
+    GLOW_TRI.push(c[0], c[1], c[2], color[0], color[1], color[2])
+    GLOW_TRI.push(p0[0], p0[1], p0[2], color[0], color[1], color[2])
+    GLOW_TRI.push(p1[0], p1[1], p1[2], color[0], color[1], color[2])
+  }
 }
 
 function box(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, color: V3) {
@@ -92,30 +113,28 @@ function arc(cx: number, cz: number, r: number, from: number, to: number, color:
   }
 }
 
-function circle(cx: number, cy: number, cz: number, r: number, color: V3, horizontal = true, steps = 40) {
-  let prev: V3 = horizontal
-    ? [cx + r, cy, cz]
-    : [cx + r, cy, cz]
+function circle(cx: number, cy: number, cz: number, r: number, color: V3, steps = 40) {
+  let prev: V3 = [cx + r, cy, cz]
   for (let i = 1; i <= steps; i++) {
     const a = (Math.PI * 2 * i) / steps
-    const p: V3 = horizontal ? [cx + r * Math.cos(a), cy, cz + r * Math.sin(a)] : [cx + r * Math.cos(a), cy + r * Math.sin(a), cz]
+    const p: V3 = [cx + r * Math.cos(a), cy, cz + r * Math.sin(a)]
     line(prev, p, color)
     prev = p
   }
 }
 
 function buildScene() {
-  const floorDark = HEX('#081a12')
-  const floorBase = HEX('#0d2a1e')
-  const courtBase = HEX('#12402d')
-  const courtLight = HEX('#17533a')
+  const floorDark = HEX('#07160f')
+  const floorBase = HEX('#0c271b')
+  const courtBase = HEX('#113a29')
+  const courtLight = HEX('#1b5c40')
   const lime = HEX('#c8f169')
-  const white = HEX('#e9f2e6')
-  const board = HEX('#dfe8df')
+  const white = HEX('#eef5ea')
+  const board = HEX('#e3ebe0')
   const rim = HEX('#ff9b52')
-  const pole = HEX('#10281d')
+  const pole = HEX('#0e2319')
+  const glowLime = HEX('#9fdc4a')
 
-  // 场外地面：网格细分，做中心光感
   const halfX = 36, halfZ = 22, nx = 36, nz = 22
   for (let i = 0; i < nx; i++) {
     for (let j = 0; j < nz; j++) {
@@ -123,24 +142,22 @@ function buildScene() {
       const z0 = -halfZ + (2 * halfZ * j) / nz, z1 = -halfZ + (2 * halfZ * (j + 1)) / nz
       const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2
       const glow = Math.exp(-(cx * cx) / 700 - (cz * cz) / 260)
-      const base = floorDark
       const c: V3 = [
-        base[0] + (floorBase[0] - base[0]) * glow,
-        base[1] + (floorBase[1] - base[1]) * glow,
-        base[2] + (floorBase[2] - base[2]) * glow,
+        floorDark[0] + (floorBase[0] - floorDark[0]) * glow,
+        floorDark[1] + (floorBase[1] - floorDark[1]) * glow,
+        floorDark[2] + (floorBase[2] - floorDark[2]) * glow,
       ]
       quad([x0, 0, z0], [x1, 0, z0], [x1, 0, z1], [x0, 0, z1], c)
     }
   }
 
-  // 球场板 28 x 15，网格做光感
-  const cx0 = 14, cz0 = 7.5, gx = 28, gz = 15
+  const cx0 = 14, cz0 = 7.5, gx = 30, gz = 16
   for (let i = 0; i < gx; i++) {
     for (let j = 0; j < gz; j++) {
       const x0 = -cx0 + (2 * cx0 * i) / gx, x1 = -cx0 + (2 * cx0 * (i + 1)) / gx
       const z0 = -cz0 + (2 * cz0 * j) / gz, z1 = -cz0 + (2 * cz0 * (j + 1)) / gz
       const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2
-      const glow = Math.max(0, 1 - Math.hypot(mx / 14, mz / 7.5) * 0.85)
+      const glow = Math.max(0, 1 - Math.hypot(mx / 14, mz / 7.5) * 0.9)
       const c: V3 = [
         courtBase[0] + (courtLight[0] - courtBase[0]) * glow,
         courtBase[1] + (courtLight[1] - courtBase[1]) * glow,
@@ -150,7 +167,6 @@ function buildScene() {
     }
   }
 
-  // 球场线
   const y = 0.035
   line([-14, y, -7.5], [14, y, -7.5], lime)
   line([14, y, -7.5], [14, y, 7.5], lime)
@@ -159,7 +175,6 @@ function buildScene() {
   line([0, y, -7.5], [0, y, 7.5], lime)
   circle(0, y, 0, 1.8, lime)
 
-  // 两端禁区 + 罚球圈 + 三分弧
   for (const dir of [-1, 1]) {
     const baseX = dir * 14
     const keyX = dir * (14 - 5.8)
@@ -173,15 +188,30 @@ function buildScene() {
     arc(hoopX, 0, 6.75, from, to, lime)
     line([baseX, y, -6.6], [dir * (14 - 6.6), y, -6.6], lime)
     line([baseX, y, 6.6], [dir * (14 - 6.6), y, 6.6], lime)
-  }
 
-  // 篮架：立柱 + 篮板 + 篮筐
-  for (const dir of [-1, 1]) {
+    // 篮架
     box(dir * 15.2, 1.9, 0, 0.16, 3.8, 0.16, pole)
     box(dir * 15.2, 3.9, 0, 1.2, 0.08, 0.08, pole)
     box(dir * 14.35, 3.55, 0, 0.06, 1.05, 1.8, board)
     circle(dir * 14.02, 3.15, 0, 0.23, rim)
     line([dir * 14.35, 3.05, 0], [dir * 14.02, 3.15, 0], rim)
+
+    // 发光：篮板描边 + 筐圈 + 地面光斑 + 立柱倒影
+    const bx = dir * 14.35
+    glowLine([bx, 3.03, -0.9], [bx, 4.07, -0.9], glowLime)
+    glowLine([bx, 4.07, -0.9], [bx, 4.07, 0.9], glowLime)
+    glowLine([bx, 4.07, 0.9], [bx, 3.03, 0.9], glowLime)
+    glowLine([bx, 3.03, 0.9], [bx, 3.03, -0.9], glowLime)
+    let prev: V3 = [dir * 14.02 + 0.3, 3.15, 0]
+    for (let i = 1; i <= 30; i++) {
+      const a = (Math.PI * 2 * i) / 30
+      const p: V3 = [dir * 14.02 + 0.3 * Math.cos(a), 3.15 + 0.3 * Math.sin(a), 0 + 0.3 * Math.sin(a) * 0]
+      glowLine(prev, p, rim)
+      prev = p
+    }
+    glowDisc(dir * 12.5, 0.03, 0, 3.4, glowLime)
+    quad([dir * 14.6, 0.025, -0.35], [dir * 14.6, 0.025, 0.35],
+      [dir * 16.4, 0.025, 0.35], [dir * 16.4, 0.025, -0.35], HEX('#0a2015'))
   }
 }
 
@@ -217,10 +247,13 @@ const FS = `
 precision mediump float;
 varying vec3 vColor;
 varying float vFog;
+uniform float uAlpha;
 void main() {
   vec3 fog = vec3(0.024, 0.07, 0.05);
-  gl_FragColor = vec4(mix(vColor, fog, vFog), 1.0);
+  gl_FragColor = vec4(mix(vColor, fog, vFog), uAlpha);
 }`
+
+const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
 function start(gl: WebGLRenderingContext, width: number, height: number) {
   buildScene()
@@ -229,6 +262,7 @@ function start(gl: WebGLRenderingContext, width: number, height: number) {
   const aColor = gl.getAttribLocation(program, 'aColor')
   const uMVP = gl.getUniformLocation(program, 'uMVP')
   const uCam = gl.getUniformLocation(program, 'uCam')
+  const uAlpha = gl.getUniformLocation(program, 'uAlpha')
 
   const triBuffer = gl.createBuffer()
   const triCount = TRI.length / 6
@@ -240,14 +274,35 @@ function start(gl: WebGLRenderingContext, width: number, height: number) {
   gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer)
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(LINE), gl.STATIC_DRAW)
 
+  const glowTriBuffer = gl.createBuffer()
+  const glowTriCount = GLOW_TRI.length / 6
+  gl.bindBuffer(gl.ARRAY_BUFFER, glowTriBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(GLOW_TRI), gl.STATIC_DRAW)
+
+  const glowLineBuffer = gl.createBuffer()
+  const glowLineCount = GLOW_LINE.length / 6
+  gl.bindBuffer(gl.ARRAY_BUFFER, glowLineBuffer)
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(GLOW_LINE), gl.STATIC_DRAW)
+
   gl.enable(gl.DEPTH_TEST)
   gl.clearColor(0.024, 0.07, 0.05, 1)
+  const t0 = performance.now()
 
   const render = (time: number) => {
     if (disposed) return
-    const az = time * 0.00006 + 0.6
-    const radius = 23
-    const eye: V3 = [Math.cos(az) * radius, 9.5, Math.sin(az) * radius]
+    const elapsed = (time - t0) / 1000
+    const intro = easeInOut(Math.min(elapsed / 2.6, 1))
+    mouse.x += (mouse.tx - mouse.x) * 0.05
+    mouse.y += (mouse.ty - mouse.y) * 0.05
+
+    const pol = 0.20 + intro * 0.42 + mouse.y * 0.05
+    const radius = 15.5 + intro * 7.5
+    const az = -0.5 + intro * 1.1 + elapsed * 0.05 + mouse.x * 0.08
+    const eye: V3 = [
+      Math.sin(pol) * Math.cos(az) * radius,
+      Math.cos(pol) * radius + 0.8,
+      Math.sin(pol) * Math.sin(az) * radius,
+    ]
     const target: V3 = [0, 0.6, 0]
     const proj = perspective((42 * Math.PI) / 180, width / height, 0.1, 120)
     const view = lookAt(eye, target, [0, 1, 0])
@@ -258,6 +313,9 @@ function start(gl: WebGLRenderingContext, width: number, height: number) {
     gl.useProgram(program)
     gl.uniformMatrix4fv(uMVP, false, mvp)
     gl.uniform3fv(uCam, eye)
+
+    gl.disable(gl.BLEND)
+    gl.uniform1f(uAlpha, 1)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, triBuffer)
     gl.enableVertexAttribArray(aPos)
@@ -271,9 +329,32 @@ function start(gl: WebGLRenderingContext, width: number, height: number) {
     gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 24, 12)
     gl.drawArrays(gl.LINES, 0, lineCount)
 
+    // 发光叠加
+    gl.enable(gl.BLEND)
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE)
+    gl.depthMask(false)
+    gl.bindBuffer(gl.ARRAY_BUFFER, glowTriBuffer)
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0)
+    gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 24, 12)
+    gl.uniform1f(uAlpha, 0.10)
+    gl.drawArrays(gl.TRIANGLES, 0, glowTriCount)
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, glowLineBuffer)
+    gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0)
+    gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 24, 12)
+    gl.uniform1f(uAlpha, 0.55)
+    gl.drawArrays(gl.LINES, 0, glowLineCount)
+    gl.depthMask(true)
+    gl.disable(gl.BLEND)
+
     raf = requestAnimationFrame(render)
   }
   raf = requestAnimationFrame(render)
+}
+
+const onMouse = (event: MouseEvent) => {
+  mouse.tx = (event.clientX / window.innerWidth - 0.5) * 2
+  mouse.ty = (event.clientY / window.innerHeight - 0.5) * 2
 }
 
 onMounted(() => {
@@ -288,15 +369,14 @@ onMounted(() => {
   }
   resize()
   start(gl, el.width, el.height)
-  window.addEventListener('resize', () => {
-    resize()
-    gl.viewport(0, 0, el.width, el.height)
-  })
+  window.addEventListener('resize', resize)
+  window.addEventListener('mousemove', onMouse)
 })
 
 onUnmounted(() => {
   disposed = true
   cancelAnimationFrame(raf)
+  window.removeEventListener('mousemove', onMouse)
 })
 </script>
 

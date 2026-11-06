@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import DockBar from '@/components/DockBar.vue'
+import CourtBackdrop from '@/components/CourtBackdrop.vue'
 import { loadMe, sessionState } from '@/stores/session'
 
 onMounted(() => {
@@ -11,11 +12,15 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="page">
-    <h1 class="page-title">
-      你好，{{ sessionState.me?.nickname ?? '球友' }}<br />
-      今晚，去哪片场？
-    </h1>
+  <div class="page" style="padding-top: 0">
+    <div class="home-hero">
+      <CourtBackdrop />
+      <div class="home-hero-shade"></div>
+      <div class="home-hero-copy">
+        <small>城东体育馆 · 4 片全场</small>
+        <h1>你好，{{ sessionState.me?.nickname ?? '球友' }}<br />今晚，去哪片场？</h1>
+      </div>
+    </div>
 
     <div class="grid">
       <router-link to="/book" class="card home-card">
