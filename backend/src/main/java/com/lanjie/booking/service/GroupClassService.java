@@ -98,6 +98,9 @@ public class GroupClassService {
         if (service == null || service.getType() != CoachServiceType.GROUP) {
             throw new BusinessException(ErrorCode.COACH_SERVICE_INVALID);
         }
+        if (startAt.isBefore(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "团课开始时间必须晚于现在");
+        }
         CoachSlot coachSlot = coachSlotMapper.selectOne(new LambdaQueryWrapper<CoachSlot>()
                 .eq(CoachSlot::getCoachId, coachId)
                 .eq(CoachSlot::getStartAt, startAt)
@@ -310,6 +313,7 @@ public class GroupClassService {
     /** 场馆/教练原因取消：全员全退，释放档期与场地 */
     @Transactional
     public void cancelClass(GroupClass clazz, String reason) {
+        String fromStatus = clazz.getStatus();
         List<GroupEnrollment> enrollments = enrollmentMapper.selectList(new LambdaQueryWrapper<GroupEnrollment>()
                 .eq(GroupEnrollment::getClassId, clazz.getId())
                 .eq(GroupEnrollment::getStatus, GroupEnrollmentStatus.CONFIRMED));
@@ -326,12 +330,16 @@ public class GroupClassService {
             enrollment.setStatus(GroupEnrollmentStatus.CANCELLED);
             enrollmentMapper.updateById(enrollment);
         }
+        // 候补一并取消，避免班级取消后仍有人等待递补
+        enrollmentMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<GroupEnrollment>()
+                .eq(GroupEnrollment::getClassId, clazz.getId())
+                .eq(GroupEnrollment::getStatus, GroupEnrollmentStatus.WAITLIST)
+                .set(GroupEnrollment::getStatus, GroupEnrollmentStatus.CANCELLED));
         clazz.setEnrolledCount(0);
         clazz.setStatus(GroupClassStatus.CANCELLED.name());
         classMapper.updateById(clazz);
         releaseClassResources(clazz);
-        audit.write(clazz.getId(), clazz.getStatus(), GroupClassStatus.CANCELLED.name(),
-                "SYSTEM", reason);
+        audit.write(clazz.getId(), fromStatus, GroupClassStatus.CANCELLED.name(), "SYSTEM", reason);
         log.warn("group class cancelled: id={} reason={}", clazz.getId(), reason);
     }
 

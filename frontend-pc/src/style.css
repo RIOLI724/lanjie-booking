@@ -228,3 +228,14 @@ tr:last-child td { border-bottom: 0; }
 .timeline-row span { color: var(--muted); font-size: 11px; }
 .timeline-row b { font-weight: 600; }
 .timeline-row small { grid-column: 2; color: var(--muted); font-size: 11px; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.form-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
+.form-grid .span2 { grid-column: span 2; }
+.form-grid input, .form-grid select, .form-grid textarea { border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; font: inherit; color: var(--ink); background: #fff; }
+.modal-lg { width: 720px; }
+.weekday-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.weekday-row .check { width: 84px; display: flex; gap: 6px; align-items: center; }
+.weekday-row input[type=time] { border: 1px solid var(--line); border-radius: 8px; padding: 5px 7px; }
+.ops-row-inline { display: flex; gap: 6px; }
+.modal table { margin-top: 4px; }

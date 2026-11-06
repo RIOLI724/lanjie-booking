@@ -85,9 +85,9 @@
 | POST `/api/v1/ai/messages/{id}/feedback` | 点赞/点踩 |
 | POST `/api/v1/ai/sessions/{id}/handoff` | 转人工 |
 
-## 第 6 组 管理端（当前已实现 20）
+## 第 6 组 管理端（当前已实现 32）
 
-> 进度：核销 / 看板 / 排期 / 订单处置 / 退款 / 用户 / AI 运营均已实现；批量价格规则、审计日志查询、教练入驻管理、发券记录属 P1。
+> 进度：核销 / 看板 / 排期 / 订单处置 / 教练排班请假 / 团课 / 退款 / 用户 / AI 运营均已实现；批量价格规则、审计日志查询、财务流水属 P1 后续。
 
 | 接口 | 说明 |
 |---|---|
@@ -104,7 +104,17 @@
 | GET `/api/v1/admin/users` | 用户列表 |
 | POST `/api/v1/admin/users/{id}/ban` | 封禁/解封 |
 | GET `/api/v1/admin/customer?phone=` | 客户 360：订单一览、余额、课包 |
-| POST `/api/v1/admin/group-classes` | 创建团课 |
+| GET/POST `/api/v1/admin/coaches` | 教练列表 / 新增入驻（开账号、默认全天可约） |
+| PUT `/api/v1/admin/coaches/{id}` | 编辑资料、课时价、抽成、在岗/停用 |
+| GET/PUT `/api/v1/admin/coaches/{id}/schedule` | 周排班查询 / 整组替换并重建未来档期 |
+| POST `/api/v1/admin/coaches/{id}/time-off` | 代请假；已售课程先返回受影响清单，`force=true` 全退 |
+| DELETE `/api/v1/admin/coaches/{id}/time-offs/{offId}` | 撤销请假并重开时段 |
+| GET `/api/v1/admin/coaches/{id}/slots?date=` | 某天可约档期（团课排班用） |
+| GET `/api/v1/admin/coaches/{id}/services` | 教练服务（私教/团课） |
+| GET `/api/v1/admin/group-classes?date=` | 团课列表（含已取消/已完成） |
+| GET `/api/v1/admin/group-classes/{id}` | 团课详情 + 报名/候补名单 |
+| POST `/api/v1/admin/group-classes` | 创建团课（占用教练档期与场地） |
+| POST `/api/v1/admin/group-classes/{id}/cancel` | 取消整班：全员全退、候补取消、释放资源 |
 | POST `/api/v1/admin/coupons/grant` | 发券 |
 | GET `/api/v1/admin/ai/summary` | AI 质量摘要 |
 | GET `/api/v1/admin/ai/handoffs` | 转人工工单 |

@@ -8,7 +8,7 @@ const phone = ref('13800000000')
 const password = ref('admin123')
 const error = ref('')
 const loading = ref(false)
-const tab = ref<'today' | 'schedule' | 'orders' | 'customer' | 'refunds' | 'users' | 'health'>('today')
+const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'customer' | 'refunds' | 'users' | 'health'>('today')
 
 const today = ref<Record<string, any>>({})
 const schedule = ref<Array<Record<string, any>>>([])
@@ -17,6 +17,19 @@ const orders = ref<Array<Record<string, any>>>([])
 const orderDate = ref(localToday())
 const orderDetail = ref<Record<string, any> | null>(null)
 const slotOps = ref<Record<string, any> | null>(null)
+const coachList = ref<Array<Record<string, any>>>([])
+const coachForm = ref<Record<string, any> | null>(null)
+const coachEditingId = ref<number | null>(null)
+const scheduleCoach = ref<Record<string, any> | null>(null)
+const scheduleRules = ref<Array<Record<string, any>>>([])
+const timeOffForm = ref({ startAt: '', endAt: '', reason: '' })
+const classDate = ref(localToday())
+const classes = ref<Array<Record<string, any>>>([])
+const courts = ref<Array<Record<string, any>>>([])
+const classForm = ref<Record<string, any> | null>(null)
+const classServices = ref<Array<Record<string, any>>>([])
+const classSlots = ref<Array<Record<string, any>>>([])
+const classDetail = ref<Record<string, any> | null>(null)
 const refunds = ref<Array<Record<string, any>>>([])
 const users = ref<Array<Record<string, any>>>([])
 const customerPhone = ref('')
@@ -37,6 +50,9 @@ const BSTATUS_TEXT: Record<string, string> = {
 const REFUND_TEXT: Record<string, string> = { SUCCESS: '已退款', PENDING: '处理中', FAILED: '失败' }
 const CHANNEL_TEXT: Record<string, string> = { WALLET: '余额', WECHAT_MOCK: '微信' }
 const CELL_TEXT: Record<string, string> = { BOOKED: '已订', HELD: '锁定', CLOSED: '已关', AVAILABLE: '' }
+const CLASS_TEXT: Record<string, string> = { OPEN: '报名中', FULL: '已满', CANCELLED: '已取消', COMPLETED: '已完成' }
+const ENROLL_TEXT: Record<string, string> = { CONFIRMED: '已报名', WAITLIST: '候补', CANCELLED: '已取消' }
+const COACH_STATUS_TEXT: Record<string, string> = { ACTIVE: '在岗', DISABLED: '停用' }
 
 async function api<T = any>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const response = await fetch(BASE + path, {
@@ -81,6 +97,11 @@ async function openTab(next: typeof tab.value) {
     if (next === 'today') today.value = await api('/admin/today')
     if (next === 'schedule') schedule.value = await api(`/admin/schedule?date=${scheduleDate.value}`)
     if (next === 'orders') orders.value = await api(`/admin/orders?date=${orderDate.value}`)
+    if (next === 'coaches') coachList.value = await api('/admin/coaches')
+    if (next === 'classes') {
+      classes.value = await api(`/admin/group-classes?date=${classDate.value}`)
+      if (!coachList.value.length) coachList.value = await api('/admin/coaches')
+    }
     if (next === 'refunds') refunds.value = await api('/admin/refunds')
     if (next === 'users') users.value = await api('/admin/users')
     if (next === 'health') {
@@ -215,6 +236,234 @@ function historyText(row: Record<string, any>): string {
   return from ? `${from} → ${to}` : to
 }
 
+// ---- 教练管理 ----
+
+const WEEKDAY_TEXT = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+
+function openCoachCreate() {
+  coachEditingId.value = null
+  coachForm.value = {
+    displayName: '', phone: '', password: '', specialties: '', bio: '',
+    basePriceYuan: 300, commissionPercent: 20, status: 'ACTIVE',
+  }
+}
+
+function openCoachEdit(row: Record<string, any>) {
+  coachEditingId.value = row.id
+  coachForm.value = {
+    displayName: row.displayName,
+    phone: row.phone,
+    password: '',
+    specialties: row.specialties ?? '',
+    bio: row.bio ?? '',
+    basePriceYuan: Number(row.basePriceCents) / 100,
+    commissionPercent: Math.round(Number(row.commissionRate) * 100),
+    status: row.status,
+  }
+}
+
+async function saveCoach() {
+  const form = coachForm.value
+  if (!form) return
+  if (!String(form.displayName).trim()) {
+    alert('请填教练姓名')
+    return
+  }
+  if (!coachEditingId.value && (!String(form.phone).trim() || String(form.password).length < 6)) {
+    alert('新教练需要手机号和至少 6 位初始密码')
+    return
+  }
+  const body: Record<string, any> = {
+    displayName: form.displayName,
+    specialties: form.specialties,
+    bio: form.bio,
+    basePriceCents: Math.round(Number(form.basePriceYuan) * 100),
+    commissionRate: Number(form.commissionPercent) / 100,
+  }
+  try {
+    if (coachEditingId.value) {
+      body.status = form.status
+      await api(`/admin/coaches/${coachEditingId.value}`, { method: 'PUT', body })
+    } else {
+      body.phone = form.phone
+      body.password = form.password
+      await api('/admin/coaches', { method: 'POST', body })
+    }
+    coachForm.value = null
+    await openTab('coaches')
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '保存失败')
+  }
+}
+
+async function openSchedule(row: Record<string, any>) {
+  try {
+    const data = await api(`/admin/coaches/${row.id}/schedule`)
+    const byDay = new Map<number, Record<string, any>>(
+      (data.rules ?? []).map((r: Record<string, any>) => [Number(r.weekday), r]),
+    )
+    scheduleRules.value = [1, 2, 3, 4, 5, 6, 7].map((weekday) => {
+      const rule = byDay.get(weekday)
+      return {
+        weekday,
+        enabled: !!rule,
+        start: rule ? String(rule.startTime).slice(0, 5) : '09:00',
+        end: rule ? String(rule.endTime).slice(0, 5) : '22:00',
+      }
+    })
+    timeOffForm.value = { startAt: '', endAt: '', reason: '' }
+    scheduleCoach.value = { ...row, upcoming: data.upcoming ?? [], timeOffs: data.timeOffs ?? [] }
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '排班加载失败')
+  }
+}
+
+async function saveSchedule() {
+  if (!scheduleCoach.value) return
+  const rules = scheduleRules.value
+    .filter((r) => r.enabled)
+    .map((r) => ({ weekday: r.weekday, startTime: r.start, endTime: r.end }))
+  try {
+    await api(`/admin/coaches/${scheduleCoach.value.id}/schedule`, { method: 'PUT', body: { rules } })
+    await openSchedule(scheduleCoach.value)
+    alert('排班已保存，未来 30 天档期已按新规则重建')
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '排班保存失败')
+  }
+}
+
+async function submitTimeOff(force = false) {
+  if (!scheduleCoach.value) return
+  const form = timeOffForm.value
+  if (!form.startAt || !form.endAt) {
+    alert('选一下请假的开始和结束时间')
+    return
+  }
+  try {
+    const data = await api(`/admin/coaches/${scheduleCoach.value.id}/time-off`, {
+      method: 'POST',
+      body: { startAt: form.startAt, endAt: form.endAt, reason: form.reason, force },
+    })
+    if (data.blocked) {
+      const names = (data.affected ?? [])
+        .map((a: Record<string, any>) => `${a.userName}（${String(a.startAt).slice(5, 16).replace('T', ' ')}）`)
+        .join('、')
+      if (!window.confirm(`${data.message}\n\n受影响：${names}\n确认全额退款/退课时并请假？`)) return
+      return submitTimeOff(true)
+    }
+    alert(`请假已登记，关闭 ${data.closedSlots} 个时段` +
+      (data.cancelled?.length ? `，取消 ${data.cancelled.length} 节课并按场馆原因全退` : ''))
+    timeOffForm.value = { startAt: '', endAt: '', reason: '' }
+    await openSchedule(scheduleCoach.value)
+    await openTab('coaches')
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '请假失败')
+  }
+}
+
+async function removeTimeOff(off: Record<string, any>) {
+  if (!scheduleCoach.value) return
+  if (!window.confirm('撤销这次请假并重新开放时段？')) return
+  try {
+    await api(`/admin/coaches/${scheduleCoach.value.id}/time-offs/${off.id}`, { method: 'DELETE' })
+    await openSchedule(scheduleCoach.value)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '撤销失败')
+  }
+}
+
+// ---- 团课管理 ----
+
+async function openClassCreate() {
+  if (!courts.value.length) {
+    courts.value = await api('/courts')
+  }
+  classForm.value = {
+    coachId: coachList.value[0]?.id ?? '',
+    serviceId: '',
+    date: classDate.value,
+    slotId: '',
+    courtId: courts.value[0]?.id ?? '',
+  }
+  await onClassCoachChange()
+}
+
+async function onClassCoachChange() {
+  const form = classForm.value
+  if (!form) return
+  form.serviceId = ''
+  form.slotId = ''
+  classServices.value = []
+  classSlots.value = []
+  if (!form.coachId) return
+  const services = await api(`/admin/coaches/${form.coachId}/services`)
+  classServices.value = services.filter((s: Record<string, any>) => s.type === 'GROUP')
+  if (classServices.value.length) form.serviceId = classServices.value[0].id
+  await loadClassSlots()
+}
+
+async function loadClassSlots() {
+  const form = classForm.value
+  if (!form) return
+  classSlots.value = []
+  form.slotId = ''
+  if (!form.coachId || !form.date) return
+  classSlots.value = await api(`/admin/coaches/${form.coachId}/slots?date=${form.date}`)
+  if (classSlots.value.length) form.slotId = classSlots.value[0].id
+}
+
+async function saveClass() {
+  const form = classForm.value
+  if (!form) return
+  const slot = classSlots.value.find((s) => s.id === form.slotId)
+  if (!slot) {
+    alert('没有可用的教练时段，换一天或先调整排班')
+    return
+  }
+  if (!form.serviceId || !form.courtId) {
+    alert('选好团课服务和场地')
+    return
+  }
+  try {
+    await api('/admin/group-classes', {
+      method: 'POST',
+      body: {
+        coachId: Number(form.coachId),
+        serviceId: Number(form.serviceId),
+        startAt: slot.startAt,
+        courtId: Number(form.courtId),
+      },
+    })
+    classForm.value = null
+    await openTab('classes')
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '开课失败')
+  }
+}
+
+async function openClassDetail(row: Record<string, any>) {
+  try {
+    classDetail.value = await api(`/admin/group-classes/${row.id}`)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '名单加载失败')
+  }
+}
+
+async function cancelClass() {
+  if (!classDetail.value) return
+  const clazz = classDetail.value.groupClass
+  const reason = window.prompt('取消团课的原因（已报名顾客会看到）', '场馆原因取消团课')
+  if (reason === null) return
+  if (!window.confirm(`取消「${clazz.title}」？\n已报名顾客将全额退款，候补一并取消。`)) return
+  try {
+    await api(`/admin/group-classes/${clazz.id}/cancel`, { method: 'POST', body: { reason } })
+    classDetail.value = null
+    await openTab('classes')
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '取消失败')
+  }
+}
+
 async function resolveHandoff(row: Record<string, any>) {
   await api(`/admin/ai/handoffs/${row.handoffId}/resolve`, { method: 'POST' })
   handoffDetail.value = null
@@ -291,6 +540,8 @@ onMounted(() => {
       <button :class="{ active: tab === 'today' }" @click="openTab('today')">前台工作台</button>
       <button :class="{ active: tab === 'schedule' }" @click="openTab('schedule')">今日排期</button>
       <button :class="{ active: tab === 'orders' }" @click="openTab('orders')">订单处置</button>
+      <button :class="{ active: tab === 'coaches' }" @click="openTab('coaches')">教练管理</button>
+      <button :class="{ active: tab === 'classes' }" @click="openTab('classes')">团课管理</button>
       <button :class="{ active: tab === 'customer' }" @click="openTab('customer')">客户查询</button>
       <button :class="{ active: tab === 'refunds' }" @click="openTab('refunds')">退款记录</button>
       <button :class="{ active: tab === 'users' }" @click="openTab('users')">用户管理</button>
@@ -397,6 +648,56 @@ onMounted(() => {
         <p v-if="!orders.length" class="empty">这天没有场地订单</p>
       </template>
 
+      <template v-if="tab === 'coaches'">
+        <h3>教练管理</h3>
+        <div class="toolbar">
+          <span class="hint-inline">新教练入职后默认全天可约（09:00–22:00），可在「排班/请假」里调整；停用后不可再被预订。</span>
+          <button class="btn" @click="openCoachCreate">新增教练</button>
+        </div>
+        <table>
+          <thead><tr><th>教练</th><th>手机号</th><th>专长</th><th>课时价</th><th>抽成</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr v-for="c in coachList" :key="c.id">
+              <td>{{ c.displayName }}</td>
+              <td>{{ c.phone }}</td>
+              <td>{{ c.specialties }}</td>
+              <td>{{ money(c.basePriceCents) }}</td>
+              <td>{{ Math.round(Number(c.commissionRate) * 100) }}%</td>
+              <td><span class="chip" :class="c.status === 'ACTIVE' ? 'ok' : 'bad'">{{ COACH_STATUS_TEXT[c.status] ?? c.status }}</span></td>
+              <td class="ops-row-inline">
+                <button class="btn sm ghost" @click="openCoachEdit(c)">编辑</button>
+                <button class="btn sm ghost" @click="openSchedule(c)">排班 / 请假</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="!coachList.length" class="empty">还没有教练</p>
+      </template>
+
+      <template v-if="tab === 'classes'">
+        <h3>团课管理</h3>
+        <div class="toolbar">
+          <input type="date" v-model="classDate" @change="openTab('classes')" />
+          <button class="btn" @click="openClassCreate">新建团课</button>
+          <span class="hint-inline">4 人开班、上限 8 人；开课前按教练空闲档期排，场地自动占用。</span>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>团课</th><th>教练</th><th>报名</th><th>单价</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr v-for="c in classes" :key="c.id">
+              <td>{{ String(c.startAt).slice(11, 16) }} – {{ String(c.endAt).slice(11, 16) }}</td>
+              <td>{{ c.title }}</td>
+              <td>{{ c.coachName }}</td>
+              <td>{{ c.enrolledCount }}/{{ c.maxStudents }}<small v-if="c.enrolledCount < c.minStudents"> · 未成班</small></td>
+              <td>{{ money(c.priceCents) }}</td>
+              <td><span class="chip" :class="c.status === 'OPEN' ? 'ok' : c.status === 'CANCELLED' ? 'bad' : 'warn'">{{ CLASS_TEXT[c.status] ?? c.status }}</span></td>
+              <td><button class="btn sm ghost" @click="openClassDetail(c)">名单 / 取消</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="!classes.length" class="empty">这天没有团课</p>
+      </template>
+
       <template v-if="tab === 'customer'">
         <h3>客户查询</h3>
         <div class="toolbar">
@@ -495,6 +796,175 @@ onMounted(() => {
         </table>
       </template>
     </main>
+
+    <div v-if="coachForm" class="modal-mask" @click.self="coachForm = null">
+      <div class="modal">
+        <div class="modal-head">
+          <b>{{ coachEditingId ? '编辑教练' : '新增教练' }}</b>
+          <button class="modal-close" @click="coachForm = null">✕</button>
+        </div>
+        <div class="form-grid">
+          <label>姓名<input v-model="coachForm.displayName" /></label>
+          <label v-if="!coachEditingId">手机号<input v-model="coachForm.phone" placeholder="登录账号" /></label>
+          <label v-if="!coachEditingId">初始密码<input v-model="coachForm.password" type="password" placeholder="至少 6 位" /></label>
+          <label>课时价（元）<input v-model.number="coachForm.basePriceYuan" type="number" min="1" /></label>
+          <label>平台抽成（%）<input v-model.number="coachForm.commissionPercent" type="number" min="0" max="90" /></label>
+          <label v-if="coachEditingId">状态
+            <select v-model="coachForm.status">
+              <option value="ACTIVE">在岗</option>
+              <option value="DISABLED">停用</option>
+            </select>
+          </label>
+          <label class="span2">专长<input v-model="coachForm.specialties" placeholder="例如：投篮专项 · 青少年" /></label>
+          <label class="span2">简介<textarea v-model="coachForm.bio" rows="2"></textarea></label>
+        </div>
+        <p class="hint-line">课时价同时用于私教单节；调价不影响已售订单。新教练默认全天可约，可在排班里改。</p>
+        <div class="ops-row">
+          <button class="btn sm ghost" @click="coachForm = null">取消</button>
+          <button class="btn sm" @click="saveCoach">保存</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="scheduleCoach" class="modal-mask" @click.self="scheduleCoach = null">
+      <div class="modal modal-lg">
+        <div class="modal-head">
+          <b>{{ scheduleCoach.displayName }} · 排班与请假</b>
+          <button class="modal-close" @click="scheduleCoach = null">✕</button>
+        </div>
+
+        <h4>每周可约时间</h4>
+        <div v-for="r in scheduleRules" :key="r.weekday" class="weekday-row">
+          <label class="check"><input v-model="r.enabled" type="checkbox" />{{ WEEKDAY_TEXT[r.weekday - 1] }}</label>
+          <input v-model="r.start" type="time" :disabled="!r.enabled" />
+          <span>至</span>
+          <input v-model="r.end" type="time" :disabled="!r.enabled" />
+        </div>
+        <div class="ops-row">
+          <button class="btn sm" @click="saveSchedule">保存排班并重建未来档期</button>
+        </div>
+        <p class="hint-line">只重建未售出的档期；已售课程不受影响，改完如需闭店请用请假。</p>
+
+        <h4>代请假</h4>
+        <div class="form-grid">
+          <label>开始<input v-model="timeOffForm.startAt" type="datetime-local" /></label>
+          <label>结束<input v-model="timeOffForm.endAt" type="datetime-local" /></label>
+          <label class="span2">原因<input v-model="timeOffForm.reason" placeholder="例如：外出培训 / 临时停课" /></label>
+        </div>
+        <div class="ops-row">
+          <button class="btn sm" @click="submitTimeOff(false)">登记请假</button>
+        </div>
+        <p class="hint-line">区间内已售课程会先列出来，确认后按场馆原因全额退款或退回课时。</p>
+
+        <template v-if="scheduleCoach.timeOffs?.length">
+          <h4>已登记的请假</h4>
+          <div class="timeline">
+            <div v-for="off in scheduleCoach.timeOffs" :key="off.id" class="timeline-row">
+              <span>{{ String(off.startAt).slice(5, 16).replace('T', ' ') }}</span>
+              <b>至 {{ String(off.endAt).slice(5, 16).replace('T', ' ') }}</b>
+              <small>
+                {{ off.reason }}
+                <button class="btn sm ghost" @click="removeTimeOff(off)">撤销并重开</button>
+              </small>
+            </div>
+          </div>
+        </template>
+
+        <h4>未来 7 天档期</h4>
+        <table>
+          <thead><tr><th>时间</th><th>状态</th><th>顾客</th></tr></thead>
+          <tbody>
+            <tr v-for="s in scheduleCoach.upcoming?.slice(0, 30)" :key="s.id">
+              <td>{{ String(s.startAt).slice(5, 16).replace('T', ' ') }}</td>
+              <td>{{ s.status === 'AVAILABLE' ? '可约' : s.status === 'BOOKED' ? '已售' : s.status === 'CLOSED' ? '关闭' : s.status }}</td>
+              <td>{{ s.userName || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div v-if="classForm" class="modal-mask" @click.self="classForm = null">
+      <div class="modal">
+        <div class="modal-head">
+          <b>新建团课</b>
+          <button class="modal-close" @click="classForm = null">✕</button>
+        </div>
+        <div class="form-grid">
+          <label>教练
+            <select v-model.number="classForm.coachId" @change="onClassCoachChange">
+              <option value="">选教练</option>
+              <option v-for="c in coachList.filter((x) => x.status === 'ACTIVE')" :key="c.id" :value="c.id">{{ c.displayName }}</option>
+            </select>
+          </label>
+          <label>团课服务
+            <select v-model.number="classForm.serviceId">
+              <option value="">选服务</option>
+              <option v-for="s in classServices" :key="s.id" :value="s.id">
+                {{ s.title }} · {{ money(s.priceCents) }}/人 · {{ s.minStudents }}–{{ s.maxStudents }} 人
+              </option>
+            </select>
+          </label>
+          <label>日期<input v-model="classForm.date" type="date" @change="loadClassSlots" /></label>
+          <label>教练空闲时段
+            <select v-model.number="classForm.slotId">
+              <option value="">选时段</option>
+              <option v-for="s in classSlots" :key="s.id" :value="s.id">
+                {{ String(s.startAt).slice(11, 16) }} – {{ String(s.endAt).slice(11, 16) }}
+              </option>
+            </select>
+          </label>
+          <label>场地
+            <select v-model.number="classForm.courtId">
+              <option v-for="c in courts" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint-line">只能选教练真正空闲的时段；场地冲突会直接拒绝，不会超卖。</p>
+        <div class="ops-row">
+          <button class="btn sm ghost" @click="classForm = null">取消</button>
+          <button class="btn sm" @click="saveClass">开班</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="classDetail" class="modal-mask" @click.self="classDetail = null">
+      <div class="modal">
+        <div class="modal-head">
+          <b>{{ classDetail.groupClass.title }}</b>
+          <button class="modal-close" @click="classDetail = null">✕</button>
+        </div>
+        <div class="detail-grid">
+          <div><small>教练</small><b>{{ classDetail.coachName }}</b></div>
+          <div><small>时间</small><b>{{ String(classDetail.groupClass.startAt).slice(5, 16).replace('T', ' ') }} – {{ String(classDetail.groupClass.endAt).slice(11, 16) }}</b></div>
+          <div><small>报名</small><b>{{ classDetail.groupClass.enrolledCount }}/{{ classDetail.groupClass.maxStudents }}（{{ classDetail.groupClass.minStudents }} 人开班）</b></div>
+          <div><small>单价</small><b>{{ money(classDetail.groupClass.priceCents) }}</b></div>
+          <div><small>状态</small><b>{{ CLASS_TEXT[classDetail.groupClass.status] ?? classDetail.groupClass.status }}</b></div>
+        </div>
+
+        <h4>报名名单</h4>
+        <table>
+          <thead><tr><th>顾客</th><th>手机号</th><th>报名状态</th><th>支付</th></tr></thead>
+          <tbody>
+            <tr v-for="r in classDetail.roster" :key="r.enrollmentId">
+              <td>{{ r.userName }}</td>
+              <td>{{ r.userPhone }}</td>
+              <td>
+                <span class="chip" :class="r.status === 'CONFIRMED' ? 'ok' : r.status === 'WAITLIST' ? 'warn' : 'bad'">
+                  {{ ENROLL_TEXT[r.status] ?? r.status }}
+                </span>
+              </td>
+              <td>{{ BSTATUS_TEXT[r.bookingStatus] ?? r.bookingStatus }} · {{ money(r.paidCents) }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="!classDetail.roster?.length" class="empty">还没有人报名</p>
+
+        <div class="ops-row" v-if="['OPEN', 'FULL'].includes(classDetail.groupClass.status)">
+          <button class="btn sm danger" @click="cancelClass">取消整班并全员退款</button>
+        </div>
+      </div>
+    </div>
 
     <div v-if="slotOps" class="modal-mask" @click.self="slotOps = null">
       <div class="modal modal-sm">
