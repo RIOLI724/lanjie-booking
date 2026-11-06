@@ -79,6 +79,20 @@ function glowLine(a: V3, b: V3, color: V3) {
   GLOW_LINE.push(b[0], b[1], b[2], color[0], color[1], color[2])
 }
 
+
+function glowCone(x: number, y: number, z: number) {
+  const s = 3.0, fy = 0.05
+  const c: V3 = [0.85, 0.95, 0.7]
+  const a: V3 = [x, y, z]
+  const p: V3[] = [[x - s, fy, z - s], [x + s, fy, z - s], [x + s, fy, z + s], [x - s, fy, z + s]]
+  for (let i = 0; i < 4; i++) {
+    const q = p[i], r = p[(i + 1) % 4]
+    GLOW_TRI.push(a[0], a[1], a[2], c[0], c[1], c[2])
+    GLOW_TRI.push(q[0], q[1], q[2], c[0], c[1], c[2])
+    GLOW_TRI.push(r[0], r[1], r[2], c[0], c[1], c[2])
+  }
+}
+
 function glowDisc(cx: number, y: number, cz: number, r: number, color: V3, steps = 28) {
   for (let i = 0; i < steps; i++) {
     const a0 = (Math.PI * 2 * i) / steps
@@ -209,9 +223,30 @@ function buildScene() {
       glowLine(prev, p, rim)
       prev = p
     }
-    glowDisc(dir * 12.5, 0.03, 0, 3.4, glowLime)
+    glowDisc(dir * 12.5, 0.03, 0, 2.6, glowLime)
     quad([dir * 14.6, 0.025, -0.35], [dir * 14.6, 0.025, 0.35],
       [dir * 16.4, 0.025, 0.35], [dir * 16.4, 0.025, -0.35], HEX('#0a2015'))
+
+    // 篮网
+    for (let i = 0; i < 8; i++) {
+      const a = (Math.PI * 2 * i) / 8
+      line([dir * 14.02 + 0.23 * Math.cos(a), 3.15, 0.23 * Math.sin(a)],
+        [dir * 14.02 + 0.09 * Math.cos(a), 2.62, 0.09 * Math.sin(a)], HEX('#cfd8c8'))
+    }
+  }
+
+  // 观众席剪影
+  for (const side of [-1, 1]) {
+    for (let row = 0; row < 3; row++) {
+      box(0, 0.4 + row * 0.75, side * (13.8 + row * 1.5), 34, 0.55, 1.2, HEX('#0a1d14'))
+    }
+  }
+  // 顶灯与光锥
+  for (const lx of [-9, 0, 9]) {
+    for (const lz of [-5.5, 5.5]) {
+      glowDisc(lx, 8.6, lz, 2.6, HEX('#e6ffc0'), 20)
+      glowCone(lx, 8.4, lz)
+    }
   }
 }
 
@@ -295,8 +330,8 @@ function start(gl: WebGLRenderingContext, width: number, height: number) {
     mouse.x += (mouse.tx - mouse.x) * 0.05
     mouse.y += (mouse.ty - mouse.y) * 0.05
 
-    const pol = 0.20 + intro * 0.42 + mouse.y * 0.05
-    const radius = 15.5 + intro * 7.5
+    const pol = 0.30 + intro * 1.02 + mouse.y * 0.03
+    const radius = 15.0 + intro * 5.0
     const az = -0.5 + intro * 1.1 + elapsed * 0.05 + mouse.x * 0.08
     const eye: V3 = [
       Math.sin(pol) * Math.cos(az) * radius,
@@ -336,13 +371,13 @@ function start(gl: WebGLRenderingContext, width: number, height: number) {
     gl.bindBuffer(gl.ARRAY_BUFFER, glowTriBuffer)
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0)
     gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 24, 12)
-    gl.uniform1f(uAlpha, 0.10)
+    gl.uniform1f(uAlpha, 0.06)
     gl.drawArrays(gl.TRIANGLES, 0, glowTriCount)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, glowLineBuffer)
     gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 24, 0)
     gl.vertexAttribPointer(aColor, 3, gl.FLOAT, false, 24, 12)
-    gl.uniform1f(uAlpha, 0.55)
+    gl.uniform1f(uAlpha, 0.40)
     gl.drawArrays(gl.LINES, 0, glowLineCount)
     gl.depthMask(true)
     gl.disable(gl.BLEND)

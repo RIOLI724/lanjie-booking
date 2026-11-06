@@ -137,12 +137,13 @@ onMounted(() => {
   <div v-if="!token" class="login-wrap">
     <CourtBackdrop />
     <div class="login-card">
-      <h1>篮界 <em>·</em> 管理台</h1>
-      <p>前台排期 · 核销 · 退款 · 用户 · AI 观测</p>
+      <div class="login-brand"><i></i>LANJIE · 篮界</div>
+      <h1>前台<em>工作台</em></h1>
+      <p>排期 · 核销 · 退款 · 会员 · AI 观测</p>
       <div class="field"><span>手机号</span><input v-model="phone" /></div>
       <div class="field"><span>密码</span><input v-model="password" type="password" @keyup.enter="login" /></div>
       <p v-if="error" class="err">{{ error }}</p>
-      <button class="btn" :disabled="loading" @click="login">登录</button>
+      <button class="btn" :disabled="loading" @click="login">进入管理台</button>
     </div>
   </div>
 

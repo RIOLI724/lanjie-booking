@@ -44,32 +44,93 @@ input { font: inherit; }
 }
 
 .login-card {
-  width: 380px;
+  width: 400px;
   position: relative;
   z-index: 1;
-  background: rgba(255, 255, 255, 0.97);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 18px;
-  padding: 30px 30px 26px;
-  box-shadow: 0 24px 70px rgba(4, 14, 9, 0.55), 0 2px 0 rgba(255, 255, 255, 0.6) inset;
-  backdrop-filter: blur(6px);
+  background: linear-gradient(160deg, rgba(20, 64, 46, 0.82), rgba(8, 23, 15, 0.88));
+  border: 1px solid rgba(200, 241, 105, 0.18);
+  border-radius: 22px;
+  padding: 34px 34px 28px;
+  box-shadow: 0 30px 90px rgba(2, 10, 6, 0.7), inset 0 1px 0 rgba(200, 241, 105, 0.12);
+  backdrop-filter: blur(18px) saturate(120%);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--lime);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  margin-bottom: 18px;
+}
+
+.login-brand i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 12px rgba(200, 241, 105, 0.8);
 }
 
 .login-card h1 {
   margin: 0 0 6px;
-  font-size: 24px;
+  font-size: 27px;
+  color: #fff;
   letter-spacing: -0.02em;
 }
 
 .login-card h1 em {
   font-style: normal;
-  color: var(--deep);
+  color: var(--lime);
 }
 
 .login-card p {
-  margin: 0 0 20px;
-  color: var(--muted);
+  margin: 0 0 24px;
+  color: rgba(233, 242, 230, 0.48);
   font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.login-card .field span {
+  color: rgba(233, 242, 230, 0.45);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+.login-card .field input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 12px;
+  padding: 11px 13px;
+}
+
+.login-card .field input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.login-card .field input:focus {
+  border-color: rgba(200, 241, 105, 0.55);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(200, 241, 105, 0.1);
+}
+
+.login-card .btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  background: var(--lime);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 12px 30px rgba(200, 241, 105, 0.18);
+}
+
+.login-card .err {
+  color: #ffb4ab;
+  text-align: left;
 }
 .field { margin-bottom: 12px; }
 .field span { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; }
