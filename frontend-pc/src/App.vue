@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import CourtBackdrop from './components/CourtBackdrop.vue'
 
 const BASE = '/api/v1'
 const token = ref(localStorage.getItem('lanjie.admin.token') ?? '')
@@ -134,8 +135,9 @@ onMounted(() => {
 
 <template>
   <div v-if="!token" class="login-wrap">
+    <CourtBackdrop />
     <div class="login-card">
-      <h1>篮界 · 管理台</h1>
+      <h1>篮界 <em>·</em> 管理台</h1>
       <p>前台排期 · 核销 · 退款 · 用户 · AI 观测</p>
       <div class="field"><span>手机号</span><input v-model="phone" /></div>
       <div class="field"><span>密码</span><input v-model="password" type="password" @keyup.enter="login" /></div>
