@@ -802,3 +802,28 @@ button {
 .home-hero-copy { position: absolute; left: 20px; right: 20px; bottom: 18px; }
 .home-hero-copy small { color: var(--lime); font-size: 10px; letter-spacing: .18em; }
 .home-hero-copy h1 { margin: 6px 0 0; color: #fff; font-size: 26px; line-height: 1.16; letter-spacing: -.04em; }
+
+/* ---- 订单页人话版 ---- */
+.filter-chips { display: flex; gap: 6px; margin-bottom: 12px; }
+.filter-chips button {
+  flex: 1; border: 1px solid var(--line); background: var(--card); border-radius: 999px;
+  padding: 7px 0; font-size: 12px; color: var(--muted);
+}
+.filter-chips button.active { background: var(--ink); border-color: var(--ink); color: var(--lime); font-weight: 650; }
+.order-card-v2 { padding: 13px 14px; }
+.order-date { font-size: 11px; color: var(--muted); }
+.order-main-line { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+.order-main-line b { font-size: 20px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.order-main-line span { font-size: 12px; color: var(--deep-2); }
+.order-bottom-line { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.order-price { font-size: 13px; font-weight: 650; color: var(--ink); }
+.order-hint { font-size: 11px; color: var(--muted); text-align: right; }
+.order-actions { display: flex; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-2); }
+.order-actions button {
+  flex: 1; border-radius: 999px; font-size: 12px; padding: 9px 0;
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+}
+.order-actions .go-pay { flex: 1.4; background: var(--ink); color: var(--lime); border-color: var(--ink); font-weight: 650; }
+.empty { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 0; }
+.empty-link { color: var(--deep-2); font-weight: 650; margin-left: 4px; }
+.chip.bad { background: #fbe3e0; color: var(--danger); }
