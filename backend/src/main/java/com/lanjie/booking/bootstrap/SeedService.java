@@ -145,6 +145,8 @@ public class SeedService {
                 "slot", "coach_slot", "coach_time_off", "coach_schedule_rule",
                 "coach_service", "coach", "user",
                 "venue_hours", "venue", "court", "price_rule", "holiday", "recharge_plan",
+                "ai_message", "ai_tool_call", "ai_session", "ai_handoff",
+                "ai_eval_result", "ai_eval_run",
         };
         for (String table : tables) {
             // TRUNCATE 重置自增：测试里引用种子固定 id（场地 1-4、教练 1-3 等）才不会漂移
