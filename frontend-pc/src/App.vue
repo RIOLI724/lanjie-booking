@@ -10,7 +10,7 @@ const phone = ref('13800000000')
 const password = ref('admin123')
 const error = ref('')
 const loading = ref(false)
-const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'customer' | 'refunds' | 'users' | 'audit' | 'finance' | 'health'>('today')
+const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'customer' | 'refunds' | 'users' | 'audit' | 'finance' | 'analytics' | 'health'>('today')
 
 const today = ref<Record<string, any>>({})
 const schedule = ref<Array<Record<string, any>>>([])
@@ -51,6 +51,8 @@ const financeTo = ref(localToday())
 const financeDirection = ref('')
 const walletAdjustYuan = ref(0)
 const walletAdjustReason = ref('')
+const heatmap = ref<Record<string, any>>({})
+const heatmapDays = ref(28)
 const health = ref<Record<string, any>>({})
 const evalRuns = ref<Array<Record<string, any>>>([])
 const handoffDetail = ref<Record<string, any> | null>(null)
@@ -67,6 +69,7 @@ const BSTATUS_TEXT: Record<string, string> = {
 const REFUND_TEXT: Record<string, string> = { SUCCESS: '已退款', PENDING: '处理中', FAILED: '失败' }
 const CHANNEL_TEXT: Record<string, string> = { WALLET: '余额', WECHAT_MOCK: '微信', PACKAGE: '课包' }
 const FIN_STATUS: Record<string, string> = { PAID: '已支付', REFUNDED: '已退款', SUCCESS: '成功' }
+const HEAT_HOURS = Array.from({ length: 13 }, (_, index) => index + 9)
 const CELL_TEXT: Record<string, string> = { BOOKED: '已订', HELD: '锁定', CLOSED: '已关', AVAILABLE: '' }
 const CLASS_TEXT: Record<string, string> = { OPEN: '报名中', FULL: '已满', CANCELLED: '已取消', COMPLETED: '已完成' }
 const ENROLL_TEXT: Record<string, string> = { CONFIRMED: '已报名', WAITLIST: '候补', CANCELLED: '已取消' }
@@ -141,6 +144,7 @@ async function openTab(next: typeof tab.value) {
     if (next === 'users') users.value = await api('/admin/users')
     if (next === 'audit') auditLogs.value = await api(`/admin/audit-logs?date=${auditDate.value}`)
     if (next === 'finance') await loadFinance()
+    if (next === 'analytics') heatmap.value = await api(`/admin/analytics/heatmap?days=${heatmapDays.value}`)
     if (next === 'health') {
       health.value = await api('/admin/ai/summary')
       evalRuns.value = await api('/admin/ai/evals')
@@ -674,6 +678,17 @@ function revenueTypeText(type: string): string {
   return names[type] ?? type
 }
 
+function heatColor(cell: Record<string, any>): string {
+  if (!cell.total || !cell.booked) return '#f1f4ed'
+  const pct = Number(cell.occupancyPct)
+  return `hsl(${Math.max(0, 118 - pct * 1.18)}, 68%, 80%)`
+}
+
+function heatCellTitle(cell: Record<string, any>): string {
+  if (!cell.total) return `${cell.courtName} ${cell.hour}:00 暂无排期`
+  return `${cell.courtName} ${cell.hour}:00–${cell.hour + 1}:00\n已售 ${cell.booked}/${cell.total} 格（${cell.occupancyPct}%）\n按牌价估算 ${money(cell.revenueCents)}`
+}
+
 async function toggleBan(row: Record<string, any>) {
   const unban = row.status === 'FROZEN'
   await api(`/admin/users/${row.id}/ban`, {
@@ -749,6 +764,7 @@ onMounted(async () => {
       <button :class="{ active: tab === 'orders' }" @click="openTab('orders')">订单处置</button>
       <button :class="{ active: tab === 'coaches' }" @click="openTab('coaches')">教练管理</button>
       <button :class="{ active: tab === 'classes' }" @click="openTab('classes')">团课管理</button>
+      <button :class="{ active: tab === 'analytics' }" @click="openTab('analytics')">时段分析</button>
       <button :class="{ active: tab === 'customer' }" @click="openTab('customer')">客户查询</button>
       <button :class="{ active: tab === 'refunds' }" @click="openTab('refunds')">退款记录</button>
       <template v-if="isManager">
@@ -1051,6 +1067,66 @@ onMounted(async () => {
           </tbody>
         </table>
         <p v-if="!auditLogs.length" class="empty">这天还没有敏感操作</p>
+      </template>
+
+      <template v-if="tab === 'analytics'">
+        <h3>时段分析</h3>
+        <div class="toolbar">
+          <select v-model.number="heatmapDays" @change="openTab('analytics')">
+            <option :value="14">最近 14 天</option>
+            <option :value="28">最近 28 天</option>
+          </select>
+          <span class="hint-inline">
+            {{ heatmap.from }} 至 {{ heatmap.to }}（含未来 7 天已售）· 颜色越暖越紧俏
+          </span>
+        </div>
+        <div class="heat-legend">
+          <span>空</span>
+          <i class="heat-swatch" style="background: #f1f4ed"></i>
+          <i class="heat-swatch" style="background: #d9eea5"></i>
+          <i class="heat-swatch" style="background: #f5d37a"></i>
+          <i class="heat-swatch" style="background: #efa06a"></i>
+          <i class="heat-swatch" style="background: #e0664f"></i>
+          <span>满</span>
+        </div>
+        <table class="heatmap-table">
+          <thead>
+            <tr>
+              <th>场地</th>
+              <th v-for="h in HEAT_HOURS" :key="h">{{ h }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in heatmap.courts ?? []" :key="row.courtId">
+              <td class="court-cell">{{ row.courtName }}</td>
+              <td v-for="cell in row.cells" :key="cell.hour"
+                  class="heat-cell"
+                  :style="{ background: heatColor(cell) }"
+                  :title="heatCellTitle(cell)">
+                {{ cell.total ? (cell.booked ? `${cell.occupancyPct}%` : '—') : '' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="advice-grid">
+          <div class="advice-card">
+            <h4>最紧俏</h4>
+            <p v-for="c in heatmap.hottest ?? []" :key="c.courtId + '-' + c.hour">
+              {{ c.courtName }} {{ c.hour }}:00 · {{ c.occupancyPct }}%（{{ c.booked }}/{{ c.total }}）
+            </p>
+            <p v-if="!heatmap.hottest?.length" class="empty">还没有足够的已售数据</p>
+            <small>可考虑高峰提价、优先留给会员，或加开教练课。</small>
+          </div>
+          <div class="advice-card">
+            <h4>最空</h4>
+            <p v-for="c in heatmap.coldest ?? []" :key="c.courtId + '-' + c.hour">
+              {{ c.courtName }} {{ c.hour }}:00 · {{ c.occupancyPct }}%（{{ c.booked }}/{{ c.total }}）
+            </p>
+            <p v-if="!heatmap.coldest?.length" class="empty">还没有排期</p>
+            <small>适合放团课、拼场或低谷折扣，先把人引进来。</small>
+          </div>
+        </div>
       </template>
 
       <template v-if="tab === 'finance'">
