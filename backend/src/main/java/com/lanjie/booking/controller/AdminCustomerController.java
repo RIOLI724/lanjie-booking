@@ -52,6 +52,25 @@ public class AdminCustomerController {
         return Result.ok(opsService.coupons(userId));
     }
 
+    /** 前台调余额：正数补款、负数扣款，写流水与审计。 */
+    @PostMapping("/{userId}/wallet-adjust")
+    public Result<Long> adjustWallet(@PathVariable Long userId,
+                                     @AuthenticationPrincipal LoginUser actor,
+                                     @Valid @RequestBody WalletAdjustRequest request) {
+        long balance = opsService.adjustWallet(userId, request.getAmountCents());
+        auditService.record(actor.userId(), "CUSTOMER_WALLET_ADJUST", "USER", userId,
+                "调余额 " + request.getAmountCents() + " 分，原因：" + request.getReason());
+        return Result.ok(balance);
+    }
+
+    @Data
+    public static class WalletAdjustRequest {
+        @NotNull(message = "调整金额不能为空")
+        private Integer amountCents;
+        @NotNull(message = "请填写调整原因")
+        private String reason;
+    }
+
     @Data
     public static class GrantPackageRequest {
         @NotNull(message = "教练不能为空")

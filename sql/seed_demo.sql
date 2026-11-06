@@ -63,6 +63,26 @@ FROM slot s JOIN court c ON c.id = s.court_id WHERE s.id = @s3;
 UPDATE slot SET status = 'HELD', hold_expires_at = DATE_ADD(NOW(), INTERVAL 15 MINUTE),
     owner_type = 'BOOKING', owner_id = @b3, version = version + 1 WHERE id = @s3;
 
+-- 对应支付单（财务流水与订单详情演示）
+INSERT INTO pay_order (pay_no, booking_id, user_id, purpose, biz_ref, channel, amount_cents,
+                       status, third_party_txn_id, paid_at, created_at)
+SELECT CONCAT('PYDEMO', DATE_FORMAT(NOW(), '%m%d%H%i%s'), '1'), @b1, @u1, 'BOOKING', @b1,
+       'WECHAT_MOCK', s.price_cents, 'PAID', 'MOCKPAYDEMO1', NOW(), NOW()
+FROM slot s WHERE s.id = @s1;
+INSERT INTO pay_order (pay_no, booking_id, user_id, purpose, biz_ref, channel, amount_cents,
+                       status, third_party_txn_id, paid_at, created_at)
+SELECT CONCAT('PYDEMO', DATE_FORMAT(NOW(), '%m%d%H%i%s'), '2'), @b2, @u2, 'BOOKING', @b2,
+       'WECHAT_MOCK', s.price_cents, 'PAID', 'MOCKPAYDEMO2', NOW(), NOW()
+FROM slot s WHERE s.id = @s2;
+
+-- 订单状态流转（订单详情演示）
+INSERT INTO booking_status_history (booking_id, from_status, to_status, actor, reason, created_at)
+VALUES (@b1, NULL, 'PENDING_PAYMENT', 'USER', '锁位', NOW()),
+       (@b1, 'PENDING_PAYMENT', 'CONFIRMED', 'SYSTEM', '支付成功', NOW()),
+       (@b2, NULL, 'PENDING_PAYMENT', 'USER', '锁位', NOW()),
+       (@b2, 'PENDING_PAYMENT', 'CONFIRMED', 'SYSTEM', '支付成功', NOW()),
+       (@b3, NULL, 'PENDING_PAYMENT', 'USER', '锁位', NOW());
+
 -- 一条退款记录
 INSERT INTO refund_order (refund_no, booking_id, user_id, amount_cents, reason, channel, status,
                           third_party_refund_id, created_at, completed_at)

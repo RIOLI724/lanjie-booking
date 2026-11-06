@@ -8,7 +8,7 @@ const phone = ref('13800000000')
 const password = ref('admin123')
 const error = ref('')
 const loading = ref(false)
-const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'customer' | 'refunds' | 'users' | 'audit' | 'health'>('today')
+const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'customer' | 'refunds' | 'users' | 'audit' | 'finance' | 'health'>('today')
 
 const today = ref<Record<string, any>>({})
 const schedule = ref<Array<Record<string, any>>>([])
@@ -41,6 +41,14 @@ const grantCoachId = ref<number | ''>('')
 const grantSessions = ref(5)
 const auditLogs = ref<Array<Record<string, any>>>([])
 const auditDate = ref(localToday())
+const financeDays = ref(7)
+const financeSummary = ref<Record<string, any>>({})
+const financeTxns = ref<Array<Record<string, any>>>([])
+const financeFrom = ref(localToday())
+const financeTo = ref(localToday())
+const financeDirection = ref('')
+const walletAdjustYuan = ref(0)
+const walletAdjustReason = ref('')
 const health = ref<Record<string, any>>({})
 const evalRuns = ref<Array<Record<string, any>>>([])
 const handoffDetail = ref<Record<string, any> | null>(null)
@@ -55,7 +63,8 @@ const BSTATUS_TEXT: Record<string, string> = {
   PENDING_PAYMENT: '待支付', CONFIRMED: '已确认', COMPLETED: '已完成', CANCELLED: '已取消', NO_SHOW: '爽约',
 }
 const REFUND_TEXT: Record<string, string> = { SUCCESS: '已退款', PENDING: '处理中', FAILED: '失败' }
-const CHANNEL_TEXT: Record<string, string> = { WALLET: '余额', WECHAT_MOCK: '微信' }
+const CHANNEL_TEXT: Record<string, string> = { WALLET: '余额', WECHAT_MOCK: '微信', PACKAGE: '课包' }
+const FIN_STATUS: Record<string, string> = { PAID: '已支付', REFUNDED: '已退款', SUCCESS: '成功' }
 const CELL_TEXT: Record<string, string> = { BOOKED: '已订', HELD: '锁定', CLOSED: '已关', AVAILABLE: '' }
 const CLASS_TEXT: Record<string, string> = { OPEN: '报名中', FULL: '已满', CANCELLED: '已取消', COMPLETED: '已完成' }
 const ENROLL_TEXT: Record<string, string> = { CONFIRMED: '已报名', WAITLIST: '候补', CANCELLED: '已取消' }
@@ -123,6 +132,7 @@ async function openTab(next: typeof tab.value) {
     if (next === 'refunds') refunds.value = await api('/admin/refunds')
     if (next === 'users') users.value = await api('/admin/users')
     if (next === 'audit') auditLogs.value = await api(`/admin/audit-logs?date=${auditDate.value}`)
+    if (next === 'finance') await loadFinance()
     if (next === 'health') {
       health.value = await api('/admin/ai/summary')
       evalRuns.value = await api('/admin/ai/evals')
@@ -574,6 +584,84 @@ async function grantPackage() {
   }
 }
 
+async function adjustWallet() {
+  if (!customer.value) return
+  const yuan = Number(walletAdjustYuan.value)
+  if (!Number.isFinite(yuan) || yuan === 0) {
+    alert('输入调整金额（正数补款，负数扣款）')
+    return
+  }
+  if (!String(walletAdjustReason.value).trim()) {
+    alert('写一下调整原因')
+    return
+  }
+  try {
+    await api(`/admin/customers/${customer.value.userId}/wallet-adjust`, {
+      method: 'POST',
+      body: { amountCents: Math.round(yuan * 100), reason: walletAdjustReason.value },
+    })
+    walletAdjustYuan.value = 0
+    walletAdjustReason.value = ''
+    await searchCustomer()
+    alert('余额已调整并记入流水')
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '调余额失败')
+  }
+}
+
+// ---- 财务 ----
+
+async function loadFinance() {
+  financeSummary.value = await api(`/admin/finance/summary?days=${financeDays.value}`)
+  financeTxns.value = await api(
+    `/admin/finance/transactions?from=${financeFrom.value}&to=${financeTo.value}`
+    + (financeDirection.value ? `&direction=${financeDirection.value}` : ''),
+  )
+}
+
+async function exportFinance() {
+  try {
+    const response = await fetch(
+      `${BASE}/admin/finance/export?from=${financeFrom.value}&to=${financeTo.value}`,
+      { headers: { Authorization: `Bearer ${token.value}` } },
+    )
+    if (!response.ok) throw new Error('导出失败')
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `财务流水-${financeFrom.value}-${financeTo.value}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '导出失败')
+  }
+}
+
+function barHeight(cents: unknown): string {
+  const max = Math.max(1, ...(financeSummary.value.trend ?? []).map((d: any) => Number(d.revenueCents)))
+  return `${Math.max(4, Math.round((Number(cents) / max) * 88))}px`
+}
+
+function financeCategory(row: Record<string, any>): string {
+  if (row.category === 'BOOKING') {
+    const byType: Record<string, string> = { COURT: '场地', COACH: '私教', GROUP: '团课', PICKUP: '拼场' }
+    return byType[row.bookingType] ?? '订场'
+  }
+  const names: Record<string, string> = {
+    RESCHEDULE_DIFF: '改期差价', COACH_PACKAGE: '课包', RECHARGE: '充值', REFUND: '退款', ADJUST: '调余额',
+  }
+  return names[row.category] ?? row.category
+}
+
+function revenueTypeText(type: string): string {
+  const names: Record<string, string> = {
+    COURT: '场地', COACH: '私教', GROUP: '团课', PICKUP: '拼场',
+    PACKAGE: '课包', RESCHEDULE_DIFF: '改期差价', OTHER: '其他', RECHARGE: '充值',
+  }
+  return names[type] ?? type
+}
+
 async function toggleBan(row: Record<string, any>) {
   const unban = row.status === 'FROZEN'
   await api(`/admin/users/${row.id}/ban`, {
@@ -644,6 +732,7 @@ onMounted(() => {
       <button :class="{ active: tab === 'refunds' }" @click="openTab('refunds')">退款记录</button>
       <button :class="{ active: tab === 'users' }" @click="openTab('users')">用户管理</button>
       <button :class="{ active: tab === 'audit' }" @click="openTab('audit')">操作审计</button>
+      <button :class="{ active: tab === 'finance' }" @click="openTab('finance')">财务</button>
       <button :class="{ active: tab === 'health' }" @click="openTab('health')">系统健康</button>
       <button style="margin-top: 18px; color: #8fa294" @click="logout">退出登录</button>
     </aside>
@@ -835,6 +924,11 @@ onMounted(() => {
                 <input v-model.number="grantSessions" type="number" min="1" max="50" style="width: 64px" />
                 <button class="btn sm ghost" @click="grantPackage">补课包</button>
               </div>
+              <div class="inline-form">
+                <input v-model.number="walletAdjustYuan" type="number" placeholder="±金额(元)" style="width: 96px" />
+                <input v-model="walletAdjustReason" placeholder="调余额原因" style="width: 120px" />
+                <button class="btn sm ghost" @click="adjustWallet">调余额</button>
+              </div>
             </div>
           </div>
 
@@ -933,6 +1027,92 @@ onMounted(() => {
           </tbody>
         </table>
         <p v-if="!auditLogs.length" class="empty">这天还没有敏感操作</p>
+      </template>
+
+      <template v-if="tab === 'finance'">
+        <h3>财务</h3>
+        <div class="toolbar">
+          <select v-model.number="financeDays" @change="loadFinance">
+            <option :value="7">近 7 天</option>
+            <option :value="30">近 30 天</option>
+          </select>
+          <span class="hint-inline">营收不含充值（预收款）；退款单列后算净收入，课包销售计入营收。</span>
+        </div>
+        <div class="cards">
+          <div class="stat"><small>营收（不含充值）</small><b>{{ money(financeSummary.revenueCents) }}</b></div>
+          <div class="stat"><small>退款</small><b>{{ money(financeSummary.refundCents) }}</b></div>
+          <div class="stat"><small>净收入</small><b>{{ money(financeSummary.netCents) }}</b></div>
+          <div class="stat"><small>订单数</small><b>{{ financeSummary.orderCount ?? 0 }}</b></div>
+          <div class="stat"><small>充值（预收）</small><b>{{ money(financeSummary.rechargeCents) }}</b></div>
+        </div>
+
+        <h4>每日营收</h4>
+        <div class="trend">
+          <div v-for="d in financeSummary.trend ?? []" :key="d.date" class="trend-col">
+            <div class="trend-bar" :style="{ height: barHeight(d.revenueCents) }"
+                 :title="`${d.date} 营收 ${money(d.revenueCents)}，退款 ${money(d.refundCents)}`"></div>
+            <small>{{ String(d.date).slice(5) }}</small>
+          </div>
+        </div>
+        <p v-if="!financeSummary.trend?.length" class="empty">这段时间还没有营收</p>
+
+        <div class="finance-split">
+          <div>
+            <h4>收入构成</h4>
+            <table>
+              <thead><tr><th>类别</th><th>金额</th></tr></thead>
+              <tbody>
+                <tr v-for="row in financeSummary.byType ?? []" :key="row.type">
+                  <td>{{ revenueTypeText(row.type) }}</td>
+                  <td>{{ money(row.amountCents) }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="!financeSummary.byType?.length" class="empty">暂无收入</p>
+          </div>
+          <div>
+            <h4>收款渠道</h4>
+            <table>
+              <thead><tr><th>渠道</th><th>金额</th></tr></thead>
+              <tbody>
+                <tr v-for="row in financeSummary.byChannel ?? []" :key="row.channel">
+                  <td>{{ CHANNEL_TEXT[row.channel] ?? row.channel }}</td>
+                  <td>{{ money(row.amountCents) }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="!financeSummary.byChannel?.length" class="empty">暂无收款</p>
+          </div>
+        </div>
+
+        <h4>收支流水</h4>
+        <div class="toolbar">
+          <input v-model="financeFrom" type="date" @change="loadFinance" />
+          <span>至</span>
+          <input v-model="financeTo" type="date" @change="loadFinance" />
+          <select v-model="financeDirection" @change="loadFinance">
+            <option value="">全部收支</option>
+            <option value="IN">只看收入</option>
+            <option value="OUT">只看支出</option>
+          </select>
+          <button class="btn sm ghost" @click="loadFinance">刷新</button>
+          <button class="btn sm" @click="exportFinance">导出 CSV</button>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>收支</th><th>类别</th><th>金额</th><th>渠道</th><th>客户</th><th>状态</th></tr></thead>
+          <tbody>
+            <tr v-for="row in financeTxns" :key="row.ref">
+              <td>{{ String(row.time).slice(5, 16).replace('T', ' ') }}</td>
+              <td><span class="chip" :class="row.direction === 'IN' ? 'ok' : 'warn'">{{ row.direction === 'IN' ? '收入' : '支出' }}</span></td>
+              <td>{{ financeCategory(row) }}</td>
+              <td>{{ money(row.amountCents) }}</td>
+              <td>{{ CHANNEL_TEXT[row.channel] ?? row.channel }}</td>
+              <td>{{ row.userName }}</td>
+              <td>{{ FIN_STATUS[row.status] ?? row.status }}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="!financeTxns.length" class="empty">这段时间没有流水</p>
       </template>
 
       <template v-if="tab === 'health'">
