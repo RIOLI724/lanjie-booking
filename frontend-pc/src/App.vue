@@ -8,6 +8,7 @@ const role = ref(localStorage.getItem('lanjie.admin.role') ?? '')
 const isManager = computed(() => role.value === 'ADMIN')
 const phone = ref('13800000000')
 const password = ref('admin123')
+const showPassword = ref(false)
 const error = ref('')
 const loading = ref(false)
 const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'pickups' | 'customer' | 'refunds' | 'users' | 'audit' | 'finance' | 'analytics' | 'health'>('today')
@@ -818,7 +819,14 @@ onMounted(async () => {
       <h1>前台<em>工作台</em></h1>
       <p>排期 · 核销 · 退款 · 会员 · AI 质量</p>
       <div class="field"><span>手机号</span><input v-model="phone" /></div>
-      <div class="field"><span>密码</span><input v-model="password" type="password" @keyup.enter="login" /></div>
+      <div class="field">
+        <span>密码</span>
+        <div class="pwd-wrap">
+          <input v-model="password" :type="showPassword ? 'text' : 'password'" @keyup.enter="login" />
+          <button type="button" class="pwd-toggle" :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                  @click="showPassword = !showPassword">{{ showPassword ? '隐藏' : '显示' }}</button>
+        </div>
+      </div>
       <p v-if="error" class="err">{{ error }}</p>
       <button class="btn" :disabled="loading" @click="login">进入管理台</button>
       <p class="login-hint">前台：13800000001 / front123 · 店长：13800000000 / admin123</p>

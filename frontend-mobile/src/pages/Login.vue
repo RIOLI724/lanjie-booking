@@ -11,6 +11,7 @@ const router = useRouter()
 const mode = ref<'PASSWORD' | 'SMS'>('PASSWORD')
 const phone = ref('')
 const password = ref('')
+const showPassword = ref(false)
 const code = ref('')
 const error = ref('')
 const submitting = ref(false)
@@ -80,7 +81,11 @@ onUnmounted(() => {
 
     <label v-if="mode === 'PASSWORD'" class="field">
       <span>密码</span>
-      <input v-model="password" type="password" maxlength="32" placeholder="6-32 位" />
+      <div class="control">
+        <input v-model="password" :type="showPassword ? 'text' : 'password'" maxlength="32" placeholder="6-32 位" />
+        <button type="button" class="pwd-toggle" :aria-label="showPassword ? '隐藏密码' : '显示密码'"
+                @click="showPassword = !showPassword">{{ showPassword ? '隐藏' : '显示' }}</button>
+      </div>
     </label>
 
     <label v-else class="field">

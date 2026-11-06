@@ -827,3 +827,6 @@ button {
 .empty { text-align: center; color: var(--muted); font-size: 12px; padding: 30px 0; }
 .empty-link { color: var(--deep-2); font-weight: 650; margin-left: 4px; }
 .chip.bad { background: #fbe3e0; color: var(--danger); }
+
+.pwd-toggle { flex: 0 0 auto; border: 1px solid var(--line); background: #fff; color: var(--deep); font-size: 12px; padding: 0 10px; border-radius: 10px; cursor: pointer; }
+.pwd-toggle:active { background: var(--paper); }
