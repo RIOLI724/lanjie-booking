@@ -80,6 +80,8 @@ public class BookingService {
     private final RefundService refundService;
     @org.springframework.context.annotation.Lazy
     private final GroupClassService groupClassService;
+    @org.springframework.context.annotation.Lazy
+    private final PickupService pickupService;
     private final StringRedisTemplate redis;
 
     public BookingService(UserMapper userMapper, CourtMapper courtMapper, SlotMapper slotMapper,
@@ -88,6 +90,7 @@ public class BookingService {
                           PayOrderMapper payOrderMapper, UserBanMapper userBanMapper,
                           BookingAuditService audit, RefundService refundService,
                           @org.springframework.context.annotation.Lazy GroupClassService groupClassService,
+                          @org.springframework.context.annotation.Lazy PickupService pickupService,
                           StringRedisTemplate redis) {
         this.userMapper = userMapper;
         this.courtMapper = courtMapper;
@@ -101,6 +104,7 @@ public class BookingService {
         this.audit = audit;
         this.refundService = refundService;
         this.groupClassService = groupClassService;
+        this.pickupService = pickupService;
         this.redis = redis;
     }
 
@@ -239,6 +243,30 @@ public class BookingService {
             }
             audit.write(booking.getId(), BookingStatus.PENDING_PAYMENT.name(),
                     BookingStatus.CANCELLED.name(), "USER", "用户取消");
+            return;
+        }
+        if (booking.getType() == BookingType.PICKUP && booking.getStatus() == BookingStatus.CONFIRMED) {
+            // 拼场：发起人场地按场地阶梯；参与者份子钱 ≥24h 全退 / <24h 不退
+            LocalDateTime firstStart = firstItemStart(bookingId);
+            boolean initiator = pickupService.isInitiatorBooking(bookingId);
+            boolean freeCancel = LocalDateTime.now().isBefore(firstStart.minusHours(24));
+            int refund = initiator ? refundService.quoteRefund(booking, firstStart)
+                    : (freeCancel ? booking.getPaidCents() : 0);
+            if (refund > 0) {
+                refundService.refundForReschedule(booking, refund, "取消拼场");
+            }
+            if (bookingMapper.markCancelledConfirmed(booking.getId(),
+                    freeCancel ? "USER_CANCEL_24H" : "USER_CANCEL_LATE") == 0) {
+                throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID);
+            }
+            if (initiator) {
+                slotMapper.releaseBookedByBooking(booking.getId());
+                slotMapper.releaseByBooking(booking.getId());
+            }
+            pickupService.handleBookingCancelled(booking);
+            audit.write(booking.getId(), BookingStatus.CONFIRMED.name(),
+                    BookingStatus.CANCELLED.name(), "USER",
+                    "取消拼场" + (refund > 0 ? "，退款 " + refund + " 分" : ""));
             return;
         }
         if (booking.getType() == BookingType.GROUP && booking.getStatus() == BookingStatus.CONFIRMED) {

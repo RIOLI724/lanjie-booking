@@ -1,0 +1,476 @@
+package com.lanjie.booking.service;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.lanjie.booking.common.BusinessException;
+import com.lanjie.booking.common.ErrorCode;
+import com.lanjie.booking.dto.CreatePickupRequest;
+import com.lanjie.booking.entity.Booking;
+import com.lanjie.booking.entity.BookingItem;
+import com.lanjie.booking.entity.Court;
+import com.lanjie.booking.entity.PickupGame;
+import com.lanjie.booking.entity.PickupParticipant;
+import com.lanjie.booking.entity.Slot;
+import com.lanjie.booking.entity.User;
+import com.lanjie.booking.entity.UserBan;
+import com.lanjie.booking.enums.BookingItemType;
+import com.lanjie.booking.enums.BookingStatus;
+import com.lanjie.booking.enums.BookingType;
+import com.lanjie.booking.enums.SlotStatus;
+import com.lanjie.booking.enums.UserStatus;
+import com.lanjie.booking.enums.WalletTxnType;
+import com.lanjie.booking.mapper.BookingItemMapper;
+import com.lanjie.booking.mapper.BookingMapper;
+import com.lanjie.booking.mapper.CourtMapper;
+import com.lanjie.booking.mapper.PickupGameMapper;
+import com.lanjie.booking.mapper.PickupParticipantMapper;
+import com.lanjie.booking.mapper.SlotMapper;
+import com.lanjie.booking.mapper.UserBanMapper;
+import com.lanjie.booking.mapper.UserMapper;
+import com.lanjie.booking.security.LoginUser;
+import com.lanjie.booking.vo.HoldVO;
+import com.lanjie.booking.vo.ItemVO;
+import com.lanjie.booking.vo.PickupGameVO;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * 拼场：发起人付全场并锁定场地 → 参与者付份子钱（平台托管）→ 开赛 1 小时后结算给发起人。
+ * 取消：参与者 ≥24h 全退；发起人取消时场地按场地阶梯、份子钱全退；场馆原因全退。
+ */
+@Slf4j
+@Service
+public class PickupService {
+
+    private static final Map<String, Integer> FORMAT_PLAYERS = Map.of("3v3", 6, "4v4", 8, "5v5", 10);
+    private static final Duration HOLD_TTL = Duration.ofMinutes(15);
+    private static final DateTimeFormatter ITEM_DATE = DateTimeFormatter.ofPattern("MM-dd");
+
+    private final PickupGameMapper gameMapper;
+    private final PickupParticipantMapper participantMapper;
+    private final BookingMapper bookingMapper;
+    private final BookingItemMapper bookingItemMapper;
+    private final SlotMapper slotMapper;
+    private final CourtMapper courtMapper;
+    private final UserMapper userMapper;
+    private final UserBanMapper userBanMapper;
+    private final WalletService walletService;
+    private final RefundService refundService;
+    private final BookingAuditService audit;
+    private final StringRedisTemplate redis;
+
+    public PickupService(PickupGameMapper gameMapper, PickupParticipantMapper participantMapper,
+                         BookingMapper bookingMapper, BookingItemMapper bookingItemMapper,
+                         SlotMapper slotMapper, CourtMapper courtMapper, UserMapper userMapper,
+                         UserBanMapper userBanMapper, WalletService walletService,
+                         RefundService refundService, BookingAuditService audit,
+                         StringRedisTemplate redis) {
+        this.gameMapper = gameMapper;
+        this.participantMapper = participantMapper;
+        this.bookingMapper = bookingMapper;
+        this.bookingItemMapper = bookingItemMapper;
+        this.slotMapper = slotMapper;
+        this.courtMapper = courtMapper;
+        this.userMapper = userMapper;
+        this.userBanMapper = userBanMapper;
+        this.walletService = walletService;
+        this.refundService = refundService;
+        this.audit = audit;
+        this.redis = redis;
+    }
+
+    /** 发起拼场：锁定场地并建待支付订单（付全场），支付成功后场次才 OPEN */
+    @Transactional
+    public HoldVO create(LoginUser loginUser, CreatePickupRequest request) {
+        User user = checkUser(loginUser.userId());
+        Integer totalPlayers = FORMAT_PLAYERS.get(request.getFormat());
+        if (totalPlayers == null) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "赛制为 3v3 / 4v4 / 5v5");
+        }
+        Slot slot = slotMapper.selectById(request.getSlotId());
+        if (slot == null || slot.getStatus() != SlotStatus.AVAILABLE
+                || slot.getStartAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException(ErrorCode.SLOT_TAKEN, "该时段不可预订");
+        }
+        Long duplicate = gameMapper.selectCount(new LambdaQueryWrapper<PickupGame>()
+                .eq(PickupGame::getSlotId, slot.getId())
+                .in(PickupGame::getStatus, "OPEN", "FULL", "PENDING_PAYMENT"));
+        if (duplicate > 0) {
+            throw new BusinessException(ErrorCode.SLOT_TAKEN, "该时段已有拼场");
+        }
+
+        int pricePerPerson = Math.max(1, slot.getPriceCents() / totalPlayers);
+        String token = UUID.randomUUID().toString().replace("-", "");
+        String key = "lanjie:hold:" + slot.getId();
+        boolean acquired = acquireFastFail(key, token);
+        try {
+            slotMapper.reclaimExpired(List.of(slot.getId()), LocalDateTime.now());
+            Court court = courtMapper.selectById(slot.getCourtId());
+            String courtName = court != null ? court.getName() : "场地";
+            String title = "%s 拼场 %s %s-%s".formatted(courtName, slot.getSlotDate().format(ITEM_DATE),
+                    slot.getStartAt().toLocalTime(), slot.getEndAt().toLocalTime());
+
+            Booking booking = new Booking();
+            booking.setBookingNo(newNo("BJ"));
+            booking.setUserId(user.getId());
+            booking.setVenueId(slot.getVenueId());
+            booking.setType(BookingType.PICKUP);
+            booking.setStatus(BookingStatus.PENDING_PAYMENT);
+            booking.setHoldExpiresAt(LocalDateTime.now().plus(HOLD_TTL));
+            booking.setListAmountCents(slot.getPriceCents());
+            booking.setDiscountCents(0);
+            booking.setPayableCents(slot.getPriceCents());
+            booking.setPaidCents(0);
+            booking.setRescheduleCount(0);
+            bookingMapper.insert(booking);
+
+            BookingItem item = new BookingItem();
+            item.setBookingId(booking.getId());
+            item.setItemType(BookingItemType.COURT_SLOT);
+            item.setRefId(slot.getId());
+            item.setTitle(title);
+            item.setStartAt(slot.getStartAt());
+            item.setEndAt(slot.getEndAt());
+            item.setUnitPriceCents(slot.getPriceCents());
+            item.setAmountCents(slot.getPriceCents());
+            item.setRefundAmountCents(0);
+            bookingItemMapper.insert(item);
+
+            int held = slotMapper.holdSlots(List.of(slot.getId()), token, booking.getHoldExpiresAt(), booking.getId());
+            if (held != 1) {
+                throw new BusinessException(ErrorCode.SLOT_TAKEN);
+            }
+
+            PickupGame game = new PickupGame();
+            game.setInitiatorId(user.getId());
+            game.setBookingId(booking.getId());
+            game.setSlotId(slot.getId());
+            game.setFormat(request.getFormat());
+            game.setTotalPlayers(totalPlayers);
+            game.setJoinedPlayers(1);
+            game.setPricePerPersonCents(pricePerPerson);
+            game.setNote(request.getNote() == null ? "" : request.getNote());
+            game.setStatus("PENDING_PAYMENT");
+            game.setSettled(false);
+            gameMapper.insert(game);
+
+            audit.write(booking.getId(), null, BookingStatus.PENDING_PAYMENT.name(), "USER", "发起拼场");
+            return new HoldVO(booking.getId(), booking.getBookingNo(), booking.getPayableCents(),
+                    booking.getHoldExpiresAt().toString(),
+                    List.of(new ItemVO(title, slot.getStartAt().toString(),
+                            slot.getEndAt().toString(), slot.getPriceCents())));
+        } finally {
+            if (acquired) {
+                redis.delete(List.of(key));
+            }
+        }
+    }
+
+    /** 加入拼场：付一份份子钱（平台托管） */
+    @Transactional
+    public HoldVO join(LoginUser loginUser, Long gameId) {
+        User user = checkUser(loginUser.userId());
+        PickupGame game = load(gameId);
+        if (!"OPEN".equals(game.getStatus())) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID,
+                    "FULL".equals(game.getStatus()) ? "已满员" : "该拼场已结束或取消");
+        }
+        if (game.getInitiatorId().equals(user.getId())) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "你是发起人，无需加入");
+        }
+        Slot slot = slotMapper.selectById(game.getSlotId());
+        if (slot == null || slot.getStartAt().isBefore(LocalDateTime.now().plusHours(0))) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "该场次已开始");
+        }
+        PickupParticipant existing = participantMapper.selectOne(new LambdaQueryWrapper<PickupParticipant>()
+                .eq(PickupParticipant::getGameId, gameId)
+                .eq(PickupParticipant::getUserId, user.getId())
+                .last("LIMIT 1"));
+        if (existing != null && !"CANCELLED".equals(existing.getStatus())) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "已在拼场中");
+        }
+
+        int share = game.getPricePerPersonCents();
+        Booking booking = new Booking();
+        booking.setBookingNo(newNo("BJ"));
+        booking.setUserId(user.getId());
+        booking.setVenueId(slot.getVenueId());
+        booking.setType(BookingType.PICKUP);
+        booking.setStatus(BookingStatus.PENDING_PAYMENT);
+        booking.setHoldExpiresAt(LocalDateTime.now().plus(HOLD_TTL));
+        booking.setListAmountCents(share);
+        booking.setDiscountCents(0);
+        booking.setPayableCents(share);
+        booking.setPaidCents(0);
+        booking.setRescheduleCount(0);
+        bookingMapper.insert(booking);
+
+        BookingItem item = new BookingItem();
+        item.setBookingId(booking.getId());
+        item.setItemType(BookingItemType.PICKUP_SHARE);
+        item.setRefId(gameId);
+        item.setTitle("拼场份子钱 " + game.getFormat());
+        item.setStartAt(slot.getStartAt());
+        item.setEndAt(slot.getEndAt());
+        item.setUnitPriceCents(share);
+        item.setAmountCents(share);
+        item.setRefundAmountCents(0);
+        bookingItemMapper.insert(item);
+
+        PickupParticipant participant = existing != null ? existing : new PickupParticipant();
+        participant.setGameId(gameId);
+        participant.setUserId(user.getId());
+        participant.setBookingId(booking.getId());
+        participant.setStatus("PENDING_PAYMENT");
+        if (participant.getId() != null) {
+            participantMapper.updateById(participant);
+        } else {
+            participantMapper.insert(participant);
+        }
+        return new HoldVO(booking.getId(), booking.getBookingNo(), share,
+                booking.getHoldExpiresAt().toString(),
+                List.of(new ItemVO(item.getTitle(), slot.getStartAt().toString(),
+                        slot.getEndAt().toString(), share)));
+    }
+
+    /** 支付回调：发起人 → 场次 OPEN；参与者 → 占坑确认 */
+    @Transactional
+    public void onBookingPaid(Booking booking) {
+        PickupGame asInitiator = gameMapper.selectOne(new LambdaQueryWrapper<PickupGame>()
+                .eq(PickupGame::getBookingId, booking.getId())
+                .last("LIMIT 1"));
+        if (asInitiator != null) {
+            asInitiator.setStatus("OPEN");
+            gameMapper.updateById(asInitiator);
+            PickupParticipant initiator = new PickupParticipant();
+            initiator.setGameId(asInitiator.getId());
+            initiator.setUserId(booking.getUserId());
+            initiator.setBookingId(booking.getId());
+            initiator.setStatus("CONFIRMED");
+            participantMapper.insert(initiator);
+            return;
+        }
+        PickupParticipant participant = participantMapper.selectOne(new LambdaQueryWrapper<PickupParticipant>()
+                .eq(PickupParticipant::getBookingId, booking.getId())
+                .last("LIMIT 1"));
+        if (participant == null) {
+            return;
+        }
+        participant.setStatus("CONFIRMED");
+        participantMapper.updateById(participant);
+        PickupGame game = gameMapper.selectById(participant.getGameId());
+        if (game != null && gameMapper.joinOne(game.getId()) > 0) {
+            PickupGame fresh = gameMapper.selectById(game.getId());
+            if (fresh.getJoinedPlayers() >= fresh.getTotalPlayers()) {
+                gameMapper.updateStatus(game.getId(), "FULL");
+            }
+        }
+    }
+
+    /** 订单取消回调：发起人取消 → 全场次取消 + 份子钱全退；参与者取消 → 按 24h 规则 */
+    @Transactional
+    public void handleBookingCancelled(Booking booking) {
+        PickupGame asInitiator = gameMapper.selectOne(new LambdaQueryWrapper<PickupGame>()
+                .eq(PickupGame::getBookingId, booking.getId())
+                .last("LIMIT 1"));
+        if (asInitiator != null) {
+            cancelGameInternal(asInitiator, "发起人取消");
+            return;
+        }
+        PickupParticipant participant = participantMapper.selectOne(new LambdaQueryWrapper<PickupParticipant>()
+                .eq(PickupParticipant::getBookingId, booking.getId())
+                .last("LIMIT 1"));
+        if (participant == null) {
+            return;
+        }
+        boolean wasConfirmed = "CONFIRMED".equals(participant.getStatus());
+        participant.setStatus("CANCELLED");
+        participantMapper.updateById(participant);
+        if (wasConfirmed) {
+            gameMapper.leaveOne(participant.getGameId());
+            PickupGame game = gameMapper.selectById(participant.getGameId());
+            if (game != null && "FULL".equals(game.getStatus())) {
+                gameMapper.updateStatus(game.getId(), "OPEN");
+            }
+        }
+    }
+
+    public boolean isInitiatorBooking(Long bookingId) {
+        return gameMapper.selectCount(new LambdaQueryWrapper<PickupGame>()
+                .eq(PickupGame::getBookingId, bookingId)) > 0;
+    }
+
+    /** 场馆原因取消：所有人全退 */
+    @Transactional
+    public void cancelGameInternal(PickupGame game, String reason) {
+        List<PickupParticipant> participants = participantMapper.selectList(
+                new LambdaQueryWrapper<PickupParticipant>()
+                        .eq(PickupParticipant::getGameId, game.getId())
+                        .in(PickupParticipant::getStatus, "CONFIRMED", "PENDING_PAYMENT"));
+        for (PickupParticipant participant : participants) {
+            if (game.getBookingId().equals(participant.getBookingId())) {
+                participant.setStatus("CANCELLED");
+                participantMapper.updateById(participant);
+                continue; // 发起人自己的订单由取消流程按场地规则处理，避免重复退款
+            }
+            Booking booking = bookingMapper.selectById(participant.getBookingId());
+            if (booking == null) {
+                continue;
+            }
+            if (booking.getStatus() == BookingStatus.CONFIRMED) {
+                if (bookingMapper.markCancelledConfirmed(booking.getId(), "PICKUP_CANCELLED") > 0
+                        && booking.getPaidCents() > 0) {
+                    refundService.refundForReschedule(booking, booking.getPaidCents(), reason);
+                }
+            } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+                bookingMapper.markCancelled(booking.getId(), "PICKUP_CANCELLED");
+            }
+            participant.setStatus("CANCELLED");
+            participantMapper.updateById(participant);
+        }
+        gameMapper.updateStatus(game.getId(), "CANCELLED");
+        audit.write(game.getBookingId(), "OPEN", "CANCELLED", "SYSTEM", reason);
+        log.warn("pickup game cancelled: id={} reason={}", game.getId(), reason);
+    }
+
+    public List<PickupGameVO> list(LoginUser loginUser, LocalDate date, String format) {
+        LambdaQueryWrapper<PickupGame> query = new LambdaQueryWrapper<PickupGame>()
+                .in(PickupGame::getStatus, "OPEN", "FULL")
+                .orderByAsc(PickupGame::getCreatedAt)
+                .last("LIMIT 50");
+        if (format != null && !format.isBlank()) {
+            query.eq(PickupGame::getFormat, format);
+        }
+        List<PickupGame> games = gameMapper.selectList(query);
+        return games.stream()
+                .filter(game -> {
+                    Slot slot = slotMapper.selectById(game.getSlotId());
+                    return slot != null && (date == null || slot.getSlotDate().equals(date));
+                })
+                .map(game -> toVO(game, loginUser.userId()))
+                .toList();
+    }
+
+    public PickupGameVO detail(LoginUser loginUser, Long gameId) {
+        return toVO(load(gameId), loginUser.userId());
+    }
+
+    /** 参与者的份子钱订单 id（取消用），非参与者返回 null */
+    public Long participantBookingId(Long userId, Long gameId) {
+        PickupParticipant participant = participantMapper.selectOne(new LambdaQueryWrapper<PickupParticipant>()
+                .eq(PickupParticipant::getGameId, gameId)
+                .eq(PickupParticipant::getUserId, userId)
+                .last("LIMIT 1"));
+        return participant != null && participant.getBookingId() != null ? participant.getBookingId() : null;
+    }
+
+    /** 结算：开赛 1 小时后把托管份子钱打给发起人（唯一键幂等） */
+    @Transactional
+    public void settle() {
+        List<PickupGame> games = gameMapper.selectList(new LambdaQueryWrapper<PickupGame>()
+                .in(PickupGame::getStatus, "OPEN", "FULL")
+                .eq(PickupGame::getSettled, false));
+        LocalDateTime now = LocalDateTime.now();
+        for (PickupGame game : games) {
+            Slot slot = slotMapper.selectById(game.getSlotId());
+            if (slot == null) {
+                continue;
+            }
+            if (slot.getStartAt().plusHours(1).isAfter(now)) {
+                continue;
+            }
+            long shares = participantMapper.selectList(new LambdaQueryWrapper<PickupParticipant>()
+                            .eq(PickupParticipant::getGameId, game.getId())
+                            .eq(PickupParticipant::getStatus, "CONFIRMED")
+                            .ne(PickupParticipant::getUserId, game.getInitiatorId()))
+                    .stream()
+                    .mapToLong(p -> {
+                        Booking booking = bookingMapper.selectById(p.getBookingId());
+                        return booking != null && booking.getStatus() == BookingStatus.CONFIRMED
+                                ? booking.getPaidCents() : 0;
+                    })
+                    .sum();
+            if (shares > 0) {
+                walletService.credit(game.getInitiatorId(), shares, WalletTxnType.PICKUP_SETTLEMENT,
+                        "PICKUP_GAME", game.getId());
+            }
+            gameMapper.markSettled(game.getId());
+            log.info("pickup settled: game={} initiator={} shares={}", game.getId(), game.getInitiatorId(), shares);
+            if (slot.getEndAt().isBefore(now)) {
+                gameMapper.updateStatus(game.getId(), "COMPLETED");
+            }
+        }
+    }
+
+    private PickupGameVO toVO(PickupGame game, Long viewerId) {
+        Slot slot = slotMapper.selectById(game.getSlotId());
+        Court court = slot != null ? courtMapper.selectById(slot.getCourtId()) : null;
+        List<PickupGameVO.ParticipantVO> participants = participantMapper.selectList(
+                        new LambdaQueryWrapper<PickupParticipant>()
+                                .eq(PickupParticipant::getGameId, game.getId())
+                                .in(PickupParticipant::getStatus, "CONFIRMED", "PENDING_PAYMENT")
+                                .orderByAsc(PickupParticipant::getCreatedAt))
+                .stream()
+                .map(p -> {
+                    User user = userMapper.selectById(p.getUserId());
+                    return new PickupGameVO.ParticipantVO(p.getUserId(),
+                            user != null ? user.getNickname() : "", p.getStatus());
+                })
+                .toList();
+        return new PickupGameVO(game.getId(), game.getSlotId(),
+                court != null ? court.getName() : "",
+                slot != null ? slot.getStartAt().toString() : "",
+                slot != null ? slot.getEndAt().toString() : "",
+                game.getFormat(), game.getTotalPlayers(), game.getJoinedPlayers(),
+                game.getPricePerPersonCents(), game.getNote(), game.getStatus(),
+                Boolean.TRUE.equals(game.getSettled()), game.getInitiatorId().equals(viewerId), participants);
+    }
+
+    private PickupGame load(Long gameId) {
+        PickupGame game = gameMapper.selectById(gameId);
+        if (game == null) {
+            throw new BusinessException(ErrorCode.BOOKING_NOT_FOUND, "拼场不存在");
+        }
+        return game;
+    }
+
+    private User checkUser(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null || user.getStatus() != UserStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.USER_FROZEN);
+        }
+        UserBan ban = userBanMapper.selectOne(new LambdaQueryWrapper<UserBan>()
+                .eq(UserBan::getUserId, userId)
+                .gt(UserBan::getEndAt, LocalDateTime.now())
+                .last("LIMIT 1"));
+        if (ban != null) {
+            throw new BusinessException(ErrorCode.USER_BANNED,
+                    "因爽约被暂停预订，" + ban.getEndAt().toLocalDate() + " 恢复");
+        }
+        return user;
+    }
+
+    private boolean acquireFastFail(String key, String token) {
+        try {
+            Boolean ok = redis.opsForValue().setIfAbsent(key, token, Duration.ofSeconds(15));
+            return ok != null && ok;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private String newNo(String prefix) {
+        return prefix + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
+                + UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+    }
+}

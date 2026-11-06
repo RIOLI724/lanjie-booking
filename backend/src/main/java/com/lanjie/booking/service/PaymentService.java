@@ -57,6 +57,7 @@ public class PaymentService {
     private final WalletService walletService;
     private final BookingService bookingService;
     private final PackageService packageService;
+    private final PickupService pickupService;
     private final BookingAuditService audit;
 
     public PaymentService(BookingMapper bookingMapper, PayOrderMapper payOrderMapper,
@@ -64,7 +65,8 @@ public class PaymentService {
                           CoachPackageMapper coachPackageMapper, RechargePlanMapper rechargePlanMapper,
                           com.lanjie.booking.mapper.BookingItemMapper bookingItemMapper,
                           WalletService walletService, BookingService bookingService,
-                          PackageService packageService, BookingAuditService audit) {
+                          PackageService packageService, PickupService pickupService,
+                          BookingAuditService audit) {
         this.bookingMapper = bookingMapper;
         this.payOrderMapper = payOrderMapper;
         this.slotMapper = slotMapper;
@@ -75,6 +77,7 @@ public class PaymentService {
         this.walletService = walletService;
         this.bookingService = bookingService;
         this.packageService = packageService;
+        this.pickupService = pickupService;
         this.audit = audit;
     }
 
@@ -207,6 +210,10 @@ public class PaymentService {
         finishPayOrder(payOrder);
         audit.write(payOrder.getBookingId(), BookingStatus.PENDING_PAYMENT.name(),
                 BookingStatus.CONFIRMED.name(), "USER", "支付成功 " + payOrder.getPayNo());
+        Booking booking = bookingMapper.selectById(payOrder.getBookingId());
+        if (booking != null && booking.getType() == com.lanjie.booking.enums.BookingType.PICKUP) {
+            pickupService.onBookingPaid(booking);
+        }
         log.info("pay confirmed: payNo={} booking={}", payOrder.getPayNo(), payOrder.getBookingId());
     }
 
