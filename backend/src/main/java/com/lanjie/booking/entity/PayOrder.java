@@ -21,6 +21,9 @@ public class PayOrder {
 
     private Long bookingId;
 
+    /** 业务引用：BOOKING/RESCHEDULE_DIFF→booking_id，RECHARGE→plan_id */
+    private Long bizRef;
+
     private Long userId;
 
     private PayPurpose purpose;

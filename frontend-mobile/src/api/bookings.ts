@@ -17,6 +17,8 @@ export interface BookingInfo {
   paidCents: number
   holdExpiresAt: string | null
   createdAt: string
+  rescheduleCount: number
+  refundQuoteCents: number
   items: ItemInfo[]
 }
 
@@ -76,4 +78,30 @@ export function cancelBooking(id: number): Promise<void> {
     auth: true,
     idempotencyKey: uuid(),
   })
+}
+
+export interface RescheduleInfo {
+  bookingId: number
+  diffCents: number
+  payNo: string | null
+  newItems: ItemInfo[]
+}
+
+export interface CheckinTokenInfo {
+  token: string
+  startAt: string
+  endAt: string
+}
+
+export function rescheduleBooking(id: number, slotIds: number[]): Promise<RescheduleInfo> {
+  return request<RescheduleInfo>(`/bookings/${id}/reschedule`, {
+    method: 'POST',
+    body: { slotIds },
+    auth: true,
+    idempotencyKey: uuid(),
+  })
+}
+
+export function fetchCheckinToken(id: number): Promise<CheckinTokenInfo> {
+  return request<CheckinTokenInfo>(`/bookings/${id}/checkin-token`, { auth: true })
 }

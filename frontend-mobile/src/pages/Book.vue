@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import DockBar from '@/components/DockBar.vue'
 import BookingSheet from '@/components/BookingSheet.vue'
-import { holdSlots } from '@/api/bookings'
+import { confirmMockPay, holdSlots, rescheduleBooking } from '@/api/bookings'
 import { ApiError } from '@/api/http'
 import {
   fetchCalendar,
@@ -12,6 +13,9 @@ import {
   type CourtInfo,
   type SlotInfo,
 } from '@/api/venue'
+
+const route = useRoute()
+const router = useRouter()
 
 const MAX_CONTIGUOUS = 4
 const HOUR = 60
@@ -25,6 +29,9 @@ const selected = ref<SlotInfo[]>([])
 const sheetBookingId = ref<number | null>(null)
 const holding = ref(false)
 const holdError = ref('')
+const rescheduleBookingId = ref(Number(route.query.reschedule) || 0)
+
+const isReschedule = computed(() => rescheduleBookingId.value > 0)
 
 const toMin = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5))
 const toStr = (m: number) =>
@@ -123,7 +130,17 @@ async function onHold() {
   holding.value = true
   holdError.value = ''
   try {
-    const hold = await holdSlots(selected.value.map((s) => s.id))
+    const slotIds = selected.value.map((s) => s.id)
+    if (isReschedule.value) {
+      // 改期：差价 > 0 需补差价支付单，这里用户点「改期」即为确认支付
+      const res = await rescheduleBooking(rescheduleBookingId.value, slotIds)
+      if (res.payNo) {
+        await confirmMockPay(res.payNo)
+      }
+      router.push('/orders')
+      return
+    }
+    const hold = await holdSlots(slotIds)
     sheetBookingId.value = hold.bookingId
   } catch (e) {
     holdError.value = e instanceof ApiError ? e.message : '网络异常，请稍后再试'
@@ -150,7 +167,7 @@ onMounted(async () => {
 
 <template>
   <div class="page">
-    <h1 class="page-title">订场</h1>
+    <h1 class="page-title">{{ isReschedule ? '改期' : '订场' }}</h1>
 
     <div class="date-strip">
       <button
@@ -189,7 +206,7 @@ onMounted(async () => {
       <div class="bar-right">
         <b>¥{{ totalCents / 100 }}</b>
         <button class="hold-btn" :disabled="holding" @click="onHold">
-          {{ holding ? '锁位中…' : '锁位' }}
+          {{ holding ? (isReschedule ? '改期中…' : '锁位中…') : isReschedule ? '改期' : '锁位' }}
         </button>
       </div>
     </div>

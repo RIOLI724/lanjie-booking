@@ -42,6 +42,12 @@ public interface SlotMapper extends BaseMapper<Slot> {
             + "WHERE owner_type = 'BOOKING' AND owner_id = #{bookingId} AND status = 'HELD'")
     int confirmByBooking(@Param("bookingId") Long bookingId);
 
+    /** 改期落地：旧格子（BOOKED）释放，不动 HELD 的新格子 */
+    @Update("UPDATE slot SET status = 'AVAILABLE', hold_token = NULL, hold_expires_at = NULL, "
+            + "owner_type = NULL, owner_id = NULL, version = version + 1 "
+            + "WHERE owner_type = 'BOOKING' AND owner_id = #{bookingId} AND status = 'BOOKED'")
+    int releaseBookedByBooking(@Param("bookingId") Long bookingId);
+
     /** 扫库兜底：释放所有过期 HELD 格子 */
     @Update("UPDATE slot SET status = 'AVAILABLE', hold_token = NULL, hold_expires_at = NULL, "
             + "owner_type = NULL, owner_id = NULL, version = version + 1 "

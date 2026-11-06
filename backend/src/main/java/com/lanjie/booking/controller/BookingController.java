@@ -10,8 +10,10 @@ import com.lanjie.booking.service.IdempotencyService;
 import com.lanjie.booking.service.PaymentService;
 import com.lanjie.booking.vo.BookingVO;
 import com.lanjie.booking.vo.CheckoutPreviewVO;
+import com.lanjie.booking.vo.CheckinTokenVO;
 import com.lanjie.booking.vo.HoldVO;
 import com.lanjie.booking.vo.PayVO;
+import com.lanjie.booking.vo.RescheduleVO;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -72,7 +74,7 @@ public class BookingController {
                              @RequestHeader(value = "Idempotency-Key", required = false) String idemKey,
                              @PathVariable Long id, @Valid @RequestBody PayRequest request) {
         PayVO payVO = idempotencyService.execute(idemKey, loginUser.userId(), "POST /bookings/" + id + "/pay",
-                request, PayVO.class, () -> paymentService.createPayment(loginUser, id, request));
+                request, PayVO.class, () -> paymentService.createBookingPayment(loginUser, id, request));
         return Result.ok(payVO);
     }
 
@@ -86,5 +88,21 @@ public class BookingController {
                     return null;
                 });
         return Result.ok();
+    }
+
+    @PostMapping("/{id}/reschedule")
+    public Result<RescheduleVO> reschedule(@AuthenticationPrincipal LoginUser loginUser,
+                                           @RequestHeader(value = "Idempotency-Key", required = false) String idemKey,
+                                           @PathVariable Long id, @Valid @RequestBody HoldRequest request) {
+        RescheduleVO rescheduleVO = idempotencyService.execute(idemKey, loginUser.userId(),
+                "POST /bookings/" + id + "/reschedule", request, RescheduleVO.class,
+                () -> bookingService.reschedule(loginUser, id, request));
+        return Result.ok(rescheduleVO);
+    }
+
+    @GetMapping("/{id}/checkin-token")
+    public Result<CheckinTokenVO> checkinToken(@AuthenticationPrincipal LoginUser loginUser,
+                                               @PathVariable Long id) {
+        return Result.ok(bookingService.checkinToken(loginUser, id));
     }
 }

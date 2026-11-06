@@ -42,6 +42,7 @@ class BookingFlowTest {
     void twoWindowsRaceForSameSlot() {
         String userA = registerAndLogin();
         String userB = registerAndLogin();
+        freeUp(1, LocalDate.now().plusDays(1));
         Slot slot = firstAvailableSlot(1);
 
         ResponseEntity<String> holdA = hold(userA, List.of(slot.getId()));
@@ -71,6 +72,7 @@ class BookingFlowTest {
     @Test
     void idempotencyKeyReplaysSameHold() {
         String token = registerAndLogin();
+        freeUp(2, LocalDate.now().plusDays(1));
         Slot slot = firstAvailableSlot(2);
         String key = "test-" + UUID.randomUUID();
 
@@ -94,6 +96,9 @@ class BookingFlowTest {
     @Test
     void holdValidation() {
         String token = registerAndLogin();
+        freeUp(1, LocalDate.now().plusDays(1));
+        freeUp(2, LocalDate.now().plusDays(1));
+        freeUp(3, LocalDate.now().plusDays(1));
         Slot slot = firstAvailableSlot(1);
         Slot otherCourt = firstAvailableSlot(2);
 
@@ -121,6 +126,7 @@ class BookingFlowTest {
     @Test
     void expiredHoldIsSwept() {
         String token = registerAndLogin();
+        freeUp(4, LocalDate.now().plusDays(1));
         Slot slot = firstAvailableSlot(4);
         ResponseEntity<String> holdResponse = hold(token, List.of(slot.getId()));
         assertEquals(0, code(holdResponse));
@@ -136,6 +142,7 @@ class BookingFlowTest {
     @Test
     void dailyBookingLimitIsEnforced() {
         String token = registerAndLogin();
+        freeUp(3, LocalDate.now().plusDays(1));
         List<Slot> slots = slotMapper.selectList(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Slot>()
                 .eq(Slot::getCourtId, 3)
                 .eq(Slot::getSlotDate, LocalDate.now().plusDays(1))
@@ -161,6 +168,13 @@ class BookingFlowTest {
                 .orderByAsc(Slot::getStartAt)
                 .last("LIMIT 1")).get(0);
         assertEquals(40905, code(hold(token, List.of(another.getId()))));
+    }
+
+    /** 测试自清理：历史运行残留可能占着目标场×日的格子，先强制释放 */
+    private void freeUp(int courtId, java.time.LocalDate date) {
+        jdbcTemplate.update("UPDATE slot SET status = 'AVAILABLE', hold_token = NULL, hold_expires_at = NULL, "
+                + "owner_type = NULL, owner_id = NULL WHERE court_id = ? AND slot_date = ? "
+                + "AND status IN ('HELD', 'BOOKED')", courtId, date);
     }
 
     // ---- helpers ----

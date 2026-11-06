@@ -1,28 +1,36 @@
 package com.lanjie.booking.bootstrap;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lanjie.booking.entity.Court;
 import com.lanjie.booking.entity.PriceRule;
+import com.lanjie.booking.entity.RechargePlan;
+import com.lanjie.booking.entity.User;
 import com.lanjie.booking.entity.Venue;
 import com.lanjie.booking.entity.VenueHours;
 import com.lanjie.booking.enums.CourtStatus;
 import com.lanjie.booking.enums.CourtType;
 import com.lanjie.booking.enums.DayType;
+import com.lanjie.booking.enums.UserRole;
+import com.lanjie.booking.enums.UserStatus;
 import com.lanjie.booking.enums.VenueStatus;
 import com.lanjie.booking.mapper.CourtMapper;
 import com.lanjie.booking.mapper.PriceRuleMapper;
+import com.lanjie.booking.mapper.RechargePlanMapper;
+import com.lanjie.booking.mapper.UserMapper;
 import com.lanjie.booking.mapper.VenueHoursMapper;
 import com.lanjie.booking.mapper.VenueMapper;
 import com.lanjie.booking.service.SlotGenerationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalTime;
 
 /**
- * 首次启动写入演示数据（城东体育馆 + 4 片场 + 营业时间 + 价格规则），然后补齐未来 30 天格子。
- * 幂等：已有场馆数据则跳过 seed，只补格子。
+ * 首次启动写入演示数据（城东体育馆 + 4 片场 + 营业时间 + 价格规则 + 管理员 + 充值档），
+ * 然后补齐未来 30 天格子。幂等：已有数据则跳过 seed，只补格子。
  */
 @Slf4j
 @Component
@@ -32,15 +40,22 @@ public class SeedDataRunner implements ApplicationRunner {
     private final VenueHoursMapper venueHoursMapper;
     private final CourtMapper courtMapper;
     private final PriceRuleMapper priceRuleMapper;
+    private final UserMapper userMapper;
+    private final RechargePlanMapper rechargePlanMapper;
+    private final PasswordEncoder passwordEncoder;
     private final SlotGenerationService slotGenerationService;
 
     public SeedDataRunner(VenueMapper venueMapper, VenueHoursMapper venueHoursMapper,
                           CourtMapper courtMapper, PriceRuleMapper priceRuleMapper,
-                          SlotGenerationService slotGenerationService) {
+                          UserMapper userMapper, RechargePlanMapper rechargePlanMapper,
+                          PasswordEncoder passwordEncoder, SlotGenerationService slotGenerationService) {
         this.venueMapper = venueMapper;
         this.venueHoursMapper = venueHoursMapper;
         this.courtMapper = courtMapper;
         this.priceRuleMapper = priceRuleMapper;
+        this.userMapper = userMapper;
+        this.rechargePlanMapper = rechargePlanMapper;
+        this.passwordEncoder = passwordEncoder;
         this.slotGenerationService = slotGenerationService;
     }
 
@@ -49,7 +64,40 @@ public class SeedDataRunner implements ApplicationRunner {
         if (venueMapper.selectCount(null) == 0) {
             seed();
         }
+        seedAdminAndPlans();
         slotGenerationService.generateOnStartup();
+    }
+
+    /** 前台管理员账号 + 充值档位（幂等：按数量判断） */
+    private void seedAdminAndPlans() {
+        if (userMapper.selectCount(new LambdaQueryWrapper<User>()
+                .eq(User::getRole, UserRole.ADMIN)) == 0) {
+            User admin = new User();
+            admin.setPhone("13800000000");
+            admin.setPasswordHash(passwordEncoder.encode("admin123"));
+            admin.setNickname("前台王姐");
+            admin.setRole(UserRole.ADMIN);
+            admin.setStatus(UserStatus.ACTIVE);
+            admin.setCumulativeRechargeCents(0L);
+            userMapper.insert(admin);
+            log.info("seeded admin account 13800000000 / admin123");
+        }
+        if (rechargePlanMapper.selectCount(null) == 0) {
+            seedPlan(50000, 5000, "充 500 送 50", 1);
+            seedPlan(100000, 15000, "充 1000 送 150", 2);
+            seedPlan(200000, 40000, "充 2000 送 400", 3);
+            log.info("seeded recharge plans");
+        }
+    }
+
+    private void seedPlan(int amountCents, int bonusCents, String title, int sort) {
+        RechargePlan plan = new RechargePlan();
+        plan.setAmountCents(amountCents);
+        plan.setBonusCents(bonusCents);
+        plan.setTitle(title);
+        plan.setStatus("ACTIVE");
+        plan.setSort(sort);
+        rechargePlanMapper.insert(plan);
     }
 
     private void seed() {

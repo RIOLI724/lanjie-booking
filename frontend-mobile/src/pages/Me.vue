@@ -55,9 +55,12 @@ async function onLogout() {
       <span class="go">›</span>
     </router-link>
 
+    <router-link to="/wallet" class="card row-card" style="margin-top: 10px">
+      <b>我的钱包</b>
+      <span class="go">›</span>
+    </router-link>
+
     <div class="card disabled" style="margin-top: 10px">
-      <div>我的钱包</div>
-      <div style="border-top: 1px solid var(--line-2); margin: 8px 0"></div>
       <div>会员与积分</div>
     </div>
 

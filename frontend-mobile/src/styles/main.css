@@ -631,6 +631,99 @@ button {
   font-weight: 650;
 }
 
+/* ---- 钱包 / 核销码 ---- */
+.balance-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--deep-2), var(--ink));
+  border: 0;
+  padding: 26px 14px;
+  margin-bottom: 12px;
+}
+
+.balance-num {
+  color: var(--lime);
+  font-size: 34px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  min-height: 78px;
+}
+
+.plan-card b {
+  font-size: 17px;
+}
+
+.plan-card small {
+  color: var(--deep-2);
+  background: var(--paper);
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+.txn-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line-2);
+  font-size: 13px;
+}
+
+.txn-row:last-child {
+  border-bottom: 0;
+}
+
+.txn-time {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.txn-amt {
+  text-align: right;
+}
+
+.txn-amt b {
+  font-variant-numeric: tabular-nums;
+}
+
+.txn-amt .in {
+  color: var(--deep-2);
+}
+
+.txn-amt .out {
+  color: var(--danger);
+}
+
+.qr-sheet {
+  text-align: center;
+}
+
+.qr-wrap {
+  display: inline-block;
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.qr-window {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- 底部导航 ---- */
 .dock {
   position: fixed;

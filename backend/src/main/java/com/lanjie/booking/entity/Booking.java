@@ -46,6 +46,9 @@ public class Booking {
 
     private Integer rescheduleCount;
 
+    /** 一次性核销码，核销成功立即作废 */
+    private String checkinToken;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

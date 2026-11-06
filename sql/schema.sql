@@ -167,6 +167,7 @@ CREATE TABLE IF NOT EXISTS `booking`
     `checked_in_at`    DATETIME        NULL COMMENT '核销时间（W4）',
     `cancel_reason`    VARCHAR(100)    NULL,
     `reschedule_count` INT             NOT NULL DEFAULT 0,
+    `checkin_token`    VARCHAR(64)     NULL COMMENT '一次性核销码，核销成功立即作废',
     `created_at`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
@@ -202,6 +203,7 @@ CREATE TABLE IF NOT EXISTS `pay_order`
     `booking_id`         BIGINT UNSIGNED NULL,
     `user_id`            BIGINT UNSIGNED NOT NULL,
     `purpose`            VARCHAR(20)     NOT NULL DEFAULT 'BOOKING' COMMENT 'BOOKING/RECHARGE/RESCHEDULE_DIFF',
+    `biz_ref`            BIGINT UNSIGNED NULL COMMENT '业务引用：BOOKING/RESCHEDULE_DIFF→booking_id，RECHARGE→plan_id',
     `channel`            VARCHAR(20)     NOT NULL COMMENT 'WALLET/WECHAT_MOCK',
     `amount_cents`       INT             NOT NULL,
     `status`             VARCHAR(20)     NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/PAID/CLOSED/REFUNDED',
@@ -241,3 +243,89 @@ CREATE TABLE IF NOT EXISTS `idempotency_key`
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_idem` (`idem_key`, `user_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '幂等键';
+
+-- 储值钱包 -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `wallet_account`
+(
+    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`       BIGINT UNSIGNED NOT NULL,
+    `balance_cents` BIGINT          NOT NULL DEFAULT 0 COMMENT '余额（含充值赠送，不退现）',
+    `version`       INT             NOT NULL DEFAULT 0,
+    `created_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_wallet_user` (`user_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '储值钱包';
+
+-- 钱包流水（唯一键兜底幂等，带余额快照可对账）--------------------------------
+CREATE TABLE IF NOT EXISTS `wallet_txn`
+(
+    `id`                  BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`             BIGINT UNSIGNED NOT NULL,
+    `type`                VARCHAR(30)     NOT NULL COMMENT 'RECHARGE/RECHARGE_BONUS/PAY/REFUND/ADJUST',
+    `amount_cents`        BIGINT          NOT NULL COMMENT '正入负出',
+    `balance_after_cents` BIGINT          NOT NULL COMMENT '余额快照',
+    `biz_type`            VARCHAR(30)     NOT NULL COMMENT 'PAY_ORDER/REFUND_ORDER',
+    `biz_id`              BIGINT UNSIGNED NOT NULL,
+    `created_at`          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_txn_biz` (`user_id`, `type`, `biz_type`, `biz_id`),
+    KEY `idx_txn_user` (`user_id`, `created_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '钱包流水';
+
+-- 退款单（原路：钱包退钱包，微信退微信）--------------------------------------
+CREATE TABLE IF NOT EXISTS `refund_order`
+(
+    `id`                   BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `refund_no`            VARCHAR(32)     NOT NULL,
+    `pay_order_id`         BIGINT UNSIGNED NULL COMMENT '原支付单',
+    `booking_id`           BIGINT UNSIGNED NULL,
+    `user_id`              BIGINT UNSIGNED NOT NULL,
+    `amount_cents`         INT             NOT NULL,
+    `reason`               VARCHAR(100)    NULL,
+    `channel`              VARCHAR(20)     NOT NULL COMMENT '与原支付同路',
+    `status`               VARCHAR(20)     NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/SUCCESS/FAILED',
+    `third_party_refund_id` VARCHAR(64)    NULL,
+    `created_at`           DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `completed_at`         DATETIME        NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_refund_no` (`refund_no`),
+    KEY `idx_refund_booking` (`booking_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '退款单';
+
+-- 充值档位 -------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `recharge_plan`
+(
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `amount_cents` INT            NOT NULL,
+    `bonus_cents` INT             NOT NULL DEFAULT 0,
+    `title`       VARCHAR(50)     NOT NULL DEFAULT '',
+    `status`      VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',
+    `sort`        INT             NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '充值档位';
+
+-- 爽约记录（7 天内 3 次触发禁订）----------------------------------------------
+CREATE TABLE IF NOT EXISTS `no_show_record`
+(
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`    BIGINT UNSIGNED NOT NULL,
+    `booking_id` BIGINT UNSIGNED NOT NULL,
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_no_show_booking` (`booking_id`),
+    KEY `idx_no_show_user` (`user_id`, `created_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '爽约记录';
+
+-- 封禁（爽约触发，禁订 7 天）--------------------------------------------------
+CREATE TABLE IF NOT EXISTS `user_ban`
+(
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`    BIGINT UNSIGNED NOT NULL,
+    `reason`     VARCHAR(100)    NOT NULL,
+    `start_at`   DATETIME        NOT NULL,
+    `end_at`     DATETIME        NOT NULL,
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_ban_user` (`user_id`, `end_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户封禁';

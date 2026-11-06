@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import DockBar from '@/components/DockBar.vue'
 import BookingSheet from '@/components/BookingSheet.vue'
+import CheckinSheet from '@/components/CheckinSheet.vue'
 import { cancelBooking, fetchBookings, type BookingInfo } from '@/api/bookings'
 import { ApiError } from '@/api/http'
 
+const router = useRouter()
+
 const bookings = ref<BookingInfo[]>([])
 const sheetFor = ref<number | null>(null)
+const qrFor = ref<number | null>(null)
 const now = ref(Date.now())
 let timer: number | undefined
 
@@ -41,6 +46,11 @@ async function load() {
 }
 
 async function onCancel(b: BookingInfo) {
+  if (b.status === 'CONFIRMED') {
+    const refund = b.refundQuoteCents / 100
+    const ok = window.confirm(refund > 0 ? `取消后将退款 ¥${refund}，确定取消？` : '取消将不退款（距开场不足 2 小时），确定？')
+    if (!ok) return
+  }
   try {
     await cancelBooking(b.id)
     await load()
@@ -49,6 +59,10 @@ async function onCancel(b: BookingInfo) {
     await load()
     if (e instanceof ApiError && e.code !== 40402) throw e
   }
+}
+
+function onReschedule(b: BookingInfo) {
+  router.push(`/book?reschedule=${b.id}`)
 }
 
 onMounted(async () => {
@@ -83,10 +97,16 @@ onUnmounted(() => {
           <button :disabled="!remaining[b.id]" @click="onCancel(b)">取消</button>
           <button class="go-pay" :disabled="!remaining[b.id]" @click="sheetFor = b.id">去支付</button>
         </div>
+        <div v-else-if="b.status === 'CONFIRMED'" class="order-actions">
+          <button v-if="b.type === 'COURT' && b.rescheduleCount === 0" @click="onReschedule(b)">改期</button>
+          <button @click="onCancel(b)">{{ b.refundQuoteCents > 0 ? `取消退 ¥${b.refundQuoteCents / 100}` : '取消' }}</button>
+          <button class="go-pay" @click="qrFor = b.id">核销码</button>
+        </div>
       </div>
     </div>
 
     <BookingSheet v-if="sheetFor" :booking-id="sheetFor" @close="sheetFor = null" @paid="load" />
+    <CheckinSheet v-if="qrFor" :booking-id="qrFor" @close="qrFor = null" />
 
     <DockBar />
   </div>

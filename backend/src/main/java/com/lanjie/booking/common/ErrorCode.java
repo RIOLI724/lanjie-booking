@@ -22,6 +22,7 @@ public enum ErrorCode {
     USER_FROZEN(40106, "账号已被冻结，请联系前台"),
     TOKEN_INVALID(40107, "登录已失效，请重新登录"),
     PHONE_INVALID(40108, "手机号格式不正确"),
+    USER_BANNED(40109, "因爽约被暂停预订"),
 
     IDEMPOTENCY_CONFLICT(40005, "请勿重复提交"),
 
@@ -35,8 +36,14 @@ public enum ErrorCode {
     BOOKING_STATUS_INVALID(40402, "订单状态不支持该操作"),
     BOOKING_HOLD_EXPIRED(40403, "锁位已超时，请重新选场"),
     BOOKING_CANCEL_UNSUPPORTED(40404, "已支付订单的取消与退款即将开放"),
+    BOOKING_RESCHEDULE_LIMIT(40405, "每单限改期 1 次"),
+    BOOKING_RESCHEDULE_CLOSED(40406, "距开场不足 2 小时，不能改期"),
+    BOOKING_CHECKIN_TOKEN(40407, "核销码无效或已使用"),
+    BOOKING_CHECKIN_WINDOW(40408, "不在核销时间范围内"),
     PAY_ORDER_NOT_FOUND(40411, "支付单不存在"),
-    PAY_CHANNEL_UNSUPPORTED(40412, "该支付渠道暂未开放");
+    PAY_CHANNEL_UNSUPPORTED(40412, "该支付渠道暂未开放"),
+    INSUFFICIENT_BALANCE(40413, "余额不足，请先充值"),
+    PLAN_NOT_FOUND(40415, "充值档位不存在");
 
     private final int code;
     private final String message;
