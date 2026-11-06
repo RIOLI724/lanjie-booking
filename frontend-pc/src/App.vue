@@ -10,7 +10,7 @@ const phone = ref('13800000000')
 const password = ref('admin123')
 const error = ref('')
 const loading = ref(false)
-const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'customer' | 'refunds' | 'users' | 'audit' | 'finance' | 'analytics' | 'health'>('today')
+const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'pickups' | 'customer' | 'refunds' | 'users' | 'audit' | 'finance' | 'analytics' | 'health'>('today')
 
 const today = ref<Record<string, any>>({})
 const schedule = ref<Array<Record<string, any>>>([])
@@ -53,6 +53,9 @@ const walletAdjustYuan = ref(0)
 const walletAdjustReason = ref('')
 const heatmap = ref<Record<string, any>>({})
 const heatmapDays = ref(28)
+const pickupDate = ref(localToday())
+const pickupGames = ref<Array<Record<string, any>>>([])
+const pickupDetail = ref<Record<string, any> | null>(null)
 const health = ref<Record<string, any>>({})
 const evalRuns = ref<Array<Record<string, any>>>([])
 const handoffDetail = ref<Record<string, any> | null>(null)
@@ -85,6 +88,10 @@ const ACTION_TEXT: Record<string, string> = {
 }
 const AUDIT_ACTIONS = Object.keys(ACTION_TEXT)
 const COUPON_STATUS: Record<string, string> = { UNUSED: '未使用', USED: '已使用', EXPIRED: '已过期' }
+const PICKUP_STATUS: Record<string, string> = {
+  PENDING_PAYMENT: '待支付', OPEN: '报名中', FULL: '已满员', CANCELLED: '已流局/取消', COMPLETED: '已完成',
+}
+const PICKUP_ROLE: Record<string, string> = { CONFIRMED: '已确认', PENDING_PAYMENT: '待支付', CANCELLED: '已取消', NO_SHOW: '缺席' }
 
 async function api<T = any>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const response = await fetch(BASE + path, {
@@ -145,6 +152,7 @@ async function openTab(next: typeof tab.value) {
     if (next === 'audit') auditLogs.value = await api(`/admin/audit-logs?date=${auditDate.value}`)
     if (next === 'finance') await loadFinance()
     if (next === 'analytics') heatmap.value = await api(`/admin/analytics/heatmap?days=${heatmapDays.value}`)
+    if (next === 'pickups') pickupGames.value = await api(`/admin/pickups?date=${pickupDate.value}`)
     if (next === 'health') {
       health.value = await api('/admin/ai/summary')
       evalRuns.value = await api('/admin/ai/evals')
@@ -493,6 +501,67 @@ async function saveClass() {
   }
 }
 
+async function openPickupDetail(row: Record<string, any>) {
+  try {
+    pickupDetail.value = await api(`/admin/pickups/${row.id}`)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '拼场详情加载失败')
+  }
+}
+
+async function abortPickup() {
+  if (!pickupDetail.value) return
+  const game = pickupDetail.value.game
+  const reason = window.prompt('流局原因（所有人会看到）', '人数不足，场馆流局')
+  if (reason === null) return
+  if (!window.confirm(`确定流局这场 ${game.format}？\n发起人与参与者的实付将全额退回，场地释放。`)) return
+  try {
+    const refunded = await api(`/admin/pickups/${game.id}/abort`, {
+      method: 'POST', body: { reason },
+    })
+    pickupDetail.value = null
+    await openTab('pickups')
+    alert(`已流局，退款 ${refunded} 人`)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '流局失败')
+  }
+}
+
+async function markInitiatorNoShow() {
+  if (!pickupDetail.value) return
+  const game = pickupDetail.value.game
+  const reason = window.prompt('发起人缺席说明', '发起人未到场')
+  if (reason === null) return
+  if (!window.confirm('确认发起人缺席？\n参与者份子钱全额退回，发起人场地费不退，场次标记完成。')) return
+  try {
+    const refunded = await api(`/admin/pickups/${game.id}/initiator-no-show`, {
+      method: 'POST', body: { reason },
+    })
+    await openTab('pickups')
+    pickupDetail.value = await api(`/admin/pickups/${game.id}`)
+    alert(`已处理，退回 ${refunded} 份份子钱`)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '处理失败')
+  }
+}
+
+async function refundPickupShare(participant: Record<string, any>) {
+  if (!pickupDetail.value) return
+  const game = pickupDetail.value.game
+  if (!window.confirm(`退「${participant.userName}」的份子钱 ${money(participant.paidCents)}？`)) return
+  const reason = window.prompt('退款原因', '份子钱争议')
+  if (reason === null) return
+  try {
+    await api(`/admin/pickups/${game.id}/participants/${participant.participantId}/refund`, {
+      method: 'POST', body: { reason },
+    })
+    await openTab('pickups')
+    pickupDetail.value = await api(`/admin/pickups/${game.id}`)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '退款失败')
+  }
+}
+
 async function openClassDetail(row: Record<string, any>) {
   try {
     classDetail.value = await api(`/admin/group-classes/${row.id}`)
@@ -764,6 +833,7 @@ onMounted(async () => {
       <button :class="{ active: tab === 'orders' }" @click="openTab('orders')">订单处置</button>
       <button :class="{ active: tab === 'coaches' }" @click="openTab('coaches')">教练管理</button>
       <button :class="{ active: tab === 'classes' }" @click="openTab('classes')">团课管理</button>
+      <button :class="{ active: tab === 'pickups' }" @click="openTab('pickups')">拼场处置</button>
       <button :class="{ active: tab === 'analytics' }" @click="openTab('analytics')">时段分析</button>
       <button :class="{ active: tab === 'customer' }" @click="openTab('customer')">客户查询</button>
       <button :class="{ active: tab === 'refunds' }" @click="openTab('refunds')">退款记录</button>
@@ -1069,6 +1139,36 @@ onMounted(async () => {
         <p v-if="!auditLogs.length" class="empty">这天还没有敏感操作</p>
       </template>
 
+      <template v-if="tab === 'pickups'">
+        <h3>拼场处置</h3>
+        <div class="toolbar">
+          <input type="date" v-model="pickupDate" @change="openTab('pickups')" />
+          <span class="hint-inline">
+            开赛前 2 小时仍未满员会自动流局全退；发起人缺席可只退参与者份子钱，场地费不退。
+          </span>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>场地</th><th>赛制</th><th>发起人</th><th>人数</th><th>状态</th><th>结算</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr v-for="g in pickupGames" :key="g.id">
+              <td>{{ String(g.startAt).slice(11, 16) }} – {{ String(g.endAt).slice(11, 16) }}</td>
+              <td>{{ g.courtName }}</td>
+              <td>{{ g.format }}</td>
+              <td>{{ g.initiatorName }}<br /><small>{{ g.initiatorPhone }}</small></td>
+              <td>{{ g.joinedPlayers }}/{{ g.totalPlayers }}</td>
+              <td>
+                <span class="chip" :class="g.status === 'CANCELLED' ? 'bad' : g.status === 'COMPLETED' ? 'ok' : 'warn'">
+                  {{ PICKUP_STATUS[g.status] ?? g.status }}
+                </span>
+              </td>
+              <td>{{ g.settled ? '已结算' : '未结算' }}</td>
+              <td><button class="btn sm ghost" @click="openPickupDetail(g)">查看 / 处置</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="!pickupGames.length" class="empty">这天没有拼场</p>
+      </template>
+
       <template v-if="tab === 'analytics'">
         <h3>时段分析</h3>
         <div class="toolbar">
@@ -1251,6 +1351,52 @@ onMounted(async () => {
         </table>
       </template>
     </main>
+
+    <div v-if="pickupDetail" class="modal-mask" @click.self="pickupDetail = null">
+      <div class="modal">
+        <div class="modal-head">
+          <b>{{ pickupDetail.courtName }} · {{ pickupDetail.game.format }} 拼场</b>
+          <button class="modal-close" @click="pickupDetail = null">✕</button>
+        </div>
+        <div class="detail-grid">
+          <div><small>时间</small><b>{{ String(pickupDetail.startAt).slice(5, 16).replace('T', ' ') }} – {{ String(pickupDetail.endAt).slice(11, 16) }}</b></div>
+          <div><small>发起人</small><b>{{ pickupDetail.roster.find((r: any) => r.initiator)?.userName ?? '—' }}</b></div>
+          <div><small>人数</small><b>{{ pickupDetail.game.joinedPlayers }}/{{ pickupDetail.game.totalPlayers }}</b></div>
+          <div><small>份子钱</small><b>{{ money(pickupDetail.game.pricePerPersonCents) }}/人</b></div>
+          <div><small>状态</small><b>{{ PICKUP_STATUS[pickupDetail.game.status] ?? pickupDetail.game.status }}</b></div>
+          <div><small>结算</small><b>{{ pickupDetail.game.settled ? '已结算' : '未结算' }}</b></div>
+        </div>
+
+        <h4>报名名单</h4>
+        <table>
+          <thead><tr><th>顾客</th><th>手机号</th><th>身份</th><th>报名状态</th><th>支付</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr v-for="p in pickupDetail.roster" :key="p.participantId">
+              <td>{{ p.userName }}</td>
+              <td>{{ p.userPhone }}</td>
+              <td>{{ p.initiator ? '发起人' : '参与者' }}</td>
+              <td>
+                <span class="chip" :class="p.status === 'CANCELLED' ? 'bad' : p.status === 'NO_SHOW' ? 'bad' : 'ok'">
+                  {{ PICKUP_ROLE[p.status] ?? p.status }}
+                </span>
+              </td>
+              <td>{{ BSTATUS_TEXT[p.bookingStatus] ?? p.bookingStatus }} · {{ money(p.paidCents) }}</td>
+              <td>
+                <button v-if="isManager && !p.initiator && !['CANCELLED', 'NO_SHOW'].includes(p.status)"
+                        class="btn sm ghost" @click="refundPickupShare(p)">退份子钱</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="!pickupDetail.roster?.length" class="empty">还没有报名记录</p>
+
+        <div class="ops-row" v-if="isManager && ['OPEN', 'FULL'].includes(pickupDetail.game.status)">
+          <button class="btn sm danger" @click="abortPickup">流局并全额退款</button>
+          <button class="btn sm ghost" @click="markInitiatorNoShow">发起人缺席处理</button>
+        </div>
+        <p class="hint-line" v-if="!isManager">流局、缺席和份子钱退款需要店长处理。</p>
+      </div>
+    </div>
 
     <div v-if="coachForm" class="modal-mask" @click.self="coachForm = null">
       <div class="modal">

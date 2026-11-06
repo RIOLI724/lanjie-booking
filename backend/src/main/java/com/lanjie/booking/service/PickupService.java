@@ -40,6 +40,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -395,6 +396,14 @@ public class PickupService {
             if (slot == null) {
                 continue;
             }
+            // 开赛前 2 小时内仍未满员：自动流局，所有人全额退款并释放场地；
+            // 已开赛的不再追溯，按原结算规则处理
+            if (game.getJoinedPlayers() < game.getTotalPlayers()
+                    && slot.getStartAt().isAfter(now)
+                    && !slot.getStartAt().isAfter(now.plusHours(2))) {
+                abortGame(game, "人数不足，自动流局", "SYSTEM");
+                continue;
+            }
             if (slot.getStartAt().plusHours(1).isAfter(now)) {
                 continue;
             }
@@ -419,6 +428,208 @@ public class PickupService {
                 gameMapper.updateStatus(game.getId(), "COMPLETED");
             }
         }
+    }
+
+    // ---- 管理端处置：流局 / 发起人缺席 / 单个份子钱争议 ----
+
+    public List<Map<String, Object>> adminGames(LocalDate date, String status) {
+        List<PickupGame> games = gameMapper.selectList(new LambdaQueryWrapper<PickupGame>()
+                .orderByDesc(PickupGame::getId).last("LIMIT 200"));
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (PickupGame game : games) {
+            Slot slot = slotMapper.selectById(game.getSlotId());
+            if (slot == null || (date != null && !date.equals(slot.getSlotDate()))) {
+                continue;
+            }
+            if (status != null && !status.isBlank() && !status.equals(game.getStatus())) {
+                continue;
+            }
+            Court court = courtMapper.selectById(slot.getCourtId());
+            User initiator = userMapper.selectById(game.getInitiatorId());
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", game.getId());
+            row.put("status", game.getStatus());
+            row.put("format", game.getFormat());
+            row.put("courtName", court != null ? court.getName() : "");
+            row.put("startAt", slot.getStartAt());
+            row.put("endAt", slot.getEndAt());
+            row.put("pricePerPersonCents", game.getPricePerPersonCents());
+            row.put("joinedPlayers", game.getJoinedPlayers());
+            row.put("totalPlayers", game.getTotalPlayers());
+            row.put("settled", game.getSettled());
+            row.put("initiatorId", game.getInitiatorId());
+            row.put("initiatorName", initiator != null ? initiator.getNickname() : "");
+            row.put("initiatorPhone", initiator != null ? initiator.getPhone() : "");
+            row.put("createdAt", game.getCreatedAt());
+            result.add(row);
+        }
+        return result;
+    }
+
+    public Map<String, Object> adminDetail(Long gameId) {
+        PickupGame game = load(gameId);
+        Slot slot = slotMapper.selectById(game.getSlotId());
+        Court court = slot != null ? courtMapper.selectById(slot.getCourtId()) : null;
+        List<PickupParticipant> participants = participantMapper.selectList(
+                new LambdaQueryWrapper<PickupParticipant>()
+                        .eq(PickupParticipant::getGameId, gameId)
+                        .orderByAsc(PickupParticipant::getCreatedAt));
+        List<Map<String, Object>> roster = new ArrayList<>();
+        for (PickupParticipant participant : participants) {
+            User user = userMapper.selectById(participant.getUserId());
+            Booking booking = participant.getBookingId() != null
+                    ? bookingMapper.selectById(participant.getBookingId()) : null;
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("participantId", participant.getId());
+            row.put("userId", participant.getUserId());
+            row.put("userName", user != null ? user.getNickname() : "");
+            row.put("userPhone", user != null ? user.getPhone() : "");
+            row.put("status", participant.getStatus());
+            row.put("bookingId", participant.getBookingId());
+            row.put("bookingStatus", booking != null ? booking.getStatus().name() : "");
+            row.put("paidCents", booking != null ? booking.getPaidCents() : 0);
+            row.put("initiator", game.getInitiatorId().equals(participant.getUserId()));
+            roster.add(row);
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("game", game);
+        data.put("courtName", court != null ? court.getName() : "");
+        data.put("startAt", slot != null ? slot.getStartAt() : null);
+        data.put("endAt", slot != null ? slot.getEndAt() : null);
+        data.put("roster", roster);
+        return data;
+    }
+
+    /** 店长手动流局：所有人（含发起人）全额退款，释放场地。 */
+    @Transactional
+    public int adminAbort(Long gameId, String reason) {
+        PickupGame game = load(gameId);
+        if ("CANCELLED".equals(game.getStatus()) || "COMPLETED".equals(game.getStatus())) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "该拼场已结束或已取消");
+        }
+        String safeReason = reason == null || reason.isBlank() ? "场馆原因流局" : reason;
+        return abortGame(game, safeReason, "ADMIN");
+    }
+
+    /** 发起人缺席：退所有参与者份子钱，发起人场地费不退，场次标记完成。 */
+    @Transactional
+    public int adminInitiatorNoShow(Long gameId, String reason) {
+        PickupGame game = load(gameId);
+        if (!"OPEN".equals(game.getStatus()) && !"FULL".equals(game.getStatus())) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "当前拼场状态不能做缺席处理");
+        }
+        if (Boolean.TRUE.equals(game.getSettled())) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "该场次已结算");
+        }
+        String safeReason = reason == null || reason.isBlank() ? "发起人缺席" : reason;
+        int refunded = 0;
+        for (PickupParticipant participant : participantMapper.selectList(
+                new LambdaQueryWrapper<PickupParticipant>()
+                        .eq(PickupParticipant::getGameId, gameId)
+                        .ne(PickupParticipant::getUserId, game.getInitiatorId())
+                        .in(PickupParticipant::getStatus, "CONFIRMED", "PENDING_PAYMENT"))) {
+            Booking booking = bookingMapper.selectById(participant.getBookingId());
+            if (booking != null && booking.getStatus() == BookingStatus.CONFIRMED) {
+                if (bookingMapper.markCancelledConfirmed(booking.getId(), "INITIATOR_NO_SHOW") > 0
+                        && booking.getPaidCents() > 0) {
+                    refundService.refundForReschedule(booking, booking.getPaidCents(), safeReason);
+                    refunded++;
+                }
+            } else if (booking != null && booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+                bookingMapper.markCancelled(booking.getId(), "INITIATOR_NO_SHOW");
+            }
+            participant.setStatus("CANCELLED");
+            participantMapper.updateById(participant);
+        }
+        PickupParticipant initiator = participantMapper.selectOne(new LambdaQueryWrapper<PickupParticipant>()
+                .eq(PickupParticipant::getGameId, gameId)
+                .eq(PickupParticipant::getUserId, game.getInitiatorId())
+                .last("LIMIT 1"));
+        if (initiator != null) {
+            initiator.setStatus("NO_SHOW");
+            participantMapper.updateById(initiator);
+        }
+        Booking initiatorBooking = bookingMapper.selectById(game.getBookingId());
+        if (initiatorBooking != null && initiatorBooking.getStatus() == BookingStatus.CONFIRMED) {
+            initiatorBooking.setStatus(BookingStatus.NO_SHOW);
+            initiatorBooking.setCancelReason("PICKUP_INITIATOR_NO_SHOW");
+            bookingMapper.updateById(initiatorBooking);
+            audit.write(initiatorBooking.getId(), BookingStatus.CONFIRMED.name(), BookingStatus.NO_SHOW.name(),
+                    "ADMIN", safeReason);
+        }
+        gameMapper.markSettled(gameId);
+        gameMapper.updateStatus(gameId, "COMPLETED");
+        log.warn("pickup initiator no-show: game={} refunded={}", gameId, refunded);
+        return refunded;
+    }
+
+    /** 单个参与者份子钱争议：全额退款并释放坑位。 */
+    @Transactional
+    public void adminRefundParticipant(Long gameId, Long participantId, String reason) {
+        PickupGame game = load(gameId);
+        PickupParticipant participant = participantMapper.selectById(participantId);
+        if (participant == null || !participant.getGameId().equals(gameId)) {
+            throw new BusinessException(ErrorCode.BOOKING_NOT_FOUND, "报名记录不存在");
+        }
+        if (game.getInitiatorId().equals(participant.getUserId())) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "发起人退款请走整场流局");
+        }
+        if ("CANCELLED".equals(participant.getStatus())) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "该报名已取消");
+        }
+        Booking booking = bookingMapper.selectById(participant.getBookingId());
+        if (booking != null && booking.getStatus() == BookingStatus.CONFIRMED) {
+            if (bookingMapper.markCancelledConfirmed(booking.getId(), "PICKUP_SHARE_REFUND") > 0
+                    && booking.getPaidCents() > 0) {
+                refundService.refundForReschedule(booking, booking.getPaidCents(),
+                        reason == null || reason.isBlank() ? "份子钱争议退款" : reason);
+            }
+        } else if (booking != null && booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+            bookingMapper.markCancelled(booking.getId(), "PICKUP_SHARE_REFUND");
+        }
+        participant.setStatus("CANCELLED");
+        participantMapper.updateById(participant);
+        gameMapper.leaveOne(gameId);
+        PickupGame fresh = gameMapper.selectById(gameId);
+        if (fresh != null && "FULL".equals(fresh.getStatus())) {
+            gameMapper.updateStatus(gameId, "OPEN");
+        }
+        if (booking != null) {
+            audit.write(booking.getId(), BookingStatus.CONFIRMED.name(), BookingStatus.CANCELLED.name(),
+                    "ADMIN", "份子钱退款：" + reason);
+        }
+    }
+
+    private int abortGame(PickupGame game, String reason, String actor) {
+        if ("CANCELLED".equals(game.getStatus()) || "COMPLETED".equals(game.getStatus())) {
+            return 0;
+        }
+        String fromStatus = game.getStatus();
+        int refunded = 0;
+        for (PickupParticipant participant : participantMapper.selectList(
+                new LambdaQueryWrapper<PickupParticipant>()
+                        .eq(PickupParticipant::getGameId, game.getId())
+                        .in(PickupParticipant::getStatus, "CONFIRMED", "PENDING_PAYMENT", "NO_SHOW"))) {
+            Booking booking = bookingMapper.selectById(participant.getBookingId());
+            if (booking != null && booking.getStatus() == BookingStatus.CONFIRMED) {
+                if (bookingMapper.markCancelledConfirmed(booking.getId(), "PICKUP_ABORTED") > 0
+                        && booking.getPaidCents() > 0) {
+                    refundService.refundForReschedule(booking, booking.getPaidCents(), reason);
+                    refunded++;
+                }
+            } else if (booking != null && booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+                bookingMapper.markCancelled(booking.getId(), "PICKUP_ABORTED");
+            }
+            participant.setStatus("CANCELLED");
+            participantMapper.updateById(participant);
+        }
+        // 发起人付的是整场，释放场地（含锁位中的情况）
+        slotMapper.releaseBookedByBooking(game.getBookingId());
+        slotMapper.releaseByBooking(game.getBookingId());
+        gameMapper.updateStatus(game.getId(), "CANCELLED");
+        audit.write(game.getBookingId(), fromStatus, "CANCELLED", actor, reason);
+        log.warn("pickup game aborted: id={} reason={} refunded={}", game.getId(), reason, refunded);
+        return refunded;
     }
 
     private PickupGameVO toVO(PickupGame game, Long viewerId) {

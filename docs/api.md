@@ -85,7 +85,7 @@
 | POST `/api/v1/ai/messages/{id}/feedback` | 点赞/点踩 |
 | POST `/api/v1/ai/sessions/{id}/handoff` | 转人工 |
 
-## 第 6 组 管理端（当前已实现 41）
+## 第 6 组 管理端（当前已实现 46）
 
 > 进度：核销 / 看板 / 排期 / 订单处置 / 教练排班请假 / 团课 / 客户运营 / 审计 / 财务 / 退款 / 用户 / AI 运营均已实现。
 
@@ -125,6 +125,11 @@
 | GET `/api/v1/admin/finance/transactions?from=&to=&direction=` | 收支流水 |
 | GET `/api/v1/admin/finance/export?from=&to=` | 导出 CSV（UTF-8 BOM） |
 | GET `/api/v1/admin/analytics/heatmap?days=` | 场地 × 时段占用热力与冷热建议 |
+| GET `/api/v1/admin/pickups?date=&status=` | 拼场列表（含人数/结算/发起人） |
+| GET `/api/v1/admin/pickups/{id}` | 拼场详情 + 报名与支付 |
+| POST `/api/v1/admin/pickups/{id}/abort` | 流局：所有人全额退款并释放场地 |
+| POST `/api/v1/admin/pickups/{id}/initiator-no-show` | 发起人缺席：退参与者份子钱，场地费不退 |
+| POST `/api/v1/admin/pickups/{id}/participants/{pid}/refund` | 单个份子钱争议退款 |
 | GET `/api/v1/admin/ai/summary` | AI 质量摘要 |
 | GET `/api/v1/admin/ai/handoffs` | 转人工工单 |
 | GET `/api/v1/admin/ai/handoffs/{id}/detail` | 工单对话详情 |
