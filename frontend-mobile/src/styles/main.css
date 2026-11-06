@@ -830,3 +830,6 @@ button {
 
 .pwd-toggle { flex: 0 0 auto; border: 1px solid var(--line); background: #fff; color: var(--deep); font-size: 12px; padding: 0 10px; border-radius: 10px; cursor: pointer; }
 .pwd-toggle:active { background: var(--paper); }
+
+.pwd-toggle { width: 46px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.pwd-toggle svg { display: block; }

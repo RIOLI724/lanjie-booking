@@ -824,7 +824,20 @@ onMounted(async () => {
         <div class="pwd-wrap">
           <input v-model="password" :type="showPassword ? 'text' : 'password'" @keyup.enter="login" />
           <button type="button" class="pwd-toggle" :aria-label="showPassword ? '隐藏密码' : '显示密码'"
-                  @click="showPassword = !showPassword">{{ showPassword ? '隐藏' : '显示' }}</button>
+                  @click="showPassword = !showPassword">
+            <svg v-if="!showPassword" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" width="18" height="18" fill="none"
+                 stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3l18 18" />
+              <path d="M10.6 6.1A10.8 10.8 0 0112 6c6.5 0 10 6 10 6a17.8 17.8 0 01-3.2 3.9" />
+              <path d="M6.7 6.7A17.6 17.6 0 002 12s3.5 6 10 6a10.7 10.7 0 004.1-.8" />
+              <path d="M9.9 9.9a3 3 0 004.2 4.2" />
+            </svg>
+          </button>
         </div>
       </div>
       <p v-if="error" class="err">{{ error }}</p>
