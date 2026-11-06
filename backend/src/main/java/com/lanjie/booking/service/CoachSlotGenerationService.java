@@ -17,9 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 /**
  * 教练档期滚动生成：按每周规则生成未来 30 天、1 小时一格；(coach_id, start_at) 唯一键幂等。
@@ -93,17 +93,24 @@ public class CoachSlotGenerationService {
         if (rules.isEmpty()) {
             return 0;
         }
-        Set<LocalTime> existing = new HashSet<>();
+        Map<LocalTime, CoachSlot> existing = new HashMap<>();
         for (CoachSlot slot : coachSlotMapper.selectList(new LambdaQueryWrapper<CoachSlot>()
                 .eq(CoachSlot::getCoachId, coach.getId())
                 .apply("DATE(start_at) = {0}", date))) {
-            existing.add(slot.getStartAt().toLocalTime());
+            existing.put(slot.getStartAt().toLocalTime(), slot);
         }
         int created = 0;
         for (CoachScheduleRule rule : rules) {
             for (LocalTime start = rule.getStartTime();
                  start.plusHours(1).compareTo(rule.getEndTime()) <= 0; start = start.plusHours(1)) {
-                if (existing.contains(start)) {
+                CoachSlot existingSlot = existing.get(start);
+                if (existingSlot != null) {
+                    // 无主的 CLOSED 格子（改规则/取消请假后）重开
+                    if (existingSlot.getStatus() == SlotStatus.CLOSED && existingSlot.getOwnerId() == null) {
+                        existingSlot.setStatus(SlotStatus.AVAILABLE);
+                        coachSlotMapper.updateById(existingSlot);
+                        created++;
+                    }
                     continue;
                 }
                 CoachSlot slot = new CoachSlot();

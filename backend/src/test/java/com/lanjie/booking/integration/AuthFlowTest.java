@@ -3,8 +3,6 @@ package com.lanjie.booking.integration;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -21,13 +19,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 注册登录全链路（发码 → 注册 → 我的信息 → 密码登录 → 刷新轮换 → 登出）。
  * 依赖本机 MySQL/Redis（CI 中由服务容器提供），验证码为 dev 固定值 123456。
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class AuthFlowTest {
+class AuthFlowTest extends IntegrationTestBase {
 
     private static final String DEV_CODE = "123456";
 
-    @Autowired
-    private TestRestTemplate restTemplate;
 
     @Test
     void fullAuthFlow() {

@@ -4,8 +4,6 @@ import com.jayway.jsonpath.JsonPath;
 import com.lanjie.booking.service.SlotGenerationService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -26,17 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * W2 集成测试：格子生成幂等、价格快照正确、订场表接口可用。
  * 依赖本机 MySQL/Redis（CI 由服务容器提供）；演示验证码 123456。
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class SlotModuleTest {
+class SlotModuleTest extends IntegrationTestBase {
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;
 
     @Autowired
-    private TestRestTemplate restTemplate;
-    @Autowired
     private SlotGenerationService generationService;
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
 
     @Test
     void generationIsIdempotentAndPricesAreSnapshotted() {

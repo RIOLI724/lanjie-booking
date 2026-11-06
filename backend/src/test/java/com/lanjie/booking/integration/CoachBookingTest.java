@@ -10,8 +10,6 @@ import com.lanjie.booking.mapper.CoachSlotMapper;
 import com.lanjie.booking.mapper.SlotMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -29,19 +27,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** W5 集成测试：教练档期、私教双资源锁、课包购买/核销/退回 */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class CoachBookingTest {
+class CoachBookingTest extends IntegrationTestBase {
 
-    @Autowired
-    private TestRestTemplate restTemplate;
     @Autowired
     private CoachSlotMapper coachSlotMapper;
     @Autowired
     private SlotMapper slotMapper;
     @Autowired
     private CoachPackageMapper coachPackageMapper;
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
 
     @Test
     void coachListedWithSlots() {
@@ -169,7 +162,13 @@ class CoachBookingTest {
     private long serviceIdOf(long coachId) {
         ResponseEntity<String> coach = get("/api/v1/coaches/" + coachId, registerAndLogin());
         assertEquals(0, code(coach));
-        return readLong(coach.getBody(), "$.data.services[0].id");
+        int n = ((Number) JsonPath.read(coach.getBody(), "$.data.services.length()")).intValue();
+        for (int i = 0; i < n; i++) {
+            if ("PRIVATE".equals(JsonPath.read(coach.getBody(), "$.data.services[" + i + "].type"))) {
+                return readLong(coach.getBody(), "$.data.services[" + i + "].id");
+            }
+        }
+        throw new AssertionError("coach has no private service");
     }
 
     private Slot courtSlotAt(LocalDateTime startAt) {

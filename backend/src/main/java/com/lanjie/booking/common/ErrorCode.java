@@ -26,6 +26,8 @@ public enum ErrorCode {
 
     IDEMPOTENCY_CONFLICT(40005, "请勿重复提交"),
 
+    FORBIDDEN(40301, "无权限"),
+
     SLOT_TAKEN(40901, "该时段刚被抢订，请换一个时段"),
     SLOT_NOT_CONTIGUOUS(40902, "只能连选同一场地的连续时段"),
     SLOT_TOO_MANY(40903, "一次最多连选 4 格"),

@@ -78,13 +78,17 @@ public class BookingService {
     private final UserBanMapper userBanMapper;
     private final BookingAuditService audit;
     private final RefundService refundService;
+    @org.springframework.context.annotation.Lazy
+    private final GroupClassService groupClassService;
     private final StringRedisTemplate redis;
 
     public BookingService(UserMapper userMapper, CourtMapper courtMapper, SlotMapper slotMapper,
                           CoachSlotMapper coachSlotMapper, CoachPackageMapper coachPackageMapper,
                           BookingMapper bookingMapper, BookingItemMapper bookingItemMapper,
                           PayOrderMapper payOrderMapper, UserBanMapper userBanMapper,
-                          BookingAuditService audit, RefundService refundService, StringRedisTemplate redis) {
+                          BookingAuditService audit, RefundService refundService,
+                          @org.springframework.context.annotation.Lazy GroupClassService groupClassService,
+                          StringRedisTemplate redis) {
         this.userMapper = userMapper;
         this.courtMapper = courtMapper;
         this.slotMapper = slotMapper;
@@ -96,6 +100,7 @@ public class BookingService {
         this.userBanMapper = userBanMapper;
         this.audit = audit;
         this.refundService = refundService;
+        this.groupClassService = groupClassService;
         this.redis = redis;
     }
 
@@ -226,8 +231,36 @@ public class BookingService {
             }
             slotMapper.releaseByBooking(booking.getId());
             coachSlotMapper.releaseByBooking(booking.getId());
+            if (booking.getType() == BookingType.GROUP) {
+                Long classId = groupClassIdOf(booking.getId());
+                if (classId != null) {
+                    groupClassService.onSeatReleased(classId, booking.getUserId());
+                }
+            }
             audit.write(booking.getId(), BookingStatus.PENDING_PAYMENT.name(),
                     BookingStatus.CANCELLED.name(), "USER", "用户取消");
+            return;
+        }
+        if (booking.getType() == BookingType.GROUP && booking.getStatus() == BookingStatus.CONFIRMED) {
+            // 团课：开场前 ≥24h 全退；<24h 不退（硬边界）。取消后触发候补递补
+            LocalDateTime firstStart = firstItemStart(bookingId);
+            boolean freeCancel = LocalDateTime.now().isBefore(firstStart.minusHours(24));
+            int refund = 0;
+            if (freeCancel && booking.getPaidCents() > 0) {
+                refund = booking.getPaidCents();
+                refundService.refundForReschedule(booking, refund, "取消团课（24h 前全退）");
+            }
+            if (bookingMapper.markCancelledConfirmed(booking.getId(),
+                    freeCancel ? "USER_CANCEL_24H" : "USER_CANCEL_LATE") == 0) {
+                throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID);
+            }
+            Long classId = groupClassIdOf(booking.getId());
+            if (classId != null) {
+                groupClassService.onSeatReleased(classId, booking.getUserId());
+            }
+            audit.write(booking.getId(), BookingStatus.CONFIRMED.name(),
+                    BookingStatus.CANCELLED.name(), "USER",
+                    freeCancel ? "取消团课，退款 " + refund + " 分" : "24h 内取消团课，不退");
             return;
         }
         if (booking.getType() == BookingType.COACH && booking.getStatus() == BookingStatus.CONFIRMED) {
@@ -514,6 +547,14 @@ public class BookingService {
                     slot.getStartAt().toLocalTime(), slot.getEndAt().toLocalTime());
             bookingItemMapper.insert(toItem(bookingId, slot, title));
         }
+    }
+
+    private Long groupClassIdOf(Long bookingId) {
+        BookingItem item = bookingItemMapper.selectOne(new LambdaQueryWrapper<BookingItem>()
+                .eq(BookingItem::getBookingId, bookingId)
+                .eq(BookingItem::getItemType, BookingItemType.GROUP_SEAT)
+                .last("LIMIT 1"));
+        return item != null ? item.getRefId() : null;
     }
 
     private LocalDateTime firstItemStart(Long bookingId) {

@@ -6,8 +6,6 @@ import com.lanjie.booking.entity.Slot;
 import com.lanjie.booking.mapper.SlotMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -28,17 +26,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * W4 集成测试：钱包（充值/余额支付/幂等）、退款阶梯、改期多退少补。
  * 阶梯比例的边界由 RefundLadderTest 钉死；这里用 jdbc 平移场次时间来固定比例档位。
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class AfterSalesTest {
+class AfterSalesTest extends IntegrationTestBase {
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE;
 
     @Autowired
-    private TestRestTemplate restTemplate;
-    @Autowired
     private SlotMapper slotMapper;
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
 
     @Test
     void walletRechargeAndBalancePayment() {

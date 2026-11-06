@@ -6,8 +6,6 @@ import com.lanjie.booking.mapper.SlotMapper;
 import com.lanjie.booking.scheduler.ReleaseScheduler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -26,17 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * W3 集成测试：锁位 → 支付 → 状态机的全链路，以及并发抢场、幂等、超时释放、日限。
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class BookingFlowTest {
+class BookingFlowTest extends IntegrationTestBase {
 
-    @Autowired
-    private TestRestTemplate restTemplate;
     @Autowired
     private SlotMapper slotMapper;
     @Autowired
     private ReleaseScheduler releaseScheduler;
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
 
     @Test
     void twoWindowsRaceForSameSlot() {

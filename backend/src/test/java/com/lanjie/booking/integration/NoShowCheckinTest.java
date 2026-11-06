@@ -7,8 +7,6 @@ import com.lanjie.booking.mapper.SlotMapper;
 import com.lanjie.booking.scheduler.NoShowScheduler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -26,17 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** W4 集成测试：核销码（一次性 + 时间窗）与爽约封禁（3 次/7 天 → 禁订 7 天） */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class NoShowCheckinTest {
+class NoShowCheckinTest extends IntegrationTestBase {
 
-    @Autowired
-    private TestRestTemplate restTemplate;
     @Autowired
     private SlotMapper slotMapper;
     @Autowired
     private NoShowScheduler noShowScheduler;
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
 
     @Test
     void checkinTokenIsOneTimeAndWindowed() {
