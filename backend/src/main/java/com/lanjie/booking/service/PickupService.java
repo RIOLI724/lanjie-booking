@@ -574,6 +574,12 @@ public class PickupService {
         if (game.getInitiatorId().equals(participant.getUserId())) {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "发起人退款请走整场流局");
         }
+        if (!"OPEN".equals(game.getStatus()) && !"FULL".equals(game.getStatus())) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "已结束的拼场不能再退份子钱");
+        }
+        if (Boolean.TRUE.equals(game.getSettled())) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "该场次已结算");
+        }
         if ("CANCELLED".equals(participant.getStatus())) {
             throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "该报名已取消");
         }
