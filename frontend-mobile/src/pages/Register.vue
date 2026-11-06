@@ -62,7 +62,6 @@ onUnmounted(() => {
   <div class="page-auth">
     <div class="brand">
       <h1>注册<span>篮界</span></h1>
-      <small>注册后即可订场 · 验证码登录无需密码</small>
     </div>
 
     <label class="field">
@@ -99,6 +98,5 @@ onUnmounted(() => {
     <p class="hint">
       已有账号？<router-link to="/login">直接登录</router-link>
     </p>
-    <p class="hint">演示环境：验证码固定为 123456</p>
   </div>
 </template>

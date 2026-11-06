@@ -50,13 +50,12 @@ async function onLogout() {
       </span>
     </div>
 
-    <p class="section-label">以下入口随排期逐周开通</p>
     <div class="card disabled">
-      <div>我的订单 · W3</div>
+      <div>我的订单</div>
       <div style="border-top: 1px solid var(--line-2); margin: 8px 0"></div>
-      <div>我的钱包 · W4</div>
+      <div>我的钱包</div>
       <div style="border-top: 1px solid var(--line-2); margin: 8px 0"></div>
-      <div>会员与积分 · W8</div>
+      <div>会员与积分</div>
     </div>
 
     <button class="btn-ghost" style="width: 100%; padding: 11px; margin-top: 14px" @click="onLogout">退出登录</button>

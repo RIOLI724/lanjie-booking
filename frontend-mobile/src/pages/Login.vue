@@ -102,6 +102,5 @@ onUnmounted(() => {
     <p class="hint">
       还没有账号？<router-link to="/register">手机号注册</router-link>
     </p>
-    <p class="hint">演示环境：验证码固定为 123456</p>
   </div>
 </template>
