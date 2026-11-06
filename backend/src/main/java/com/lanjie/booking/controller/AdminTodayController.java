@@ -256,10 +256,23 @@ public class AdminTodayController {
     @GetMapping("/ai/summary")
     public Result<Map<String, Object>> aiSummary() {
         LocalDateTime dayStart = LocalDate.now().atStartOfDay();
-        long sessionsToday = sessionMapper.selectCount(new LambdaQueryWrapper<AiSession>()
-                .ge(AiSession::getStartedAt, dayStart));
-        long handoffsToday = handoffMapper.selectCount(new LambdaQueryWrapper<AiHandoff>()
-                .ge(AiHandoff::getCreatedAt, dayStart));
+        // 只统计真实顾客：评测/自测走的是管理员账号，不算“AI 接待”
+        long sessionsToday = 0;
+        for (AiSession session : sessionMapper.selectList(new LambdaQueryWrapper<AiSession>()
+                .ge(AiSession::getStartedAt, dayStart))) {
+            User user = userMapper.selectById(session.getUserId());
+            if (user == null || user.getRole() != com.lanjie.booking.enums.UserRole.ADMIN) {
+                sessionsToday++;
+            }
+        }
+        long handoffsToday = 0;
+        for (AiHandoff handoff : handoffMapper.selectList(new LambdaQueryWrapper<AiHandoff>()
+                .ge(AiHandoff::getCreatedAt, dayStart))) {
+            User user = userMapper.selectById(handoff.getUserId());
+            if (user == null || user.getRole() != com.lanjie.booking.enums.UserRole.ADMIN) {
+                handoffsToday++;
+            }
+        }
         AiEvalRun latest = evalRunMapper.selectOne(new LambdaQueryWrapper<AiEvalRun>()
                 .orderByDesc(AiEvalRun::getId).last("LIMIT 1"));
         List<Map<String, Object>> failedCases = new ArrayList<>();
