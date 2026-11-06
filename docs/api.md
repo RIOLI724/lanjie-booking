@@ -124,6 +124,7 @@
 | GET `/api/v1/admin/finance/summary?days=` | 营收/退款/净收入/趋势/构成 |
 | GET `/api/v1/admin/finance/transactions?from=&to=&direction=` | 收支流水 |
 | GET `/api/v1/admin/finance/export?from=&to=` | 导出 CSV（UTF-8 BOM） |
+| GET `/api/v1/admin/analytics/heatmap?days=` | 场地 × 时段占用热力与冷热建议 |
 | GET `/api/v1/admin/ai/summary` | AI 质量摘要 |
 | GET `/api/v1/admin/ai/handoffs` | 转人工工单 |
 | GET `/api/v1/admin/ai/handoffs/{id}/detail` | 工单对话详情 |
