@@ -4,11 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lanjie.booking.common.Result;
 import com.lanjie.booking.entity.AiHandoff;
 import com.lanjie.booking.entity.AiEvalRun;
+import com.lanjie.booking.entity.AiMessage;
 import com.lanjie.booking.entity.AiSession;
 import com.lanjie.booking.entity.AiToolCall;
+import com.lanjie.booking.entity.User;
 import com.lanjie.booking.mapper.AiHandoffMapper;
+import com.lanjie.booking.mapper.AiMessageMapper;
 import com.lanjie.booking.mapper.AiSessionMapper;
 import com.lanjie.booking.mapper.AiToolCallMapper;
+import com.lanjie.booking.mapper.UserMapper;
 import com.lanjie.booking.service.AiEvalService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,13 +35,18 @@ public class AdminAiController {
     private final AiSessionMapper sessionMapper;
     private final AiToolCallMapper toolCallMapper;
     private final AiHandoffMapper handoffMapper;
+    private final AiMessageMapper messageMapper;
+    private final UserMapper userMapper;
     private final AiEvalService evalService;
 
     public AdminAiController(AiSessionMapper sessionMapper, AiToolCallMapper toolCallMapper,
-                             AiHandoffMapper handoffMapper, AiEvalService evalService) {
+                             AiHandoffMapper handoffMapper, AiMessageMapper messageMapper,
+                             UserMapper userMapper, AiEvalService evalService) {
         this.sessionMapper = sessionMapper;
         this.toolCallMapper = toolCallMapper;
         this.handoffMapper = handoffMapper;
+        this.messageMapper = messageMapper;
+        this.userMapper = userMapper;
         this.evalService = evalService;
     }
 
@@ -59,9 +68,44 @@ public class AdminAiController {
     }
 
     @GetMapping("/handoffs")
-    public Result<List<AiHandoff>> handoffs() {
-        return Result.ok(handoffMapper.selectList(new LambdaQueryWrapper<AiHandoff>()
-                .orderByAsc(AiHandoff::getStatus).orderByDesc(AiHandoff::getId).last("LIMIT 50")));
+    public Result<List<Map<String, Object>>> handoffs() {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (AiHandoff handoff : handoffMapper.selectList(new LambdaQueryWrapper<AiHandoff>()
+                .orderByAsc(AiHandoff::getStatus).orderByDesc(AiHandoff::getId).last("LIMIT 50"))) {
+            User user = userMapper.selectById(handoff.getUserId());
+            Map<String, Object> row = new java.util.LinkedHashMap<>();
+            row.put("id", handoff.getId());
+            row.put("sessionId", handoff.getSessionId());
+            row.put("reason", handoff.getReason());
+            row.put("summary", handoff.getSummary());
+            row.put("status", handoff.getStatus());
+            row.put("createdAt", handoff.getCreatedAt().toString());
+            row.put("userName", user != null ? user.getNickname() : "顾客");
+            row.put("userPhone", user != null ? user.getPhone() : "");
+            rows.add(row);
+        }
+        return Result.ok(rows);
+    }
+
+    /** 工单详情：顾客信息 + 最近对话原文（前台看得懂的那一版） */
+    @GetMapping("/handoffs/{id}/detail")
+    public Result<Map<String, Object>> handoffDetail(@PathVariable Long id) {
+        AiHandoff handoff = handoffMapper.selectById(id);
+        if (handoff == null) {
+            return Result.ok(Map.of());
+        }
+        User user = userMapper.selectById(handoff.getUserId());
+        List<AiMessage> messages = messageMapper.selectList(new LambdaQueryWrapper<AiMessage>()
+                .eq(AiMessage::getSessionId, handoff.getSessionId())
+                .in(AiMessage::getRole, "USER", "ASSISTANT")
+                .orderByAsc(AiMessage::getId)
+                .last("LIMIT 20"));
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("handoff", handoff);
+        result.put("userName", user != null ? user.getNickname() : "顾客");
+        result.put("userPhone", user != null ? user.getPhone() : "");
+        result.put("messages", messages);
+        return Result.ok(result);
     }
 
     @PostMapping("/handoffs/{id}/resolve")
