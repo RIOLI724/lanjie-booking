@@ -8,11 +8,15 @@ const phone = ref('13800000000')
 const password = ref('admin123')
 const error = ref('')
 const loading = ref(false)
-const tab = ref<'today' | 'schedule' | 'customer' | 'refunds' | 'users' | 'health'>('today')
+const tab = ref<'today' | 'schedule' | 'orders' | 'customer' | 'refunds' | 'users' | 'health'>('today')
 
 const today = ref<Record<string, any>>({})
 const schedule = ref<Array<Record<string, any>>>([])
 const scheduleDate = ref(new Date().toISOString().slice(0, 10))
+const orders = ref<Array<Record<string, any>>>([])
+const orderDate = ref(new Date().toISOString().slice(0, 10))
+const orderDetail = ref<Record<string, any> | null>(null)
+const slotOps = ref<Record<string, any> | null>(null)
 const refunds = ref<Array<Record<string, any>>>([])
 const users = ref<Array<Record<string, any>>>([])
 const customerPhone = ref('')
@@ -76,6 +80,7 @@ async function openTab(next: typeof tab.value) {
   try {
     if (next === 'today') today.value = await api('/admin/today')
     if (next === 'schedule') schedule.value = await api(`/admin/schedule?date=${scheduleDate.value}`)
+    if (next === 'orders') orders.value = await api(`/admin/orders?date=${orderDate.value}`)
     if (next === 'refunds') refunds.value = await api('/admin/refunds')
     if (next === 'users') users.value = await api('/admin/users')
     if (next === 'health') {
@@ -102,6 +107,112 @@ async function checkin(row: Record<string, any>) {
 
 async function viewHandoff(row: Record<string, any>) {
   handoffDetail.value = await api(`/admin/ai/handoffs/${row.handoffId}/detail`)
+}
+
+function openSlot(row: Record<string, any>, cell: Record<string, any>) {
+  if (cell.status === 'BOOKED' && cell.bookingId) {
+    viewOrder(cell.bookingId)
+    return
+  }
+  slotOps.value = { ...cell, courtName: row.courtName }
+}
+
+async function closeSlot(force = false) {
+  if (!slotOps.value) return
+  const reason = window.prompt('关场原因（会记录，便于对账）', '场馆原因关场')
+  if (reason === null) return
+  try {
+    const data = await api(`/admin/slots/${slotOps.value.slotId}/close`, {
+      method: 'POST',
+      body: { force, reason },
+    })
+    if (data.blocked) {
+      const names = (data.affected ?? []).map((a: any) => `${a.userName}（${a.userPhone}）`).join('、')
+      if (!window.confirm(`${data.message}\n\n受影响订单：${names}\n确认后将全额退款并关场，确定吗？`)) return
+      await api(`/admin/slots/${slotOps.value.slotId}/close`, {
+        method: 'POST',
+        body: { force: true, reason },
+      })
+    }
+    slotOps.value = null
+    await openTab(tab.value)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '关场失败')
+  }
+}
+
+async function reopenSlot() {
+  if (!slotOps.value) return
+  if (!window.confirm(`开放「${slotOps.value.courtName} ${slotOps.value.time}」给顾客预订？`)) return
+  try {
+    await api(`/admin/slots/${slotOps.value.slotId}/reopen`, { method: 'POST' })
+    slotOps.value = null
+    await openTab(tab.value)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '开放失败')
+  }
+}
+
+async function changePrice() {
+  if (!slotOps.value) return
+  const current = Number(slotOps.value.priceCents) / 100
+  const input = window.prompt(`「${slotOps.value.courtName} ${slotOps.value.time}」改价\n当前 ¥${current}，输入新价格（元）`, String(current))
+  if (input === null) return
+  const yuan = Number(input)
+  if (!Number.isFinite(yuan) || yuan <= 0) {
+    alert('价格必须是大于 0 的数字')
+    return
+  }
+  try {
+    await api(`/admin/slots/${slotOps.value.slotId}/price`, {
+      method: 'PATCH',
+      body: { priceCents: Math.round(yuan * 100) },
+    })
+    slotOps.value = null
+    await openTab(tab.value)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '改价失败')
+  }
+}
+
+async function viewOrder(id: number) {
+  try {
+    orderDetail.value = await api(`/admin/orders/${id}`)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '订单加载失败')
+  }
+}
+
+async function forceCancelOrder() {
+  if (!orderDetail.value) return
+  const booking = orderDetail.value.booking
+  const reason = window.prompt('强制取消原因（顾客可见）', '场馆原因取消')
+  if (reason === null) return
+  if (!window.confirm(`取消订单 ${booking.bookingNo}？\n已实付 ${money(booking.paidCents)} 将全额退回。`)) return
+  try {
+    const data = await api(`/admin/orders/${booking.id}/force-cancel`, {
+      method: 'POST',
+      body: { reason },
+    })
+    alert(`已取消，退款 ${money(data.refundCents)}`)
+    orderDetail.value = null
+    await openTab(tab.value)
+  } catch (e) {
+    alert(e instanceof Error ? e.message : '取消失败')
+  }
+}
+
+function timeRange(row: Record<string, any>): string {
+  if (!row.startAt) return '—'
+  const start = String(row.startAt).slice(11, 16)
+  const end = String(row.endAt).slice(11, 16)
+  return `${start} – ${end}`
+}
+
+function historyText(row: Record<string, any>): string {
+  const from = BSTATUS_TEXT[row.fromStatus] ?? row.fromStatus ?? '创建'
+  const to = BSTATUS_TEXT[row.toStatus] ?? row.toStatus
+  return from ? `${from} → ${to}` : to
 }
 
 async function resolveHandoff(row: Record<string, any>) {
@@ -172,6 +283,7 @@ onMounted(() => {
       <h2>篮界管理台</h2>
       <button :class="{ active: tab === 'today' }" @click="openTab('today')">前台工作台</button>
       <button :class="{ active: tab === 'schedule' }" @click="openTab('schedule')">今日排期</button>
+      <button :class="{ active: tab === 'orders' }" @click="openTab('orders')">订单处置</button>
       <button :class="{ active: tab === 'customer' }" @click="openTab('customer')">客户查询</button>
       <button :class="{ active: tab === 'refunds' }" @click="openTab('refunds')">退款记录</button>
       <button :class="{ active: tab === 'users' }" @click="openTab('users')">用户管理</button>
@@ -236,13 +348,16 @@ onMounted(() => {
           <input type="date" v-model="scheduleDate" @change="openTab('schedule')" />
           <span class="legend"><i class="lg avail"></i>可订<i class="lg booked"></i>已订<i class="lg held"></i>锁定<i class="lg off"></i>已关</span>
         </div>
+        <p class="hint-line">点格子就能关场、开放、改价；已订格子点开看订单。</p>
         <table class="grid-table">
           <thead><tr><th>场地</th><th v-for="cell in schedule[0]?.cells ?? []" :key="cell.time">{{ cell.time }}</th></tr></thead>
           <tbody>
             <tr v-for="row in schedule" :key="row.courtName">
               <td class="court-cell">{{ row.courtName }}</td>
               <td v-for="cell in row.cells" :key="cell.time">
-                <div class="slot-cell" :class="String(cell.status).toLowerCase()">
+                <div class="slot-cell" :class="[String(cell.status).toLowerCase(), { clickable: cell.status !== 'HELD' }]"
+                     :title="cell.status === 'BOOKED' ? `查看 ${cell.userName} 的订单` : '点击操作'"
+                     @click="cell.status !== 'HELD' && openSlot(row, cell)">
                   <b v-if="cell.status === 'BOOKED'">{{ cell.userName }}</b>
                   <span v-else>{{ CELL_TEXT[cell.status] ?? '' }}</span>
                   <small v-if="cell.status === 'AVAILABLE'">{{ money(cell.priceCents) }}</small>
@@ -251,6 +366,28 @@ onMounted(() => {
             </tr>
           </tbody>
         </table>
+      </template>
+
+      <template v-if="tab === 'orders'">
+        <h3>订单处置</h3>
+        <div class="toolbar">
+          <input type="date" v-model="orderDate" @change="openTab('orders')" />
+          <span class="hint-inline">当天场地订单，点「查看」可强制取消并全额退款</span>
+        </div>
+        <table>
+          <thead><tr><th>时间</th><th>顾客</th><th>内容</th><th>状态</th><th>实付</th><th>操作</th></tr></thead>
+          <tbody>
+            <tr v-for="row in orders" :key="row.id">
+              <td>{{ timeRange(row) }}</td>
+              <td>{{ row.userName }}<br /><small>{{ row.userPhone }}</small></td>
+              <td>{{ row.title }}</td>
+              <td><span class="chip" :class="row.status === 'CONFIRMED' ? 'ok' : row.status === 'CANCELLED' ? 'bad' : 'warn'">{{ BSTATUS_TEXT[row.status] ?? row.status }}</span></td>
+              <td>{{ money(row.paidCents) }}</td>
+              <td><button class="btn sm ghost" @click="viewOrder(row.id)">查看</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-if="!orders.length" class="empty">这天没有场地订单</p>
       </template>
 
       <template v-if="tab === 'customer'">
@@ -351,6 +488,87 @@ onMounted(() => {
         </table>
       </template>
     </main>
+
+    <div v-if="slotOps" class="modal-mask" @click.self="slotOps = null">
+      <div class="modal modal-sm">
+        <div class="modal-head">
+          <b>{{ slotOps.courtName }} · {{ slotOps.time }}</b>
+          <button class="modal-close" @click="slotOps = null">✕</button>
+        </div>
+        <p class="detail-line">
+          当前状态：
+          <span class="chip" :class="slotOps.status === 'AVAILABLE' ? 'ok' : 'warn'">
+            {{ slotOps.status === 'AVAILABLE' ? `可订 · ${money(slotOps.priceCents)}` : '已关场' }}
+          </span>
+        </p>
+        <div class="ops-row" v-if="slotOps.status === 'AVAILABLE'">
+          <button class="btn sm ghost" @click="changePrice">改价</button>
+          <button class="btn sm" @click="closeSlot(false)">关场</button>
+        </div>
+        <div class="ops-row" v-else>
+          <button class="btn sm" @click="reopenSlot">重新开放</button>
+        </div>
+        <p class="hint-line">关场时若已有顾客预订，会先列出受影响订单，确认后全额退款并取消。</p>
+      </div>
+    </div>
+
+    <div v-if="orderDetail" class="modal-mask" @click.self="orderDetail = null">
+      <div class="modal">
+        <div class="modal-head">
+          <b>订单 {{ orderDetail.booking.bookingNo }}</b>
+          <button class="modal-close" @click="orderDetail = null">✕</button>
+        </div>
+        <div class="detail-grid">
+          <div><small>顾客</small><b>{{ orderDetail.userName }}</b></div>
+          <div><small>手机号</small><b>{{ orderDetail.userPhone }}</b></div>
+          <div><small>状态</small><b>{{ BSTATUS_TEXT[orderDetail.booking.status] ?? orderDetail.booking.status }}</b></div>
+          <div><small>实付 / 应付</small><b>{{ money(orderDetail.booking.paidCents) }} / {{ money(orderDetail.booking.payableCents) }}</b></div>
+        </div>
+
+        <h4>场次明细</h4>
+        <table>
+          <thead><tr><th>内容</th><th>时间</th><th>金额</th></tr></thead>
+          <tbody>
+            <tr v-for="item in orderDetail.items" :key="item.id">
+              <td>{{ item.title }}</td>
+              <td>{{ String(item.startAt).slice(5, 16).replace('T', ' ') }} – {{ String(item.endAt).slice(11, 16) }}</td>
+              <td>{{ money(item.amountCents) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4>状态流转</h4>
+        <div class="timeline">
+          <div v-for="h in orderDetail.history" :key="h.id" class="timeline-row">
+            <span>{{ String(h.createdAt).slice(5, 16).replace('T', ' ') }}</span>
+            <b>{{ historyText(h) }}</b>
+            <small>{{ h.actor === 'ADMIN' ? '前台' : h.actor === 'USER' ? '顾客' : h.actor }} · {{ h.reason }}</small>
+          </div>
+          <p v-if="!orderDetail.history?.length" class="empty">暂无流转记录</p>
+        </div>
+
+        <h4>支付 / 退款</h4>
+        <div class="timeline">
+          <div v-for="p in orderDetail.pays" :key="'p' + p.id" class="timeline-row">
+            <span>{{ String(p.paidAt ?? p.createdAt).slice(5, 16).replace('T', ' ') }}</span>
+            <b>支付 {{ money(p.amountCents) }}</b>
+            <small>{{ CHANNEL_TEXT[p.channel] ?? p.channel }} · {{ p.status }}</small>
+          </div>
+          <div v-for="r in orderDetail.refunds" :key="'r' + r.id" class="timeline-row">
+            <span>{{ String(r.createdAt).slice(5, 16).replace('T', ' ') }}</span>
+            <b>退款 {{ money(r.amountCents) }}</b>
+            <small>{{ r.reason }} · {{ REFUND_TEXT[r.status] ?? r.status }}</small>
+          </div>
+          <p v-if="!orderDetail.pays?.length && !orderDetail.refunds?.length" class="empty">还没有支付记录</p>
+        </div>
+
+        <div class="ops-row" v-if="orderDetail.booking.type === 'COURT' && ['PENDING_PAYMENT', 'CONFIRMED'].includes(orderDetail.booking.status)">
+          <button class="btn sm danger" @click="forceCancelOrder">
+            {{ orderDetail.booking.status === 'CONFIRMED' ? '强制取消并全额退款' : '取消未支付订单' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div v-if="handoffDetail" class="modal-mask" @click.self="handoffDetail = null">
       <div class="modal">

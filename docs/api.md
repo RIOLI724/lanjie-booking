@@ -85,29 +85,32 @@
 | POST `/api/v1/ai/messages/{id}/feedback` | 点赞/点踩 |
 | POST `/api/v1/ai/sessions/{id}/handoff` | 转人工 |
 
-## 第 6 组 管理端（17）
+## 第 6 组 管理端（当前已实现 20）
 
-> 进度：扫码核销 ✅ W4；其余 W10/W11。
+> 进度：核销 / 看板 / 排期 / 订单处置 / 退款 / 用户 / AI 运营均已实现；批量价格规则、审计日志查询、教练入驻管理、发券记录属 P1。
 
 | 接口 | 说明 |
 |---|---|
-| GET `/api/v1/admin/dashboard` | 今日看板 |
-| GET `/api/v1/admin/bookings` | 订单列表 |
+| GET `/api/v1/admin/today` | 前台工作台：待核销、AI 转人工、待退款、今日摘要 |
+| GET `/api/v1/admin/schedule?date=` | 排期网格（4 片场 × 时段） |
+| GET `/api/v1/admin/orders?date=&status=` | 当天场地订单列表 |
+| GET `/api/v1/admin/orders/{id}` | 订单详情：明细、状态流水、支付/退款记录 |
+| POST `/api/v1/admin/orders/{id}/force-cancel` | 强制取消：全额退款 + 审计 |
+| POST `/api/v1/admin/slots/{slotId}/close` | 单格关场；占用中先返回受影响订单，`force=true` 全退并取消 |
+| POST `/api/v1/admin/slots/{slotId}/reopen` | 重新开放已关时段 |
+| PATCH `/api/v1/admin/slots/{slotId}/price` | 单格改价（仅可订状态） |
 | POST `/api/v1/admin/bookings/{id}/checkin` | 扫码核销 |
-| POST `/api/v1/admin/bookings/{id}/force-cancel` | 强制取消（全退+审计） |
 | GET `/api/v1/admin/refunds` | 退款记录 |
-| POST `/api/v1/admin/refunds/{id}/retry` | 退款重试 |
 | GET `/api/v1/admin/users` | 用户列表 |
 | POST `/api/v1/admin/users/{id}/ban` | 封禁/解封 |
-| GET `/api/v1/admin/price-rules` | 价格规则 |
-| PUT `/api/v1/admin/price-rules` | 改价（只影响未生成格子） |
-| POST `/api/v1/admin/slots/close` | 闭馆（先列受影响订单确认） |
-| POST `/api/v1/admin/slots/generate` | 批量生成格子 |
-| POST `/api/v1/admin/coaches` | 教练入驻/编辑 |
+| GET `/api/v1/admin/customer?phone=` | 客户 360：订单一览、余额、课包 |
+| POST `/api/v1/admin/group-classes` | 创建团课 |
 | POST `/api/v1/admin/coupons/grant` | 发券 |
+| GET `/api/v1/admin/ai/summary` | AI 质量摘要 |
 | GET `/api/v1/admin/ai/handoffs` | 转人工工单 |
+| GET `/api/v1/admin/ai/handoffs/{id}/detail` | 工单对话详情 |
 | POST `/api/v1/admin/ai/handoffs/{id}/resolve` | 处理工单 |
-| GET `/api/v1/admin/audit-logs` | 审计日志 |
+| GET/POST `/api/v1/admin/ai/evals` | 评测历史 / 重跑评测 |
 
 ## 错误码分段
 

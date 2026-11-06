@@ -1,7 +1,6 @@
 package com.lanjie.booking.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lanjie.booking.common.BusinessException;
 import com.lanjie.booking.common.ErrorCode;
 import com.lanjie.booking.common.Result;
@@ -13,6 +12,7 @@ import com.lanjie.booking.entity.RefundOrder;
 import com.lanjie.booking.entity.Slot;
 import com.lanjie.booking.entity.User;
 import com.lanjie.booking.enums.BookingStatus;
+import com.lanjie.booking.enums.BookingType;
 import com.lanjie.booking.enums.SlotStatus;
 import com.lanjie.booking.mapper.BookingItemMapper;
 import com.lanjie.booking.mapper.BookingMapper;
@@ -31,13 +31,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 前台运营操作（P0）：排期可动、订单可处置。
@@ -57,7 +59,6 @@ public class AdminOpsController {
     private final UserMapper userMapper;
     private final RefundService refundService;
     private final BookingAuditService audit;
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AdminOpsController(BookingMapper bookingMapper, BookingItemMapper bookingItemMapper,
                               BookingStatusHistoryMapper historyMapper, PayOrderMapper payOrderMapper,
@@ -72,6 +73,65 @@ public class AdminOpsController {
         this.userMapper = userMapper;
         this.refundService = refundService;
         this.audit = audit;
+    }
+
+    /** 场地订单列表：按日期（默认今天）或状态筛选，前台一眼看清今天要处理谁 */
+    @GetMapping("/orders")
+    public Result<List<Map<String, Object>>> orders(@RequestParam(required = false) String date,
+                                                    @RequestParam(required = false) String status) {
+        LocalDate day;
+        try {
+            day = date == null || date.isBlank() ? LocalDate.now() : LocalDate.parse(date);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "日期格式应为 yyyy-MM-dd");
+        }
+        LambdaQueryWrapper<Booking> query = new LambdaQueryWrapper<Booking>()
+                .eq(Booking::getType, BookingType.COURT)
+                .apply("EXISTS (SELECT 1 FROM booking_item i WHERE i.booking_id = booking.id "
+                        + "AND i.start_at >= {0} AND i.start_at < {1})", day.atStartOfDay(), day.plusDays(1).atStartOfDay())
+                .orderByAsc(Booking::getId);
+        if (status != null && !status.isBlank()) {
+            try {
+                query.eq(Booking::getStatus, BookingStatus.valueOf(status));
+            } catch (IllegalArgumentException e) {
+                throw new BusinessException(ErrorCode.PARAM_INVALID, "订单状态不合法");
+            }
+        }
+        List<Booking> bookings = bookingMapper.selectList(query);
+        if (bookings.isEmpty()) {
+            return Result.ok(List.of());
+        }
+        Map<Long, List<BookingItem>> itemMap = bookingItemMapper.selectList(
+                        new LambdaQueryWrapper<BookingItem>()
+                                .in(BookingItem::getBookingId,
+                                        bookings.stream().map(Booking::getId).toList())
+                                .orderByAsc(BookingItem::getStartAt))
+                .stream().collect(Collectors.groupingBy(BookingItem::getBookingId));
+        Map<Long, User> userMap = userMapper.selectBatchIds(
+                        bookings.stream().map(Booking::getUserId).distinct().toList())
+                .stream().collect(Collectors.toMap(User::getId, u -> u));
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Booking booking : bookings) {
+            List<BookingItem> items = itemMap.getOrDefault(booking.getId(), List.of());
+            User user = userMap.get(booking.getUserId());
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("id", booking.getId());
+            row.put("bookingNo", booking.getBookingNo());
+            row.put("status", booking.getStatus().name());
+            row.put("userName", user != null ? user.getNickname() : "");
+            row.put("userPhone", user != null ? user.getPhone() : "");
+            row.put("title", items.isEmpty() ? "" : items.get(0).getTitle());
+            row.put("startAt", items.isEmpty() ? null : items.get(0).getStartAt());
+            row.put("endAt", items.isEmpty() ? null : items.get(items.size() - 1).getEndAt());
+            row.put("paidCents", booking.getPaidCents());
+            row.put("payableCents", booking.getPayableCents());
+            row.put("createdAt", booking.getCreatedAt());
+            row.put("canCancel", booking.getStatus() == BookingStatus.PENDING_PAYMENT
+                    || booking.getStatus() == BookingStatus.CONFIRMED);
+            result.add(row);
+        }
+        return Result.ok(result);
     }
 
     /** 订单详情：主信息 + 明细 + 状态流水 + 支付/退款 */
@@ -111,17 +171,26 @@ public class AdminOpsController {
         if (booking == null) {
             throw new BusinessException(ErrorCode.BOOKING_NOT_FOUND);
         }
+        if (booking.getType() != BookingType.COURT) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID,
+                    "当前仅支持强制取消场地订单，教练/团课/拼场请走对应管理");
+        }
         String reason = req == null || req.getReason() == null || req.getReason().isBlank()
                 ? "场馆原因取消" : req.getReason();
         int refund = 0;
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            // 先抢占状态，避免并发下重复退款
+            if (bookingMapper.markCancelledConfirmed(id, "ADMIN_" + reason) == 0) {
+                throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "订单状态已变化，请刷新后重试");
+            }
             if (booking.getPaidCents() != null && booking.getPaidCents() > 0) {
                 refund = booking.getPaidCents();
                 refundService.refundForReschedule(booking, refund, reason);
             }
-            bookingMapper.markCancelledConfirmed(id, "ADMIN_" + reason);
         } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
-            bookingMapper.markCancelled(id, "ADMIN_" + reason);
+            if (bookingMapper.markCancelled(id, "ADMIN_" + reason) == 0) {
+                throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "订单状态已变化，请刷新后重试");
+            }
         } else {
             throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "当前状态不能取消");
         }
