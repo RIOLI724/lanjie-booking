@@ -41,16 +41,19 @@ interface RequestOptions {
   body?: unknown
   /** 需要登录态的请求；401 时自动用 refreshToken 续期重试一次 */
   auth?: boolean
+  /** 写接口防重复提交 */
+  idempotencyKey?: string
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, auth = false } = options
+  const { method = 'GET', body, auth = false, idempotencyKey } = options
 
   const send = (token: string | null) =>
     fetch(BASE + path, {
       method,
       headers: {
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

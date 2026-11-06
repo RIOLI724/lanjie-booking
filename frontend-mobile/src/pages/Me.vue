@@ -50,9 +50,12 @@ async function onLogout() {
       </span>
     </div>
 
-    <div class="card disabled">
-      <div>我的订单</div>
-      <div style="border-top: 1px solid var(--line-2); margin: 8px 0"></div>
+    <router-link to="/orders" class="card row-card">
+      <b>我的订单</b>
+      <span class="go">›</span>
+    </router-link>
+
+    <div class="card disabled" style="margin-top: 10px">
       <div>我的钱包</div>
       <div style="border-top: 1px solid var(--line-2); margin: 8px 0"></div>
       <div>会员与积分</div>

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import DockBar from '@/components/DockBar.vue'
+import BookingSheet from '@/components/BookingSheet.vue'
+import { holdSlots } from '@/api/bookings'
+import { ApiError } from '@/api/http'
 import {
   fetchCalendar,
   fetchCourts,
@@ -19,6 +22,9 @@ const courts = ref<CourtInfo[]>([])
 const slots = ref<SlotInfo[]>([])
 const selectedDate = ref('')
 const selected = ref<SlotInfo[]>([])
+const sheetBookingId = ref<number | null>(null)
+const holding = ref(false)
+const holdError = ref('')
 
 const toMin = (s: string) => Number(s.slice(0, 2)) * 60 + Number(s.slice(3, 5))
 const toStr = (m: number) =>
@@ -112,6 +118,26 @@ async function pick(d: CalendarDay) {
   slots.value = await fetchSlots(d.date)
 }
 
+async function onHold() {
+  if (holding.value || !selected.value.length) return
+  holding.value = true
+  holdError.value = ''
+  try {
+    const hold = await holdSlots(selected.value.map((s) => s.id))
+    sheetBookingId.value = hold.bookingId
+  } catch (e) {
+    holdError.value = e instanceof ApiError ? e.message : '网络异常，请稍后再试'
+  } finally {
+    holding.value = false
+  }
+}
+
+async function onPaid() {
+  sheetBookingId.value = null
+  selected.value = []
+  slots.value = selectedDate.value ? await fetchSlots(selectedDate.value) : []
+}
+
 onMounted(async () => {
   const from = new Date()
   const to = new Date(Date.now() + 6 * 86_400_000)
@@ -159,9 +185,21 @@ onMounted(async () => {
     </div>
 
     <div v-if="selected.length" class="select-bar">
-      <span>{{ selected.length }} 格连场</span>
-      <b>¥{{ totalCents / 100 }}</b>
+      <span :class="{ 'bar-error': holdError }">{{ holdError || `${selected.length} 格连场` }}</span>
+      <div class="bar-right">
+        <b>¥{{ totalCents / 100 }}</b>
+        <button class="hold-btn" :disabled="holding" @click="onHold">
+          {{ holding ? '锁位中…' : '锁位' }}
+        </button>
+      </div>
     </div>
+
+    <BookingSheet
+      v-if="sheetBookingId"
+      :booking-id="sheetBookingId"
+      @close="sheetBookingId = null"
+      @paid="onPaid"
+    />
 
     <DockBar />
   </div>

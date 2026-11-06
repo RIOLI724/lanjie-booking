@@ -146,3 +146,98 @@ CREATE TABLE IF NOT EXISTS `slot`
     UNIQUE KEY `uk_slot_court_start` (`court_id`, `start_at`),
     KEY `idx_slot_date` (`slot_date`, `court_id`, `status`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '可售时段（1 小时格子）';
+
+-- 订单（所有消费类型的聚合：订场/私教/团课/拼场份子钱）-----------------------
+CREATE TABLE IF NOT EXISTS `booking`
+(
+    `id`               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `booking_no`       VARCHAR(32)     NOT NULL COMMENT '业务单号 BJ+日期+随机',
+    `user_id`          BIGINT UNSIGNED NOT NULL,
+    `venue_id`         BIGINT UNSIGNED NOT NULL,
+    `type`             VARCHAR(20)     NOT NULL DEFAULT 'COURT' COMMENT 'COURT/COACH/GROUP/PICKUP',
+    `status`           VARCHAR(20)     NOT NULL DEFAULT 'PENDING_PAYMENT'
+                                       COMMENT 'PENDING_PAYMENT/CONFIRMED/COMPLETED/CANCELLED/NO_SHOW',
+    `list_amount_cents` INT            NOT NULL DEFAULT 0 COMMENT '原价合计',
+    `discount_cents`   INT             NOT NULL DEFAULT 0 COMMENT '优惠合计（W8 启用）',
+    `payable_cents`    INT             NOT NULL DEFAULT 0 COMMENT '应付',
+    `paid_cents`       INT             NOT NULL DEFAULT 0 COMMENT '实付',
+    `contact_name`     VARCHAR(50)     NULL,
+    `contact_phone`    VARCHAR(20)     NULL,
+    `hold_expires_at`  DATETIME        NULL COMMENT '锁位过期时间（15 分钟）',
+    `checked_in_at`    DATETIME        NULL COMMENT '核销时间（W4）',
+    `cancel_reason`    VARCHAR(100)    NULL,
+    `reschedule_count` INT             NOT NULL DEFAULT 0,
+    `created_at`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_booking_no` (`booking_no`),
+    KEY `idx_booking_user` (`user_id`, `created_at`),
+    KEY `idx_booking_status_hold` (`status`, `hold_expires_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单主表';
+
+-- 订单明细（一个订单可含多个格子/教练课/团课席位）----------------------------
+CREATE TABLE IF NOT EXISTS `booking_item`
+(
+    `id`                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `booking_id`         BIGINT UNSIGNED NOT NULL,
+    `item_type`          VARCHAR(20)     NOT NULL COMMENT 'COURT_SLOT/COACH_SESSION/GROUP_SEAT/PICKUP_SHARE',
+    `ref_id`             BIGINT UNSIGNED NOT NULL COMMENT 'slot_id / coach_slot_id / class_id / game_id',
+    `title`              VARCHAR(100)    NOT NULL COMMENT '展示标题，如 1号场 11-08 19:00-20:00',
+    `start_at`           DATETIME        NOT NULL,
+    `end_at`             DATETIME        NOT NULL,
+    `unit_price_cents`   INT             NOT NULL DEFAULT 0,
+    `amount_cents`       INT             NOT NULL DEFAULT 0,
+    `refund_amount_cents` INT            NOT NULL DEFAULT 0 COMMENT '已退金额（W4）',
+    `created_at`         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_item_booking` (`booking_id`),
+    KEY `idx_item_ref` (`item_type`, `ref_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单明细';
+
+-- 支付单（一次支付一条；改期差价可再开一条）----------------------------------
+CREATE TABLE IF NOT EXISTS `pay_order`
+(
+    `id`                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `pay_no`             VARCHAR(32)     NOT NULL COMMENT '支付单号 PY+…',
+    `booking_id`         BIGINT UNSIGNED NULL,
+    `user_id`            BIGINT UNSIGNED NOT NULL,
+    `purpose`            VARCHAR(20)     NOT NULL DEFAULT 'BOOKING' COMMENT 'BOOKING/RECHARGE/RESCHEDULE_DIFF',
+    `channel`            VARCHAR(20)     NOT NULL COMMENT 'WALLET/WECHAT_MOCK',
+    `amount_cents`       INT             NOT NULL,
+    `status`             VARCHAR(20)     NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/PAID/CLOSED/REFUNDED',
+    `third_party_txn_id` VARCHAR(64)     NULL COMMENT '第三方流水号（幂等锚点）',
+    `paid_at`            DATETIME        NULL,
+    `created_at`         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`         DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_pay_no` (`pay_no`),
+    KEY `idx_pay_booking` (`booking_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '支付单';
+
+-- 订单状态流转留痕 -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `booking_status_history`
+(
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `booking_id`  BIGINT UNSIGNED NOT NULL,
+    `from_status` VARCHAR(20)     NULL,
+    `to_status`   VARCHAR(20)     NOT NULL,
+    `actor`       VARCHAR(30)     NOT NULL DEFAULT 'USER' COMMENT 'USER/ADMIN/SYSTEM/AI',
+    `reason`      VARCHAR(100)    NULL,
+    `created_at`  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_bsh_booking` (`booking_id`, `created_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '订单状态历史';
+
+-- 幂等键（写接口防重复提交/重放）---------------------------------------------
+CREATE TABLE IF NOT EXISTS `idempotency_key`
+(
+    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `idem_key`      VARCHAR(64)     NOT NULL,
+    `user_id`       BIGINT UNSIGNED NOT NULL,
+    `endpoint`      VARCHAR(100)    NOT NULL,
+    `request_hash`  CHAR(64)        NOT NULL COMMENT '请求体 SHA-256，内容不同则拒绝',
+    `response_json` TEXT            NULL COMMENT '首次成功的响应，重放直接返回',
+    `created_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_idem` (`idem_key`, `user_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '幂等键';
