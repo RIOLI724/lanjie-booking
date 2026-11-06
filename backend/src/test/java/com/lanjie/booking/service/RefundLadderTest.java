@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /** 退款阶梯纯函数：≥24h 全退 / 2–24h 退 70% / <2h 不退 */
 class RefundLadderTest {
 
-    private final RefundService service = new RefundService(null, null, null, null);
+    private final RefundService service = new RefundService(null, null, null, null, null, null);
 
     @Test
     void fullRefundAt24hOrMore() {

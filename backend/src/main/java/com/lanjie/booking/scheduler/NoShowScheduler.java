@@ -8,6 +8,7 @@ import com.lanjie.booking.mapper.BookingMapper;
 import com.lanjie.booking.mapper.NoShowRecordMapper;
 import com.lanjie.booking.mapper.UserBanMapper;
 import com.lanjie.booking.service.BookingAuditService;
+import com.lanjie.booking.service.PointsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -33,13 +34,16 @@ public class NoShowScheduler {
     private final NoShowRecordMapper noShowRecordMapper;
     private final UserBanMapper userBanMapper;
     private final BookingAuditService audit;
+    private final PointsService pointsService;
 
     public NoShowScheduler(BookingMapper bookingMapper, NoShowRecordMapper noShowRecordMapper,
-                           UserBanMapper userBanMapper, BookingAuditService audit) {
+                           UserBanMapper userBanMapper, BookingAuditService audit,
+                           PointsService pointsService) {
         this.bookingMapper = bookingMapper;
         this.noShowRecordMapper = noShowRecordMapper;
         this.userBanMapper = userBanMapper;
         this.audit = audit;
+        this.pointsService = pointsService;
     }
 
     @Scheduled(fixedDelay = 60_000, initialDelay = 45_000)
@@ -95,6 +99,7 @@ public class NoShowScheduler {
         for (Booking booking : candidates) {
             if (bookingMapper.markCompleted(booking.getId()) > 0) {
                 audit.write(booking.getId(), "CONFIRMED", "COMPLETED", "SYSTEM", "场次结束");
+                pointsService.earnForBooking(booking);
             }
         }
     }

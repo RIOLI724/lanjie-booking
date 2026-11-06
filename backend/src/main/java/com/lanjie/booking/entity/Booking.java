@@ -30,6 +30,14 @@ public class Booking {
 
     private Integer discountCents;
 
+    private Long couponId;
+
+    private Integer pointsUsed;
+
+    private Integer couponDiscountCents;
+
+    private Integer pointsDiscountCents;
+
     private Integer payableCents;
 
     private Integer paidCents;

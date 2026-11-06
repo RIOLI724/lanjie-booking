@@ -37,13 +37,18 @@ public class RefundService {
     private final PayOrderMapper payOrderMapper;
     private final BookingItemMapper bookingItemMapper;
     private final WalletService walletService;
+    private final CouponService couponService;
+    private final PointsService pointsService;
 
     public RefundService(RefundOrderMapper refundOrderMapper, PayOrderMapper payOrderMapper,
-                         BookingItemMapper bookingItemMapper, WalletService walletService) {
+                         BookingItemMapper bookingItemMapper, WalletService walletService,
+                         CouponService couponService, PointsService pointsService) {
         this.refundOrderMapper = refundOrderMapper;
         this.payOrderMapper = payOrderMapper;
         this.bookingItemMapper = bookingItemMapper;
         this.walletService = walletService;
+        this.couponService = couponService;
+        this.pointsService = pointsService;
     }
 
     public int refundRatio(LocalDateTime firstStart, LocalDateTime now) {
@@ -63,13 +68,22 @@ public class RefundService {
         return (int) (booking.getPaidCents() * (long) ratio / 100);
     }
 
-    /** 取消退款：按阶梯计算并原路退回，返回实退金额（0 表示不退） */
+    /** 取消退款：按阶梯计算并原路退回，返回实退金额（0 表示不退）。全退返券；积分按比例返还 */
     @Transactional
     public int refundForCancel(Booking booking, LocalDateTime firstStart, String reason) {
+        int ratio = refundRatio(firstStart, LocalDateTime.now());
         int refund = quoteRefund(booking, firstStart);
         if (refund > 0) {
             createRefund(booking, refund, reason);
             applyItemRefunds(booking.getId(), refund, booking.getPaidCents());
+        }
+        if (ratio == 100) {
+            couponService.restore(booking.getCouponId());
+            int points = booking.getPointsUsed() == null ? 0 : booking.getPointsUsed();
+            pointsService.restoreSpend(booking.getUserId(), points, booking.getId());
+        } else if (ratio > 0 && booking.getPointsUsed() != null && booking.getPointsUsed() > 0) {
+            pointsService.restoreSpend(booking.getUserId(),
+                    booking.getPointsUsed() * ratio / 100, booking.getId());
         }
         return refund;
     }

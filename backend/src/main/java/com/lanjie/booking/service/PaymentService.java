@@ -58,6 +58,10 @@ public class PaymentService {
     private final BookingService bookingService;
     private final PackageService packageService;
     private final PickupService pickupService;
+    private final PricingService pricingService;
+    private final CouponService couponService;
+    private final PointsService pointsService;
+    private final MembershipService membershipService;
     private final BookingAuditService audit;
 
     public PaymentService(BookingMapper bookingMapper, PayOrderMapper payOrderMapper,
@@ -66,6 +70,8 @@ public class PaymentService {
                           com.lanjie.booking.mapper.BookingItemMapper bookingItemMapper,
                           WalletService walletService, BookingService bookingService,
                           PackageService packageService, PickupService pickupService,
+                          PricingService pricingService, CouponService couponService,
+                          PointsService pointsService, MembershipService membershipService,
                           BookingAuditService audit) {
         this.bookingMapper = bookingMapper;
         this.payOrderMapper = payOrderMapper;
@@ -78,6 +84,10 @@ public class PaymentService {
         this.bookingService = bookingService;
         this.packageService = packageService;
         this.pickupService = pickupService;
+        this.pricingService = pricingService;
+        this.couponService = couponService;
+        this.pointsService = pointsService;
+        this.membershipService = membershipService;
         this.audit = audit;
     }
 
@@ -94,15 +104,43 @@ public class PaymentService {
             // 课包核销：0 元，消耗一节课时
             return createPackageBookingPayment(loginUser, booking, request.getPackageId());
         }
+        // 计价：会员 vs 券取优 + 积分抵扣；占用券/积分与支付同事务
+        com.lanjie.booking.vo.PricingQuote quote =
+                pricingService.quote(booking, request.getCouponId(), request.getPointsToUse());
+        if (quote.couponId() != null) {
+            couponService.use(booking.getUserId(), quote.couponId(), bookingId);
+        }
+        if (quote.pointsUsed() > 0) {
+            pointsService.spend(booking.getUserId(), quote.pointsUsed(), bookingId);
+        }
+        applyQuote(bookingId, quote);
+
         PayOrder payOrder = createPayOrder(booking.getUserId(), bookingId, bookingId,
-                PayPurpose.BOOKING, request.getChannel(), booking.getPayableCents());
+                PayPurpose.BOOKING, request.getChannel(), quote.payableCents());
         if (request.getChannel() == PayChannel.WALLET) {
             // 钱包即时支付：扣款与订单完成在同一事务，余额不足全部回滚
-            walletService.debit(booking.getUserId(), booking.getPayableCents(),
+            walletService.debit(booking.getUserId(), quote.payableCents(),
                     WalletTxnType.PAY, "PAY_ORDER", payOrder.getId());
             confirmBookingPayment(payOrder);
         }
         return new PayVO(payOrder.getPayNo(), payOrder.getAmountCents(), payOrder.getChannel().name());
+    }
+
+    /** 把计价结果写回订单（仅待支付可写，条件更新防重复） */
+    private void applyQuote(Long bookingId, com.lanjie.booking.vo.PricingQuote quote) {
+        int updated = bookingMapper.update(null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<Booking>()
+                        .eq(Booking::getId, bookingId)
+                        .eq(Booking::getStatus, BookingStatus.PENDING_PAYMENT)
+                        .set(Booking::getDiscountCents, quote.discountCents())
+                        .set(Booking::getPayableCents, quote.payableCents())
+                        .set(Booking::getCouponId, quote.couponId())
+                        .set(Booking::getPointsUsed, quote.pointsUsed())
+                        .set(Booking::getCouponDiscountCents, quote.couponDiscountCents())
+                        .set(Booking::getPointsDiscountCents, quote.pointsDiscountCents()));
+        if (updated == 0) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID);
+        }
     }
 
     /** 课包核销私教课：校验归属与教练匹配，条件扣课时，0 元完成订单 */
@@ -226,6 +264,7 @@ public class PaymentService {
             walletService.credit(payOrder.getUserId(), plan.getBonusCents(),
                     WalletTxnType.RECHARGE_BONUS, "PAY_ORDER", payOrder.getId());
         }
+        membershipService.onRecharge(payOrder.getUserId(), payOrder.getAmountCents());
         finishPayOrder(payOrder);
         log.info("recharge confirmed: payNo={} user={} amount={}+bonus",
                 payOrder.getPayNo(), payOrder.getUserId(), payOrder.getAmountCents());

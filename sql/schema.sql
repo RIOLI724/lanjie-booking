@@ -158,7 +158,11 @@ CREATE TABLE IF NOT EXISTS `booking`
     `status`           VARCHAR(20)     NOT NULL DEFAULT 'PENDING_PAYMENT'
                                        COMMENT 'PENDING_PAYMENT/CONFIRMED/COMPLETED/CANCELLED/NO_SHOW',
     `list_amount_cents` INT            NOT NULL DEFAULT 0 COMMENT '原价合计',
-    `discount_cents`   INT             NOT NULL DEFAULT 0 COMMENT '优惠合计（W8 启用）',
+    `discount_cents`   INT             NOT NULL DEFAULT 0 COMMENT '优惠合计',
+    `coupon_id`        BIGINT UNSIGNED NULL COMMENT '使用的用户券',
+    `points_used`      INT             NOT NULL DEFAULT 0 COMMENT '抵扣积分',
+    `coupon_discount_cents` INT        NOT NULL DEFAULT 0 COMMENT '券抵扣',
+    `points_discount_cents` INT        NOT NULL DEFAULT 0 COMMENT '积分抵扣',
     `payable_cents`    INT             NOT NULL DEFAULT 0 COMMENT '应付',
     `paid_cents`       INT             NOT NULL DEFAULT 0 COMMENT '实付',
     `contact_name`     VARCHAR(50)     NULL,

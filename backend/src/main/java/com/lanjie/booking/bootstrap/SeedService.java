@@ -62,6 +62,8 @@ public class SeedService {
     private final CoachScheduleRuleMapper coachScheduleRuleMapper;
     private final CoachServiceMapper coachServiceMapper;
     private final com.lanjie.booking.mapper.GroupClassMapper groupClassMapper;
+    private final com.lanjie.booking.mapper.MemberLevelMapper memberLevelMapper;
+    private final com.lanjie.booking.mapper.CouponTemplateMapper couponTemplateMapper;
     private final com.lanjie.booking.service.GroupClassService groupClassService;
     private final PasswordEncoder passwordEncoder;
     private final SlotGenerationService slotGenerationService;
@@ -74,6 +76,8 @@ public class SeedService {
                        CoachMapper coachMapper, CoachScheduleRuleMapper coachScheduleRuleMapper,
                        CoachServiceMapper coachServiceMapper,
                        com.lanjie.booking.mapper.GroupClassMapper groupClassMapper,
+                       com.lanjie.booking.mapper.MemberLevelMapper memberLevelMapper,
+                       com.lanjie.booking.mapper.CouponTemplateMapper couponTemplateMapper,
                        com.lanjie.booking.service.GroupClassService groupClassService,
                        PasswordEncoder passwordEncoder, SlotGenerationService slotGenerationService,
                        CoachSlotGenerationService coachSlotGenerationService, JdbcTemplate jdbcTemplate) {
@@ -87,6 +91,8 @@ public class SeedService {
         this.coachScheduleRuleMapper = coachScheduleRuleMapper;
         this.coachServiceMapper = coachServiceMapper;
         this.groupClassMapper = groupClassMapper;
+        this.memberLevelMapper = memberLevelMapper;
+        this.couponTemplateMapper = couponTemplateMapper;
         this.groupClassService = groupClassService;
         this.passwordEncoder = passwordEncoder;
         this.slotGenerationService = slotGenerationService;
@@ -110,6 +116,7 @@ public class SeedService {
             seedCoaches();
         }
         seedGroupServices();
+        seedMembership();
         slotGenerationService.generateOnStartup();
         coachSlotGenerationService.generateOnStartup();
         seedGroupClasses();
@@ -275,6 +282,52 @@ public class SeedService {
         service.setMaxStudents(1);
         service.setStatus("ACTIVE");
         coachServiceMapper.insert(service);
+    }
+
+    /** 会员四档 + 券模板（幂等） */
+    private void seedMembership() {
+        if (memberLevelMapper.selectCount(null) == 0) {
+            seedLevel("NORMAL", "普通", 0L, 100, "1.0", 1);
+            seedLevel("SILVER", "银卡", 100000L, 98, "1.1", 2);
+            seedLevel("GOLD", "金卡", 300000L, 95, "1.2", 3);
+            seedLevel("BLACK", "黑卡", 800000L, 92, "1.5", 4);
+            log.info("seeded member levels");
+        }
+        if (couponTemplateMapper.selectCount(null) == 0) {
+            seedCoupon("新人场地券", "FIXED", 2000, 100, 0, 10000, "COURT", 30);
+            seedCoupon("教练课券", "FIXED", 5000, 100, 0, 30000, "COACH", 30);
+            log.info("seeded coupon templates");
+        }
+    }
+
+    private void seedLevel(String code, String name, long threshold, int discountPct, String pointsRate, int sort) {
+        com.lanjie.booking.entity.MemberLevel level = new com.lanjie.booking.entity.MemberLevel();
+        level.setCode(code);
+        level.setName(name);
+        level.setThresholdCents(threshold);
+        level.setDiscountPct(discountPct);
+        level.setPointsRate(new java.math.BigDecimal(pointsRate));
+        level.setSort(sort);
+        memberLevelMapper.insert(level);
+    }
+
+    private void seedCoupon(String name, String type, int valueCents, int percent, int maxDiscount,
+                            int minAmount, String scope, int validDays) {
+        com.lanjie.booking.entity.CouponTemplate template = new com.lanjie.booking.entity.CouponTemplate();
+        template.setName(name);
+        template.setType(type);
+        template.setValueCents(valueCents);
+        template.setPercent(percent);
+        template.setMaxDiscountCents(maxDiscount);
+        template.setMinAmountCents(minAmount);
+        template.setScope(scope);
+        template.setValidFrom(java.time.LocalDateTime.now());
+        template.setValidTo(java.time.LocalDateTime.now().plusDays(validDays));
+        template.setTotalQuantity(0);
+        template.setIssuedQuantity(0);
+        template.setPerUserLimit(1);
+        template.setStatus("ACTIVE");
+        couponTemplateMapper.insert(template);
     }
 
     private void seedGroupServices() {
