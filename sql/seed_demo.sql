@@ -1,15 +1,18 @@
 -- 演示数据（交付演示用，非测试数据；请在干净库上执行一次）
 -- 用法：mysql -uroot -p lanjie < sql/seed_demo.sql
 
--- 演示顾客
-INSERT INTO user (phone, nickname, role, status, cumulative_recharge_cents)
-VALUES ('13800001001', '小林', 'CUSTOMER', 'ACTIVE', 0);
+-- 演示顾客（密码统一 123456，可直接密码登录；也可用验证码 123456）
+INSERT INTO user (phone, nickname, role, status, cumulative_recharge_cents, password_hash)
+VALUES ('13800001001', '小林', 'CUSTOMER', 'ACTIVE', 0,
+        '$2a$10$LzUbktyZrQ/yDiHRymviMu6Ir4PoWCkr.tHW9wUxGhXkJQxh39.u2');
 SET @u1 = LAST_INSERT_ID();
-INSERT INTO user (phone, nickname, role, status, cumulative_recharge_cents)
-VALUES ('13800001002', '阿杰', 'CUSTOMER', 'ACTIVE', 0);
+INSERT INTO user (phone, nickname, role, status, cumulative_recharge_cents, password_hash)
+VALUES ('13800001002', '阿杰', 'CUSTOMER', 'ACTIVE', 0,
+        '$2a$10$LzUbktyZrQ/yDiHRymviMu6Ir4PoWCkr.tHW9wUxGhXkJQxh39.u2');
 SET @u2 = LAST_INSERT_ID();
-INSERT INTO user (phone, nickname, role, status, cumulative_recharge_cents)
-VALUES ('13800001003', '小周', 'CUSTOMER', 'ACTIVE', 0);
+INSERT INTO user (phone, nickname, role, status, cumulative_recharge_cents, password_hash)
+VALUES ('13800001003', '小周', 'CUSTOMER', 'ACTIVE', 0,
+        '$2a$10$LzUbktyZrQ/yDiHRymviMu6Ir4PoWCkr.tHW9wUxGhXkJQxh39.u2');
 SET @u3 = LAST_INSERT_ID();
 
 INSERT INTO wallet_account (user_id, balance_cents, version)
