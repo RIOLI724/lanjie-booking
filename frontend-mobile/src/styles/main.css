@@ -233,6 +233,149 @@ button {
   color: var(--muted);
 }
 
+/* ---- 订场表 ---- */
+.date-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 0 12px;
+  scrollbar-width: none;
+}
+
+.date-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.date-chip {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 14px;
+  padding: 7px 12px;
+  text-align: center;
+}
+
+.date-chip span {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.date-chip b {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.date-chip.active {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.date-chip.active span,
+.date-chip.active b {
+  color: var(--lime);
+}
+
+.book-grid {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 10px;
+}
+
+.book-row {
+  display: grid;
+  grid-template-columns: 44px repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.book-row:last-child {
+  margin-bottom: 0;
+}
+
+.court-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.hour-label {
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.cell {
+  height: 40px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #e9ede6;
+  padding: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cell.avail {
+  background: #fff;
+  border-color: var(--line);
+  color: var(--deep-2);
+  font-weight: 600;
+}
+
+.cell.sel {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.cell.off {
+  background: #e2e6df;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.select-bar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(66px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--ink);
+  border-radius: 16px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(11, 31, 23, 0.25);
+}
+
+.select-bar b {
+  color: var(--lime);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.home-card {
+  position: relative;
+}
+
+.home-card .go {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  color: var(--deep-2);
+  font-size: 18px;
+  line-height: 1;
+}
+
 /* ---- 底部导航 ---- */
 .dock {
   position: fixed;

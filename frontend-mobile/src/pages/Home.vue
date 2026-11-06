@@ -18,9 +18,10 @@ onMounted(() => {
     </h1>
 
     <div class="grid">
-      <div class="card disabled">
+      <router-link to="/book" class="card home-card">
         <b>订场</b>
-      </div>
+        <span class="go">›</span>
+      </router-link>
       <div class="card disabled">
         <b>约教练</b>
       </div>
