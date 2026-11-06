@@ -47,3 +47,10 @@ lanjie:
   sms:
     # 开发环境固定验证码，仅 dev 生效；生产接入真实短信后此配置无效
     dev-fixed-code: "123456"
+  ai:
+    # mock：确定性模型（CI/离线）；glm：智谱（需 GLM_API_KEY）
+    provider: ${AI_PROVIDER:mock}
+    glm:
+      api-key: ${GLM_API_KEY:}
+      model: ${GLM_MODEL:glm-4-flash}
+      endpoint: ${GLM_ENDPOINT:https://open.bigmodel.cn/api/paas/v4/chat/completions}

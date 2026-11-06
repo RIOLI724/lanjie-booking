@@ -64,6 +64,8 @@ public class SeedService {
     private final com.lanjie.booking.mapper.GroupClassMapper groupClassMapper;
     private final com.lanjie.booking.mapper.MemberLevelMapper memberLevelMapper;
     private final com.lanjie.booking.mapper.CouponTemplateMapper couponTemplateMapper;
+    private final com.lanjie.booking.mapper.KnowledgeDocMapper knowledgeDocMapper;
+    private final com.lanjie.booking.mapper.KnowledgeChunkMapper knowledgeChunkMapper;
     private final com.lanjie.booking.service.GroupClassService groupClassService;
     private final PasswordEncoder passwordEncoder;
     private final SlotGenerationService slotGenerationService;
@@ -78,6 +80,8 @@ public class SeedService {
                        com.lanjie.booking.mapper.GroupClassMapper groupClassMapper,
                        com.lanjie.booking.mapper.MemberLevelMapper memberLevelMapper,
                        com.lanjie.booking.mapper.CouponTemplateMapper couponTemplateMapper,
+                       com.lanjie.booking.mapper.KnowledgeDocMapper knowledgeDocMapper,
+                       com.lanjie.booking.mapper.KnowledgeChunkMapper knowledgeChunkMapper,
                        com.lanjie.booking.service.GroupClassService groupClassService,
                        PasswordEncoder passwordEncoder, SlotGenerationService slotGenerationService,
                        CoachSlotGenerationService coachSlotGenerationService, JdbcTemplate jdbcTemplate) {
@@ -93,6 +97,8 @@ public class SeedService {
         this.groupClassMapper = groupClassMapper;
         this.memberLevelMapper = memberLevelMapper;
         this.couponTemplateMapper = couponTemplateMapper;
+        this.knowledgeDocMapper = knowledgeDocMapper;
+        this.knowledgeChunkMapper = knowledgeChunkMapper;
         this.groupClassService = groupClassService;
         this.passwordEncoder = passwordEncoder;
         this.slotGenerationService = slotGenerationService;
@@ -117,6 +123,7 @@ public class SeedService {
         }
         seedGroupServices();
         seedMembership();
+        seedKnowledge();
         slotGenerationService.generateOnStartup();
         coachSlotGenerationService.generateOnStartup();
         seedGroupClasses();
@@ -328,6 +335,54 @@ public class SeedService {
         template.setPerUserLimit(1);
         template.setStatus("ACTIVE");
         couponTemplateMapper.insert(template);
+    }
+
+    /** 规则库（RAG 源）：8 篇政策，get_policy 按主题检索并引用 */
+    private void seedKnowledge() {
+        if (knowledgeDocMapper.selectCount(null) > 0) {
+            return;
+        }
+        seedDoc("退款规则", "refund",
+                "开场前 24 小时以上取消全额退款；开场前 2 至 24 小时取消退 70%；开场前不足 2 小时取消不退款。",
+                "退款,取消,阶梯,70%,24小时");
+        seedDoc("改期规则", "reschedule",
+                "开场前 2 小时可改期一次，多退少补；改期后不可再次改期。",
+                "改期,换时间,差价");
+        seedDoc("爽约规则", "noshow",
+                "开场 30 分钟未核销记为爽约；7 天内爽约 3 次暂停预订 7 天。",
+                "爽约,违约,黑名单");
+        seedDoc("课包规则", "package",
+                "私教课包分 5/10/20 节，分别 95/90/85 折，购买日起 12 个月有效；开场前 24 小时取消退回课时，24 小时内取消扣 1 节。",
+                "课包,课时,私教");
+        seedDoc("团课规则", "group",
+                "团课 4 人开班、上限 8 人，24 小时前不足 4 人自动取消并全额退款；满员可候补，有人退按顺序递补。",
+                "团课,开班,候补");
+        seedDoc("拼场规则", "pickup",
+                "拼场为 3v3/4v4/5v5，发起人先付全场，参与者份子钱由平台托管，开赛 1 小时后结算给发起人。",
+                "拼场,份子钱,AA");
+        seedDoc("场馆信息", "venue",
+                "城东体育馆营业时间 09:00-22:00，4 片全场；地址城东区体育大道 8 号，电话 0871-88886666。",
+                "营业,地址,电话,停车");
+        seedDoc("会员与优惠", "member",
+                "会员四档按累计充值升级（1000/3000/8000），享 98/95/92 折；会员折扣与优惠券二选一，积分可再抵最多 20%。",
+                "会员,折扣,积分,优惠券");
+        log.info("seeded knowledge base");
+    }
+
+    private void seedDoc(String title, String category, String content, String keywords) {
+        com.lanjie.booking.entity.KnowledgeDoc doc = new com.lanjie.booking.entity.KnowledgeDoc();
+        doc.setTitle(title);
+        doc.setCategory(category);
+        doc.setContent(content);
+        doc.setVersion(1);
+        doc.setStatus("ACTIVE");
+        knowledgeDocMapper.insert(doc);
+        com.lanjie.booking.entity.KnowledgeChunk chunk = new com.lanjie.booking.entity.KnowledgeChunk();
+        chunk.setDocId(doc.getId());
+        chunk.setSeq(0);
+        chunk.setContent(content);
+        chunk.setKeywords(keywords);
+        knowledgeChunkMapper.insert(chunk);
     }
 
     private void seedGroupServices() {
