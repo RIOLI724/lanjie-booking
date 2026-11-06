@@ -91,7 +91,8 @@ public class CoachController {
         return Result.ok(payVO);
     }
 
-    /** 教练端改档期后重建档期（W6 教练端使用；此入口先供内部联调） */
+    /** 重建教练档期：仅管理员（避免顾客触发全量重建） */
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/coaches/{id}/regenerate")
     public Result<Void> regenerate(@PathVariable Long id) {
         coachSlotGenerationService.regenerateForCoach(id);

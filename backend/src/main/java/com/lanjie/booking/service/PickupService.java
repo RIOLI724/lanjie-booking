@@ -237,6 +237,14 @@ public class PickupService {
         } else {
             participantMapper.insert(participant);
         }
+        // 加入即条件占坑，防并发超员；未支付超时由 settle 释放
+        if (gameMapper.joinOne(gameId) == 0) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "拼场已满员");
+        }
+        PickupGame freshGame = gameMapper.selectById(gameId);
+        if (freshGame.getJoinedPlayers() >= freshGame.getTotalPlayers()) {
+            gameMapper.updateStatus(gameId, "FULL");
+        }
         return new HoldVO(booking.getId(), booking.getBookingNo(), share,
                 booking.getHoldExpiresAt().toString(),
                 List.of(new ItemVO(item.getTitle(), slot.getStartAt().toString(),
@@ -268,13 +276,6 @@ public class PickupService {
         }
         participant.setStatus("CONFIRMED");
         participantMapper.updateById(participant);
-        PickupGame game = gameMapper.selectById(participant.getGameId());
-        if (game != null && gameMapper.joinOne(game.getId()) > 0) {
-            PickupGame fresh = gameMapper.selectById(game.getId());
-            if (fresh.getJoinedPlayers() >= fresh.getTotalPlayers()) {
-                gameMapper.updateStatus(game.getId(), "FULL");
-            }
-        }
     }
 
     /** 订单取消回调：发起人取消 → 全场次取消 + 份子钱全退；参与者取消 → 按 24h 规则 */
@@ -293,15 +294,13 @@ public class PickupService {
         if (participant == null) {
             return;
         }
-        boolean wasConfirmed = "CONFIRMED".equals(participant.getStatus());
         participant.setStatus("CANCELLED");
         participantMapper.updateById(participant);
-        if (wasConfirmed) {
-            gameMapper.leaveOne(participant.getGameId());
-            PickupGame game = gameMapper.selectById(participant.getGameId());
-            if (game != null && "FULL".equals(game.getStatus())) {
-                gameMapper.updateStatus(game.getId(), "OPEN");
-            }
+        // 加入时已占坑，任何状态的取消都释放
+        gameMapper.leaveOne(participant.getGameId());
+        PickupGame game = gameMapper.selectById(participant.getGameId());
+        if (game != null && "FULL".equals(game.getStatus())) {
+            gameMapper.updateStatus(game.getId(), "OPEN");
         }
     }
 
@@ -377,6 +376,16 @@ public class PickupService {
     /** 结算：开赛 1 小时后把托管份子钱打给发起人（唯一键幂等） */
     @Transactional
     public void settle() {
+        // 未支付超时：释放加入时占的坑
+        for (PickupParticipant stale : participantMapper.selectList(new LambdaQueryWrapper<PickupParticipant>()
+                .eq(PickupParticipant::getStatus, "PENDING_PAYMENT"))) {
+            Booking staleBooking = bookingMapper.selectById(stale.getBookingId());
+            if (staleBooking == null || staleBooking.getStatus() == BookingStatus.CANCELLED) {
+                stale.setStatus("CANCELLED");
+                participantMapper.updateById(stale);
+                gameMapper.leaveOne(stale.getGameId());
+            }
+        }
         List<PickupGame> games = gameMapper.selectList(new LambdaQueryWrapper<PickupGame>()
                 .in(PickupGame::getStatus, "OPEN", "FULL")
                 .eq(PickupGame::getSettled, false));

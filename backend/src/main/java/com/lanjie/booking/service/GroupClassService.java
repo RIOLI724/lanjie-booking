@@ -198,15 +198,18 @@ public class GroupClassService {
             enrollment.setId(existing.getId());
         }
 
-        if (clazz.getEnrolledCount() < clazz.getMaxStudents()) {
+        int reserved = classMapper.update(null,
+                new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<GroupClass>()
+                        .eq(GroupClass::getId, classId)
+                        .apply("enrolled_count < max_students")
+                        .setSql("enrolled_count = enrolled_count + 1"));
+        if (reserved > 0) {
             Booking booking = createSeatBooking(user, clazz);
             enrollment.setBookingId(booking.getId());
             enrollment.setStatus(GroupEnrollmentStatus.CONFIRMED);
             upsertEnrollment(enrollment);
-            classMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<GroupClass>()
-                    .eq(GroupClass::getId, classId)
-                    .setSql("enrolled_count = enrolled_count + 1"));
-            if (clazz.getEnrolledCount() + 1 >= clazz.getMaxStudents()) {
+            GroupClass fresh = loadClass(classId);
+            if (fresh.getEnrolledCount() >= fresh.getMaxStudents()) {
                 classMapper.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<GroupClass>()
                         .eq(GroupClass::getId, classId)
                         .set(GroupClass::getStatus, GroupClassStatus.FULL.name()));
