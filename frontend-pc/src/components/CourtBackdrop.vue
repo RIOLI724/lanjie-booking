@@ -290,7 +290,7 @@ void main() {
 
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
-function start(gl: WebGLRenderingContext, width: number, height: number) {
+function start(gl: WebGLRenderingContext, size: { w: number; h: number }) {
   buildScene()
   const program = compile(gl, VS, FS)
   const aPos = gl.getAttribLocation(program, 'aPos')
@@ -339,11 +339,11 @@ function start(gl: WebGLRenderingContext, width: number, height: number) {
       Math.sin(pol) * Math.sin(az) * radius,
     ]
     const target: V3 = [0, 0.6, 0]
-    const proj = perspective((42 * Math.PI) / 180, width / height, 0.1, 120)
+    const proj = perspective((42 * Math.PI) / 180, size.w / size.h, 0.1, 120)
     const view = lookAt(eye, target, [0, 1, 0])
     const mvp = multiply(proj, view)
 
-    gl.viewport(0, 0, width, height)
+    gl.viewport(0, 0, size.w, size.h)
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
     gl.useProgram(program)
     gl.uniformMatrix4fv(uMVP, false, mvp)
@@ -397,13 +397,16 @@ onMounted(() => {
   if (!el) return
   const gl = el.getContext('webgl', { antialias: true, alpha: false })
   if (!gl) return
+  const size = { w: 0, h: 0 }
   const resize = () => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     el.width = Math.floor(el.clientWidth * dpr)
     el.height = Math.floor(el.clientHeight * dpr)
+    size.w = el.width
+    size.h = el.height
   }
   resize()
-  start(gl, el.width, el.height)
+  start(gl, size)
   window.addEventListener('resize', resize)
   window.addEventListener('mousemove', onMouse)
 })

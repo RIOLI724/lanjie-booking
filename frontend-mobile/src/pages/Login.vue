@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { sendSmsCode } from '@/api/auth'
 import { ApiError } from '@/api/http'
 import { loginByPassword, loginBySms } from '@/stores/session'
+import CourtBackdrop from '@/components/CourtBackdrop.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -64,12 +65,17 @@ onUnmounted(() => {
 
 <template>
   <div class="page-auth">
-    <div class="brand">
-      <h1>篮<span>界</span></h1>
-      <small>城东体育馆 · 4 片全场 · AI 前台</small>
+    <div class="auth-visual">
+      <CourtBackdrop />
+      <div class="auth-visual-shade"></div>
+      <div class="brand">
+        <h1>篮<span>界</span></h1>
+        <small>城东体育馆 · 4 片全场 · AI 前台</small>
+      </div>
     </div>
 
-    <div class="seg">
+    <div class="auth-form">
+      <div class="seg">
       <button :class="{ active: mode === 'PASSWORD' }" @click="mode = 'PASSWORD'">密码登录</button>
       <button :class="{ active: mode === 'SMS' }" @click="mode = 'SMS'">验证码登录</button>
     </div>
@@ -120,5 +126,6 @@ onUnmounted(() => {
     <p class="hint">
       还没有账号？<router-link to="/register">手机号注册</router-link>
     </p>
+    </div>
   </div>
 </template>

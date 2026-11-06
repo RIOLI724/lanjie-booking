@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { sendSmsCode } from '@/api/auth'
 import { ApiError } from '@/api/http'
 import { register } from '@/stores/session'
+import CourtBackdrop from '@/components/CourtBackdrop.vue'
 
 const router = useRouter()
 
@@ -60,14 +61,20 @@ onUnmounted(() => {
 
 <template>
   <div class="page-auth">
-    <div class="brand">
-      <h1>注册<span>篮界</span></h1>
+    <div class="auth-visual">
+      <CourtBackdrop />
+      <div class="auth-visual-shade"></div>
+      <div class="brand">
+        <h1>注册<span>篮界</span></h1>
+        <small>30 秒加入球局 · 4 片全场</small>
+      </div>
     </div>
 
-    <label class="field">
-      <span>手机号</span>
-      <input v-model="phone" inputmode="numeric" maxlength="11" placeholder="11 位手机号" />
-    </label>
+    <div class="auth-form">
+      <label class="field">
+        <span>手机号</span>
+        <input v-model="phone" inputmode="numeric" maxlength="11" placeholder="11 位手机号" />
+      </label>
 
     <label class="field">
       <span>验证码</span>
@@ -98,5 +105,6 @@ onUnmounted(() => {
     <p class="hint">
       已有账号？<router-link to="/login">直接登录</router-link>
     </p>
+    </div>
   </div>
 </template>
