@@ -1,0 +1,272 @@
+/* 篮界设计令牌：深绿 + 石灰绿，与原型一致 */
+:root {
+  --ink: #0b1f17;
+  --deep-2: #14402e;
+  --lime: #c8f169;
+  --paper: #f4f7f0;
+  --card: #ffffff;
+  --line: #e3e9dd;
+  --line-2: #eef2e8;
+  --muted: #7b8a80;
+  --danger: #d05a4e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100dvh;
+}
+
+input,
+button {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* ---- 布局 ---- */
+.page {
+  min-height: 100dvh;
+  padding: 0 18px calc(86px + env(safe-area-inset-bottom));
+}
+
+.page-auth {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 0 22px calc(24px + env(safe-area-inset-bottom));
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.brand h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: -0.03em;
+}
+
+.brand h1 span {
+  color: var(--deep-2);
+}
+
+.brand small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ---- 表单 ---- */
+.field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.field span {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.field .control {
+  display: flex;
+  gap: 8px;
+}
+
+.field input {
+  flex: 1;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 11px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.field input:focus {
+  border-color: var(--deep-2);
+}
+
+.seg {
+  display: flex;
+  gap: 4px;
+  background: #e9eee6;
+  border-radius: 14px;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+
+.seg button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.seg button.active {
+  background: #fff;
+  color: var(--ink);
+  font-weight: 650;
+  box-shadow: 0 2px 7px rgba(11, 31, 23, 0.08);
+}
+
+.btn-primary {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--lime);
+  font-weight: 650;
+  font-size: 14px;
+  padding: 13px;
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+}
+
+.btn-ghost {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--deep-2);
+  font-size: 12px;
+  padding: 0 12px;
+  white-space: nowrap;
+}
+
+.hint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.hint a {
+  color: var(--deep-2);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.error {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: var(--danger);
+  text-align: center;
+}
+
+/* ---- 卡片 ---- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+}
+
+.card.disabled {
+  opacity: 0.6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.grid .card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 96px;
+}
+
+.grid .card b {
+  font-size: 15px;
+}
+
+.grid .card small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.grid .card .tag {
+  margin-top: auto;
+  align-self: flex-start;
+  font-size: 10px;
+  color: var(--deep-2);
+  background: var(--paper);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.page-title {
+  padding: 22px 0 14px;
+  font-size: 24px;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.section-label {
+  margin: 18px 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---- 底部导航 ---- */
+.dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  padding: 8px 0 max(10px, env(safe-area-inset-bottom));
+}
+
+.dock a {
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.dock a i {
+  display: block;
+  width: 22px;
+  height: 22px;
+  margin: 0 auto 3px;
+  border-radius: 7px;
+  background: var(--line-2);
+}
+
+.dock a.active {
+  color: var(--deep-2);
+  font-weight: 650;
+}
+
+.dock a.active i {
+  background: var(--lime);
+}
