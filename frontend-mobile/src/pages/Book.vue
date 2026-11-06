@@ -39,11 +39,17 @@ const toStr = (m: number) =>
 const localIso = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
+const selectedDay = computed(() => days.value.find((x) => x.date === selectedDate.value))
+const selectedDayTitle = computed(() => {
+  if (!selectedDay.value) return isReschedule.value ? '改期' : '订场'
+  const date = new Date(`${selectedDate.value}T00:00:00`)
+  return `${date.getMonth() + 1} 月 ${date.getDate()} 日 ${WEEK_LABELS[date.getDay()]}`
+})
+
 const hours = computed<string[]>(() => {
-  const day = days.value.find((x) => x.date === selectedDate.value)
-  if (!day) return []
+  if (!selectedDay.value) return []
   const list: string[] = []
-  for (let m = toMin(day.openTime); m + HOUR <= toMin(day.closeTime); m += HOUR) {
+  for (let m = toMin(selectedDay.value.openTime); m + HOUR <= toMin(selectedDay.value.closeTime); m += HOUR) {
     list.push(toStr(m))
   }
   return list
@@ -83,21 +89,33 @@ function isSelectable(slot: SlotInfo): boolean {
   return new Date(`${selectedDate.value}T${slot.startAt}:00`).getTime() > Date.now()
 }
 
-function cellState(court: CourtInfo, hour: string): 'sel' | 'avail' | 'off' {
+type CellState = 'sel' | 'avail' | 'off' | 'booked' | 'held' | 'closed'
+
+function cellState(court: CourtInfo, hour: string): CellState {
   const slot = cellSlot(court, hour)
-  if (!slot || !isSelectable(slot)) return 'off'
+  if (!slot) return 'off'
   if (selected.value.some((s) => s.id === slot.id)) return 'sel'
+  if (slot.status === 'BOOKED') return 'booked'
+  if (slot.status === 'HELD') return 'held'
+  if (slot.status === 'CLOSED') return 'closed'
+  if (!isSelectable(slot)) return 'off'
   return 'avail'
 }
 
-function cellText(court: CourtInfo, hour: string): string {
+function cellMain(court: CourtInfo, hour: string): string {
   const slot = cellSlot(court, hour)
   if (!slot) return ''
   const state = cellState(court, hour)
   if (state === 'sel' || state === 'avail') return `¥${slot.priceCents / 100}`
-  if (slot.status === 'BOOKED') return '已订'
-  if (slot.status === 'HELD') return '锁定'
-  return ''
+  if (state === 'booked') return '已订'
+  if (state === 'held') return '待支付'
+  if (state === 'closed') return '已关'
+  return '—'
+}
+
+function cellSub(court: CourtInfo, hour: string): string {
+  const state = cellState(court, hour)
+  return state === 'sel' || state === 'avail' ? '空' : ''
 }
 
 /** 连选约束：同一场地、时间连续、最多 4 格 */
@@ -118,6 +136,23 @@ function tapCell(court: CourtInfo, hour: string) {
   selected.value.push(slot)
 }
 
+/** AI 帮我选：优先找最早的一段可连场（最多 2 小时） */
+function aiPick() {
+  const available = slots.value
+    .filter(isSelectable)
+    .sort((a, b) => a.startAt.localeCompare(b.startAt) || a.courtId - b.courtId)
+  const first = available[0]
+  if (!first) {
+    window.alert('这天已经没有空场了，换个日期看看')
+    return
+  }
+  selected.value = [first]
+  const next = slotMap.value.get(`${first.courtId}|${toStr(toMin(first.startAt) + HOUR)}`)
+  if (next && isSelectable(next)) {
+    selected.value.push(next)
+  }
+}
+
 async function pick(d: CalendarDay) {
   if (d.date === selectedDate.value) return
   selectedDate.value = d.date
@@ -132,7 +167,6 @@ async function onHold() {
   try {
     const slotIds = selected.value.map((s) => s.id)
     if (isReschedule.value) {
-      // 改期：差价 > 0 需补差价支付单，这里用户点「改期」即为确认支付
       const res = await rescheduleBooking(rescheduleBookingId.value, slotIds)
       if (res.payNo) {
         await confirmMockPay(res.payNo)
@@ -166,8 +200,16 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="page">
-    <h1 class="page-title">{{ isReschedule ? '改期' : '订场' }}</h1>
+  <div class="page book-page">
+    <header class="book-head">
+      <div>
+        <h1>{{ isReschedule ? '改期' : selectedDayTitle }}</h1>
+        <p>{{ courts.length }} 片全场 · {{ selectedDay?.openTime }}–{{ selectedDay?.closeTime }}</p>
+      </div>
+      <button class="ai-pick" @click="aiPick">
+        <span>✧</span> AI 帮我选
+      </button>
+    </header>
 
     <div class="date-strip">
       <button
@@ -182,26 +224,34 @@ onMounted(async () => {
       </button>
     </div>
 
-    <div class="book-grid">
-      <div class="book-row">
-        <div class="hour-label"></div>
-        <div v-for="c in courts" :key="c.id" class="court-name">{{ c.name }}</div>
-      </div>
-      <div v-for="h in hours" :key="h" class="book-row">
-        <div class="hour-label">{{ h }}</div>
-        <button
-          v-for="c in courts"
-          :key="c.id"
-          class="cell"
-          :class="cellState(c, h)"
-          @click="tapCell(c, h)"
-        >
-          {{ cellText(c, h) }}
-        </button>
+    <div class="book-scroll">
+      <div class="book-table" :style="{ '--hours': hours.length }">
+        <div class="book-corner">场地</div>
+        <div v-for="h in hours" :key="h" class="book-hour">{{ h }}</div>
+        <template v-for="c in courts" :key="c.id">
+          <div class="book-court">{{ c.name }}</div>
+          <button
+            v-for="h in hours"
+            :key="`${c.id}-${h}`"
+            class="book-cell"
+            :class="cellState(c, h)"
+            @click="tapCell(c, h)"
+          >
+            <b>{{ cellMain(c, h) }}</b>
+            <span v-if="cellSub(c, h)">{{ cellSub(c, h) }}</span>
+          </button>
+        </template>
       </div>
     </div>
 
-    <div v-if="selected.length" class="select-bar">
+    <div class="book-legend">
+      <span><i class="lg avail"></i>可订</span>
+      <span><i class="lg booked"></i>已订</span>
+      <span><i class="lg held"></i>待支付</span>
+      <span><i class="lg sel"></i>已选</span>
+    </div>
+
+    <div v-if="selected.length" class="select-bar book-select-bar">
       <span :class="{ 'bar-error': holdError }">{{ holdError || `${selected.length} 格连场` }}</span>
       <div class="bar-right">
         <b>¥{{ totalCents / 100 }}</b>
