@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import DockBar from '@/components/DockBar.vue'
 import { loadMe, logout, sessionState } from '@/stores/session'
+import { fetchMember, type MemberInfo } from '@/api/services'
 
 const router = useRouter()
+const member = ref<MemberInfo | null>(null)
 
-onMounted(() => {
+onMounted(async () => {
   if (!sessionState.loaded) {
     loadMe().catch(() => {})
   }
+  member.value = await fetchMember().catch(() => null)
 })
 
 async function onLogout() {
@@ -60,8 +63,19 @@ async function onLogout() {
       <span class="go">›</span>
     </router-link>
 
-    <div class="card disabled" style="margin-top: 10px">
-      <div>会员与积分</div>
+    <div class="card" style="margin-top: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: baseline">
+        <div>
+          <b>{{ member?.levelName ?? '普通' }}</b>
+          <div style="font-size: 11px; color: var(--muted); margin-top: 2px">
+            累计充值 ¥{{ (member?.cumulativeRechargeCents ?? 0) / 100 }}
+          </div>
+        </div>
+        <div style="text-align: right">
+          <b style="color: var(--deep-2)">{{ member?.pointsBalance ?? 0 }}</b>
+          <div style="font-size: 11px; color: var(--muted)">积分</div>
+        </div>
+      </div>
     </div>
 
     <button class="btn-ghost" style="width: 100%; padding: 11px; margin-top: 14px" @click="onLogout">退出登录</button>

@@ -22,15 +22,18 @@ onMounted(() => {
         <b>订场</b>
         <span class="go">›</span>
       </router-link>
-      <div class="card disabled">
+      <router-link to="/coach" class="card home-card">
         <b>约教练</b>
-      </div>
-      <div class="card disabled">
+        <span class="go">›</span>
+      </router-link>
+      <router-link to="/pickup" class="card home-card">
         <b>拼场</b>
-      </div>
-      <div class="card disabled">
+        <span class="go">›</span>
+      </router-link>
+      <router-link to="/ai" class="card home-card">
         <b>AI 前台</b>
-      </div>
+        <span class="go">›</span>
+      </router-link>
     </div>
 
     <DockBar />

@@ -7,6 +7,7 @@ import Book from '@/pages/Book.vue'
 import Orders from '@/pages/Orders.vue'
 import Wallet from '@/pages/Wallet.vue'
 import Coach from '@/pages/Coach.vue'
+import Ai from '@/pages/Ai.vue'
 import Pickup from '@/pages/Pickup.vue'
 import Me from '@/pages/Me.vue'
 
@@ -21,6 +22,7 @@ export const router = createRouter({
     { path: '/wallet', name: 'wallet', component: Wallet, meta: { requiresAuth: true } },
     { path: '/coach', name: 'coach', component: Coach, meta: { requiresAuth: true } },
     { path: '/pickup', name: 'pickup', component: Pickup, meta: { requiresAuth: true } },
+    { path: '/ai', name: 'ai', component: Ai, meta: { requiresAuth: true } },
     { path: '/me', name: 'me', component: Me, meta: { requiresAuth: true } },
   ],
 })

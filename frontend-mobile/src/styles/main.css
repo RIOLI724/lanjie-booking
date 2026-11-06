@@ -761,3 +761,37 @@ button {
 .dock a.active i {
   background: var(--lime);
 }
+
+/* ---- W12 教练 / 拼场 / AI ---- */
+.coach-grid { display: grid; grid-template-columns: 1fr; gap: 8px; margin-bottom: 12px; }
+.coach-card { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left; }
+.coach-card.on { border-color: var(--deep-2); box-shadow: 0 0 0 2px rgba(20,64,46,.15); }
+.coach-card small { color: var(--muted); font-size: 11px; }
+.coach-card .price { color: var(--deep-2); font-weight: 700; font-size: 13px; }
+.slot-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.slot-chip { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 9px 0; font-size: 12px; color: var(--deep-2); }
+.slot-chip.on { background: var(--lime); border-color: var(--lime); color: var(--ink); font-weight: 700; }
+.slot-chip.off { color: var(--muted); text-decoration: line-through; }
+.coach-actions { margin-top: 4px; }
+.pkg-buy { display: flex; gap: 8px; align-items: center; margin-top: 12px; font-size: 12px; color: var(--muted); }
+.pkg-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; }
+.pkg-row small { color: var(--muted); }
+.pickup-card { margin-bottom: 10px; }
+.pickup-top { display: flex; justify-content: space-between; align-items: center; }
+.pickup-sub { color: var(--muted); font-size: 11px; margin-top: 4px; }
+.pickup-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+.pickup-foot b { font-size: 17px; }
+.pickup-foot small { font-size: 10px; color: var(--muted); font-weight: 400; }
+.slot-select { width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.chat-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 70px; }
+.chat-row { display: flex; }
+.chat-row.user { justify-content: flex-end; }
+.bubble { max-width: 86%; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 13px; white-space: pre-wrap; }
+.chat-row.user .bubble { background: var(--ink); color: #fff; border-color: var(--ink); }
+.steps { margin-bottom: 6px; display: flex; flex-direction: column; gap: 3px; }
+.step { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: var(--muted); background: var(--paper); border-radius: 8px; padding: 4px 8px; }
+.chat-input { position: fixed; left: 0; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); display: flex; gap: 8px; padding: 8px 12px; background: var(--paper); border-top: 1px solid var(--line); }
+.chat-input input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+.chip.ok { background: var(--lime); color: var(--ink); }
+.chip.warn { background: #fdf3d8; color: #9a6b00; }
+.empty { text-align: center; color: var(--muted); font-size: 12px; padding: 18px; }
