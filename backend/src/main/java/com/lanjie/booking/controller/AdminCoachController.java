@@ -1,5 +1,7 @@
 package com.lanjie.booking.controller;
 
+import com.lanjie.booking.common.BusinessException;
+import com.lanjie.booking.common.ErrorCode;
 import com.lanjie.booking.common.Result;
 import com.lanjie.booking.entity.CoachScheduleRule;
 import com.lanjie.booking.entity.CoachService;
@@ -35,7 +37,7 @@ import java.util.Map;
 /** 管理端：教练入驻、资料编辑、代排班、代请假。 */
 @RestController
 @RequestMapping("/api/v1/admin/coaches")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'FRONT_DESK')")
 public class AdminCoachController {
 
     private final AdminCoachOpsService opsService;
@@ -51,6 +53,7 @@ public class AdminCoachController {
         return Result.ok(opsService.coaches());
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public Result<Long> create(@AuthenticationPrincipal LoginUser actor,
                                @Valid @RequestBody CreateCoachRequest request) {
@@ -62,6 +65,7 @@ public class AdminCoachController {
         return Result.ok(coachId);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @AuthenticationPrincipal LoginUser actor,
                                @RequestBody UpdateCoachRequest request) {
@@ -100,6 +104,9 @@ public class AdminCoachController {
     public Result<Map<String, Object>> timeOff(@PathVariable Long id,
                                                @AuthenticationPrincipal LoginUser actor,
                                                @RequestBody TimeOffRequest request) {
+        if (request.isForce() && !"ADMIN".equals(actor.role())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "请假区间有已售课程，取消并退款需要店长权限");
+        }
         Map<String, Object> data = opsService.timeOff(id, request.getStartAt(), request.getEndAt(),
                 request.getReason(), request.isForce());
         if (!Boolean.TRUE.equals(data.get("blocked"))) {

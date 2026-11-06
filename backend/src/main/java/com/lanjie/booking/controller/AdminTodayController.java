@@ -54,7 +54,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/v1/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'FRONT_DESK')")
 public class AdminTodayController {
 
     private final BookingMapper bookingMapper;
@@ -266,6 +266,7 @@ public class AdminTodayController {
     }
 
     /** AI 质量摘要：人话版，给前台/负责人看 */
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/ai/summary")
     public Result<Map<String, Object>> aiSummary() {
         LocalDateTime dayStart = LocalDate.now().atStartOfDay();

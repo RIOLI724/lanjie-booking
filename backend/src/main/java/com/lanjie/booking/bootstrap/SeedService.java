@@ -118,6 +118,10 @@ public class SeedService {
                 .eq(User::getRole, UserRole.ADMIN)) == 0) {
             seedAdmin();
         }
+        if (userMapper.selectCount(new LambdaQueryWrapper<User>()
+                .eq(User::getPhone, "13800000001")) == 0) {
+            seedFrontDesk();
+        }
         if (rechargePlanMapper.selectCount(null) == 0) {
             seedPlans();
         }
@@ -219,6 +223,19 @@ public class SeedService {
         admin.setCumulativeRechargeCents(0L);
         userMapper.insert(admin);
         log.info("seeded admin account 13800000000 / admin123");
+    }
+
+    /** 前台值班账号：只能做日常接待/排期，退款、改价、财务等要店长。 */
+    private void seedFrontDesk() {
+        User frontDesk = new User();
+        frontDesk.setPhone("13800000001");
+        frontDesk.setPasswordHash(passwordEncoder.encode("front123"));
+        frontDesk.setNickname("前台值班");
+        frontDesk.setRole(UserRole.FRONT_DESK);
+        frontDesk.setStatus(UserStatus.ACTIVE);
+        frontDesk.setCumulativeRechargeCents(0L);
+        userMapper.insert(frontDesk);
+        log.info("seeded front desk account 13800000001 / front123");
     }
 
     private void seedPlans() {

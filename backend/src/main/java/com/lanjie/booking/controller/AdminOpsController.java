@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/v1/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'FRONT_DESK')")
 public class AdminOpsController {
 
     private final BookingMapper bookingMapper;
@@ -171,6 +171,7 @@ public class AdminOpsController {
     }
 
     /** 强制取消：场馆原因全退，写审计 */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/orders/{id}/force-cancel")
     public Result<Map<String, Object>> forceCancel(@PathVariable Long id,
                                                    @RequestBody(required = false) CancelRequest req,
@@ -223,6 +224,9 @@ public class AdminOpsController {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "时段不存在");
         }
         boolean force = req != null && req.isForce();
+        if (force && !"ADMIN".equals(actor.role())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "强制关场并退款需要店长权限");
+        }
         String reason = req == null || req.getReason() == null || req.getReason().isBlank()
                 ? "场馆原因关场" : req.getReason();
         Map<String, Object> data = new LinkedHashMap<>();
@@ -283,6 +287,7 @@ public class AdminOpsController {
     }
 
     /** 改价：只改当前格子的价格快照，不影响已售出生效规则 */
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/slots/{slotId}/price")
     public Result<Void> changePrice(@PathVariable Long slotId, @RequestBody PriceRequest req,
                                     @AuthenticationPrincipal LoginUser actor) {

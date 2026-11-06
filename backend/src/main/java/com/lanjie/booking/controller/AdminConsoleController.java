@@ -39,7 +39,7 @@ import java.util.Map;
 /** 管理端查询：看板 / 订单 / 退款 / 用户封禁 / 排期（核销与 AI 观测另有控制器） */
 @RestController
 @RequestMapping("/api/v1/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'FRONT_DESK')")
 public class AdminConsoleController {
 
     private final BookingMapper bookingMapper;
@@ -135,6 +135,7 @@ public class AdminConsoleController {
                 .orderByDesc(RefundOrder::getId).last("LIMIT 100")));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users")
     public Result<List<Map<String, Object>>> users() {
         List<Map<String, Object>> result = new ArrayList<>();
@@ -157,6 +158,7 @@ public class AdminConsoleController {
         return Result.ok(result);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/users/{id}/ban")
     public Result<Void> ban(@PathVariable Long id, @AuthenticationPrincipal LoginUser actor,
                             @RequestBody BanRequest request) {

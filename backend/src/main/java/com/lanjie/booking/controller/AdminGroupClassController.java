@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 /** 管理端：团课排班、报名名单、取消整班（全员全退）。 */
 @RestController
 @RequestMapping("/api/v1/admin/group-classes")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'FRONT_DESK')")
 public class AdminGroupClassController {
 
     private final GroupClassService groupClassService;
@@ -145,6 +145,7 @@ public class AdminGroupClassController {
     }
 
     /** 取消整班：已报名全员全退，释放教练档期与场地 */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable Long id,
                                @AuthenticationPrincipal LoginUser actor,

@@ -251,3 +251,6 @@ tr:last-child td { border-bottom: 0; }
 .trend-bar { width: 70%; max-width: 34px; background: linear-gradient(180deg, var(--lime), #9fd13f); border-radius: 5px 5px 2px 2px; transition: height .2s ease; }
 .trend-col small { color: var(--muted); font-size: 10px; }
 .finance-split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.side-role { margin-top: 18px; padding: 0 9px; font-size: 11px; color: #7f9186; }
+.login-hint { margin: 10px 0 0; font-size: 11px; color: var(--muted); line-height: 1.5; }

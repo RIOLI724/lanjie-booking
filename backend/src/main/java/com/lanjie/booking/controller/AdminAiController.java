@@ -29,7 +29,7 @@ import java.util.Map;
 /** AI 观测台：会话/工具调用/转人工工单/评测（PC 管理端数据源） */
 @RestController
 @RequestMapping("/api/v1/admin/ai")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'FRONT_DESK')")
 public class AdminAiController {
 
     private final AiSessionMapper sessionMapper;
@@ -122,11 +122,13 @@ public class AdminAiController {
         return Result.ok();
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/evals/run")
     public Result<AiEvalRun> runEval() {
         return Result.ok(evalService.run(evalService.evalUser().userId()));
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/evals")
     public Result<List<AiEvalRun>> evals() {
         return Result.ok(evalService.runs());

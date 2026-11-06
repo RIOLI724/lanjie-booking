@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import CourtBackdrop from './components/CourtBackdrop.vue'
 
 const BASE = '/api/v1'
 const token = ref(localStorage.getItem('lanjie.admin.token') ?? '')
+const role = ref(localStorage.getItem('lanjie.admin.role') ?? '')
+const isManager = computed(() => role.value === 'ADMIN')
 const phone = ref('13800000000')
 const password = ref('admin123')
 const error = ref('')
@@ -57,7 +59,7 @@ const REASON_TEXT: Record<string, string> = {
   USER_REQUEST: '用户要求人工', PAYMENT: '涉及退款 / 支付', COMPLAINT: '投诉',
   OUT_OF_SCOPE: '超出了 AI 能办的范围', REPEATED_FAILURE: 'AI 没听懂，已兜底转人工',
 }
-const ROLE_TEXT: Record<string, string> = { CUSTOMER: '顾客', COACH: '教练', ADMIN: '管理员' }
+const ROLE_TEXT: Record<string, string> = { CUSTOMER: '顾客', COACH: '教练', ADMIN: '店长', FRONT_DESK: '前台' }
 const USTATUS_TEXT: Record<string, string> = { ACTIVE: '正常', FROZEN: '已封禁' }
 const BSTATUS_TEXT: Record<string, string> = {
   PENDING_PAYMENT: '待支付', CONFIRMED: '已确认', COMPLETED: '已完成', CANCELLED: '已取消', NO_SHOW: '爽约',
@@ -104,16 +106,22 @@ async function login() {
     })
     token.value = data.accessToken
     localStorage.setItem('lanjie.admin.token', data.accessToken)
+    const me = await api<{ role: string }>('/me')
+    role.value = me.role
+    localStorage.setItem('lanjie.admin.role', me.role)
     await openTab('today')
   } catch (e) {
     error.value = e instanceof Error ? e.message : '登录失败'
     token.value = ''
+    role.value = ''
   }
 }
 
 function logout() {
   token.value = ''
+  role.value = ''
   localStorage.removeItem('lanjie.admin.token')
+  localStorage.removeItem('lanjie.admin.role')
 }
 
 async function openTab(next: typeof tab.value) {
@@ -177,6 +185,10 @@ async function closeSlot(force = false) {
       body: { force, reason },
     })
     if (data.blocked) {
+      if (!isManager.value) {
+        alert('该时段已经有顾客预订，关场退款需要店长处理。')
+        return
+      }
       const names = (data.affected ?? []).map((a: any) => `${a.userName}（${a.userPhone}）`).join('、')
       if (!window.confirm(`${data.message}\n\n受影响订单：${names}\n确认后将全额退款并关场，确定吗？`)) return
       await api(`/admin/slots/${slotOps.value.slotId}/close`, {
@@ -701,8 +713,16 @@ function relative(iso: unknown): string {
   return `${Math.floor(diff / 1440)} 天前`
 }
 
-onMounted(() => {
-  if (token.value) openTab('today')
+onMounted(async () => {
+  if (!token.value) return
+  try {
+    const me = await api<{ role: string }>('/me')
+    role.value = me.role
+    localStorage.setItem('lanjie.admin.role', me.role)
+    await openTab('today')
+  } catch {
+    logout()
+  }
 })
 </script>
 
@@ -717,6 +737,7 @@ onMounted(() => {
       <div class="field"><span>密码</span><input v-model="password" type="password" @keyup.enter="login" /></div>
       <p v-if="error" class="err">{{ error }}</p>
       <button class="btn" :disabled="loading" @click="login">进入管理台</button>
+      <p class="login-hint">前台：13800000001 / front123 · 店长：13800000000 / admin123</p>
     </div>
   </div>
 
@@ -730,11 +751,14 @@ onMounted(() => {
       <button :class="{ active: tab === 'classes' }" @click="openTab('classes')">团课管理</button>
       <button :class="{ active: tab === 'customer' }" @click="openTab('customer')">客户查询</button>
       <button :class="{ active: tab === 'refunds' }" @click="openTab('refunds')">退款记录</button>
-      <button :class="{ active: tab === 'users' }" @click="openTab('users')">用户管理</button>
-      <button :class="{ active: tab === 'audit' }" @click="openTab('audit')">操作审计</button>
-      <button :class="{ active: tab === 'finance' }" @click="openTab('finance')">财务</button>
-      <button :class="{ active: tab === 'health' }" @click="openTab('health')">系统健康</button>
-      <button style="margin-top: 18px; color: #8fa294" @click="logout">退出登录</button>
+      <template v-if="isManager">
+        <button :class="{ active: tab === 'users' }" @click="openTab('users')">用户管理</button>
+        <button :class="{ active: tab === 'audit' }" @click="openTab('audit')">操作审计</button>
+        <button :class="{ active: tab === 'finance' }" @click="openTab('finance')">财务</button>
+        <button :class="{ active: tab === 'health' }" @click="openTab('health')">系统健康</button>
+      </template>
+      <div class="side-role">当前身份：{{ role === 'ADMIN' ? '店长' : '前台' }}</div>
+      <button style="margin-top: 8px; color: #8fa294" @click="logout">退出登录</button>
     </aside>
 
     <main class="main">
@@ -840,7 +864,7 @@ onMounted(() => {
         <h3>教练管理</h3>
         <div class="toolbar">
           <span class="hint-inline">新教练入职后默认全天可约（09:00–22:00），可在「排班/请假」里调整；停用后不可再被预订。</span>
-          <button class="btn" @click="openCoachCreate">新增教练</button>
+          <button v-if="isManager" class="btn" @click="openCoachCreate">新增教练</button>
         </div>
         <table>
           <thead><tr><th>教练</th><th>手机号</th><th>专长</th><th>课时价</th><th>抽成</th><th>状态</th><th>操作</th></tr></thead>
@@ -853,7 +877,7 @@ onMounted(() => {
               <td>{{ Math.round(Number(c.commissionRate) * 100) }}%</td>
               <td><span class="chip" :class="c.status === 'ACTIVE' ? 'ok' : 'bad'">{{ COACH_STATUS_TEXT[c.status] ?? c.status }}</span></td>
               <td class="ops-row-inline">
-                <button class="btn sm ghost" @click="openCoachEdit(c)">编辑</button>
+                <button v-if="isManager" class="btn sm ghost" @click="openCoachEdit(c)">编辑</button>
                 <button class="btn sm ghost" @click="openSchedule(c)">排班 / 请假</button>
               </td>
             </tr>
@@ -900,7 +924,7 @@ onMounted(() => {
             <div class="stat"><small>课包</small><b>{{ customer.packages?.length ?? 0 }} 个</b></div>
           </div>
 
-          <div class="action-panel">
+          <div class="action-panel" v-if="isManager">
             <div class="action-title">
               <b>客户运营</b>
               <span v-if="customer.status === 'FROZEN'" class="chip bad">
@@ -1315,7 +1339,7 @@ onMounted(() => {
         </table>
         <p v-if="!classDetail.roster?.length" class="empty">还没有人报名</p>
 
-        <div class="ops-row" v-if="['OPEN', 'FULL'].includes(classDetail.groupClass.status)">
+        <div class="ops-row" v-if="['OPEN', 'FULL'].includes(classDetail.groupClass.status) && isManager">
           <button class="btn sm danger" @click="cancelClass">取消整班并全员退款</button>
         </div>
       </div>
@@ -1334,7 +1358,7 @@ onMounted(() => {
           </span>
         </p>
         <div class="ops-row" v-if="slotOps.status === 'AVAILABLE'">
-          <button class="btn sm ghost" @click="changePrice">改价</button>
+          <button v-if="isManager" class="btn sm ghost" @click="changePrice">改价</button>
           <button class="btn sm" @click="closeSlot(false)">关场</button>
         </div>
         <div class="ops-row" v-else>
@@ -1394,7 +1418,7 @@ onMounted(() => {
           <p v-if="!orderDetail.pays?.length && !orderDetail.refunds?.length" class="empty">还没有支付记录</p>
         </div>
 
-        <div class="ops-row" v-if="orderDetail.booking.type === 'COURT' && ['PENDING_PAYMENT', 'CONFIRMED'].includes(orderDetail.booking.status)">
+        <div class="ops-row" v-if="orderDetail.booking.type === 'COURT' && isManager && ['PENDING_PAYMENT', 'CONFIRMED'].includes(orderDetail.booking.status)">
           <button class="btn sm danger" @click="forceCancelOrder">
             {{ orderDetail.booking.status === 'CONFIRMED' ? '强制取消并全额退款' : '取消未支付订单' }}
           </button>

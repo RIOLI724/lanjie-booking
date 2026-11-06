@@ -38,7 +38,7 @@ Spring Boot 3.5 · MyBatis-Plus · MySQL 8 · Redis · JWT · Vue 3 + Vite + Typ
    ```
 
 5. 手机或浏览器打开 `http://localhost:5179`；演示环境验证码固定 **123456**（见 `application.yml` 的 `lanjie.sms.dev-fixed-code`）。
-6. 前台管理员：`13800000000 / admin123`；教练账号：`13900000001 / coach123`（依此类推）。
+6. 店长：`13800000000 / admin123`；前台值班：`13800000001 / front123`（退款、改价、财务、审计需店长）；教练账号：`13900000001 / coach123`（依此类推）。
 7. AI：默认 mock（离线/CI）；接真模型设 `AI_PROVIDER=glm` 与 `GLM_API_KEY`。
 
 ## 已实现（W1–W3）
