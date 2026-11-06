@@ -61,16 +61,14 @@ onUnmounted(() => {
 
 <template>
   <div class="page-auth">
-    <div class="auth-visual">
-      <CourtBackdrop />
-      <div class="auth-visual-shade"></div>
+    <CourtBackdrop />
+    <div class="auth-visual-shade"></div>
+    <div class="auth-card">
       <div class="brand">
         <h1>注册<span>篮界</span></h1>
         <small>30 秒加入球局 · 4 片全场</small>
       </div>
-    </div>
 
-    <div class="auth-form">
       <label class="field">
         <span>手机号</span>
         <input v-model="phone" inputmode="numeric" maxlength="11" placeholder="11 位手机号" />

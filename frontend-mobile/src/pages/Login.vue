@@ -65,16 +65,14 @@ onUnmounted(() => {
 
 <template>
   <div class="page-auth">
-    <div class="auth-visual">
-      <CourtBackdrop />
-      <div class="auth-visual-shade"></div>
+    <CourtBackdrop />
+    <div class="auth-visual-shade"></div>
+    <div class="auth-card">
       <div class="brand">
         <h1>篮<span>界</span></h1>
         <small>城东体育馆 · 4 片全场 · AI 前台</small>
       </div>
-    </div>
 
-    <div class="auth-form">
       <div class="seg">
       <button :class="{ active: mode === 'PASSWORD' }" @click="mode = 'PASSWORD'">密码登录</button>
       <button :class="{ active: mode === 'SMS' }" @click="mode = 'SMS'">验证码登录</button>

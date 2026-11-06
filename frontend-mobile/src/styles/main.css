@@ -834,13 +834,54 @@ button {
 .pwd-toggle { width: 46px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 .pwd-toggle svg { display: block; }
 
-/* ---- 登录/注册：3D 球场背景板 ---- */
-.page-auth { display: block; min-height: 100dvh; padding: 0; background: var(--paper); }
-.auth-visual { position: relative; height: min(300px, 42dvh); min-height: 220px; overflow: hidden; background: #08170f; }
-.auth-visual .court-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
-.auth-visual-shade { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(6, 18, 12, .02) 30%, rgba(6, 18, 12, .82) 100%); }
-.auth-visual .brand { position: absolute; z-index: 2; left: 22px; right: 22px; bottom: 20px; margin: 0; text-align: left; }
-.auth-visual .brand h1 { color: #fff; font-size: 34px; }
-.auth-visual .brand h1 span { color: var(--lime); }
-.auth-visual .brand small { color: rgba(233, 242, 230, .58); font-size: 10px; letter-spacing: .14em; margin-top: 4px; }
-.auth-form { padding: 20px 22px calc(24px + env(safe-area-inset-bottom)); }
+/* ---- 登录/注册：全屏 3D + 深色玻璃卡 ---- */
+.page-auth {
+  position: relative;
+  min-height: 100dvh;
+  padding: 32px 20px calc(28px + env(safe-area-inset-bottom));
+  background: #08170f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.page-auth .court-backdrop { position: absolute; inset: 0; width: 100%; height: 100%; }
+.auth-visual-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(circle at 50% 36%, rgba(16, 52, 36, .18), rgba(4, 14, 9, .76) 72%);
+}
+.auth-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 380px;
+  padding: 22px 20px 24px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  background: linear-gradient(160deg, rgba(20, 64, 46, .84), rgba(8, 23, 15, .92));
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .45);
+  backdrop-filter: blur(16px);
+}
+.auth-card .brand { text-align: center; margin-bottom: 18px; }
+.auth-card .brand h1 { color: #fff; font-size: 32px; }
+.auth-card .brand h1 span { color: var(--lime); }
+.auth-card .brand small { color: rgba(233, 242, 230, .55); letter-spacing: .1em; }
+.auth-card .seg { background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .08); }
+.auth-card .seg button { color: rgba(233, 242, 230, .55); }
+.auth-card .seg button.active { background: var(--lime); color: #0b1f17; }
+.auth-card .field span { color: rgba(233, 242, 230, .48); }
+.auth-card .field input {
+  background: rgba(255, 255, 255, .06);
+  border-color: rgba(255, 255, 255, .12);
+  color: #fff;
+}
+.auth-card .field input::placeholder { color: rgba(255, 255, 255, .26); }
+.auth-card .field input:focus { border-color: rgba(200, 241, 105, .65); }
+.auth-card .pwd-toggle { background: transparent; border-color: rgba(255, 255, 255, .16); color: var(--lime); }
+.auth-card .btn-ghost { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .14); color: var(--lime); }
+.auth-card .btn-primary { background: var(--lime); color: #0b1f17; }
+.auth-card .btn-primary:disabled { background: rgba(200, 241, 105, .32); color: rgba(11, 31, 23, .55); }
+.auth-card .hint { color: rgba(233, 242, 230, .5); }
+.auth-card .hint a { color: var(--lime); }
+.auth-card .error { color: #ff9a8d; }
