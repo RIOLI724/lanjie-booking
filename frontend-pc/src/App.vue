@@ -170,7 +170,7 @@ onMounted(() => {
   <div v-else class="shell">
     <aside class="side">
       <h2>篮界管理台</h2>
-      <button :class="{ active: tab === 'today' }" @click="openTab('today')">今日工作台</button>
+      <button :class="{ active: tab === 'today' }" @click="openTab('today')">前台工作台</button>
       <button :class="{ active: tab === 'schedule' }" @click="openTab('schedule')">今日排期</button>
       <button :class="{ active: tab === 'customer' }" @click="openTab('customer')">客户查询</button>
       <button :class="{ active: tab === 'refunds' }" @click="openTab('refunds')">退款记录</button>
@@ -183,7 +183,7 @@ onMounted(() => {
       <p v-if="error" class="err">{{ error }}</p>
 
       <template v-if="tab === 'today' && today.summary">
-        <h3>王姐，今天要做这些事</h3>
+        <h3>前台工作台</h3>
         <div class="cards">
           <div class="stat"><small>今天进账</small><b>{{ money(today.summary.revenueCents) }}</b></div>
           <div class="stat"><small>待核销</small><b>{{ today.summary.checkinCount }}</b></div>
