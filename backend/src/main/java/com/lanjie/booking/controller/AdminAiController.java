@@ -73,6 +73,9 @@ public class AdminAiController {
         for (AiHandoff handoff : handoffMapper.selectList(new LambdaQueryWrapper<AiHandoff>()
                 .orderByAsc(AiHandoff::getStatus).orderByDesc(AiHandoff::getId).last("LIMIT 50"))) {
             User user = userMapper.selectById(handoff.getUserId());
+            if (user != null && user.getRole() == com.lanjie.booking.enums.UserRole.ADMIN) {
+                continue; // 评测/自测数据不展示
+            }
             Map<String, Object> row = new java.util.LinkedHashMap<>();
             row.put("id", handoff.getId());
             row.put("sessionId", handoff.getSessionId());

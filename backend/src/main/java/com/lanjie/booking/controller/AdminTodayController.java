@@ -129,6 +129,10 @@ public class AdminTodayController {
         for (AiHandoff handoff : handoffMapper.selectList(new LambdaQueryWrapper<AiHandoff>()
                 .eq(AiHandoff::getStatus, "OPEN").orderByDesc(AiHandoff::getId).last("LIMIT 20"))) {
             User user = userMapper.selectById(handoff.getUserId());
+            // 评测与自测使用管理员账号，不进入前台待办
+            if (user != null && user.getRole() == com.lanjie.booking.enums.UserRole.ADMIN) {
+                continue;
+            }
             AiMessage lastUser = messageMapper.selectOne(new LambdaQueryWrapper<AiMessage>()
                     .eq(AiMessage::getSessionId, handoff.getSessionId())
                     .eq(AiMessage::getRole, "USER")
