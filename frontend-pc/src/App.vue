@@ -12,9 +12,9 @@ const tab = ref<'today' | 'schedule' | 'orders' | 'customer' | 'refunds' | 'user
 
 const today = ref<Record<string, any>>({})
 const schedule = ref<Array<Record<string, any>>>([])
-const scheduleDate = ref(new Date().toISOString().slice(0, 10))
+const scheduleDate = ref(localToday())
 const orders = ref<Array<Record<string, any>>>([])
-const orderDate = ref(new Date().toISOString().slice(0, 10))
+const orderDate = ref(localToday())
 const orderDetail = ref<Record<string, any> | null>(null)
 const slotOps = ref<Record<string, any> | null>(null)
 const refunds = ref<Array<Record<string, any>>>([])
@@ -247,6 +247,13 @@ async function runEval() {
 
 function money(cents: unknown): string {
   return `¥${Number(cents ?? 0) / 100}`
+}
+
+/** 本地时区的今天，避免 UTC 导致凌晨显示成昨天 */
+function localToday(): string {
+  const now = new Date()
+  now.setMinutes(now.getMinutes() - now.getTimezoneOffset())
+  return now.toISOString().slice(0, 10)
 }
 
 function relative(iso: unknown): string {
