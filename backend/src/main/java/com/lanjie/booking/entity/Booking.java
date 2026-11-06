@@ -46,6 +46,9 @@ public class Booking {
 
     private Integer rescheduleCount;
 
+    /** 课包核销的订单指向所消耗的课包 */
+    private Long packageId;
+
     /** 一次性核销码，核销成功立即作废 */
     private String checkinToken;
 

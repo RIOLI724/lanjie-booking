@@ -43,7 +43,9 @@ public enum ErrorCode {
     PAY_ORDER_NOT_FOUND(40411, "支付单不存在"),
     PAY_CHANNEL_UNSUPPORTED(40412, "该支付渠道暂未开放"),
     INSUFFICIENT_BALANCE(40413, "余额不足，请先充值"),
-    PLAN_NOT_FOUND(40415, "充值档位不存在");
+    PLAN_NOT_FOUND(40415, "充值档位不存在"),
+    PACKAGE_UNAVAILABLE(40416, "课包不可用或已用完"),
+    COACH_SERVICE_INVALID(40417, "教练服务不可用");
 
     private final int code;
     private final String message;

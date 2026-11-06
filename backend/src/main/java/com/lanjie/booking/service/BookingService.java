@@ -21,6 +21,8 @@ import com.lanjie.booking.enums.SlotStatus;
 import com.lanjie.booking.enums.UserStatus;
 import com.lanjie.booking.mapper.BookingItemMapper;
 import com.lanjie.booking.mapper.BookingMapper;
+import com.lanjie.booking.mapper.CoachPackageMapper;
+import com.lanjie.booking.mapper.CoachSlotMapper;
 import com.lanjie.booking.mapper.CourtMapper;
 import com.lanjie.booking.mapper.PayOrderMapper;
 import com.lanjie.booking.mapper.SlotMapper;
@@ -48,7 +50,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -69,6 +70,8 @@ public class BookingService {
     private final UserMapper userMapper;
     private final CourtMapper courtMapper;
     private final SlotMapper slotMapper;
+    private final CoachSlotMapper coachSlotMapper;
+    private final CoachPackageMapper coachPackageMapper;
     private final BookingMapper bookingMapper;
     private final BookingItemMapper bookingItemMapper;
     private final PayOrderMapper payOrderMapper;
@@ -78,12 +81,15 @@ public class BookingService {
     private final StringRedisTemplate redis;
 
     public BookingService(UserMapper userMapper, CourtMapper courtMapper, SlotMapper slotMapper,
+                          CoachSlotMapper coachSlotMapper, CoachPackageMapper coachPackageMapper,
                           BookingMapper bookingMapper, BookingItemMapper bookingItemMapper,
                           PayOrderMapper payOrderMapper, UserBanMapper userBanMapper,
                           BookingAuditService audit, RefundService refundService, StringRedisTemplate redis) {
         this.userMapper = userMapper;
         this.courtMapper = courtMapper;
         this.slotMapper = slotMapper;
+        this.coachSlotMapper = coachSlotMapper;
+        this.coachPackageMapper = coachPackageMapper;
         this.bookingMapper = bookingMapper;
         this.bookingItemMapper = bookingItemMapper;
         this.payOrderMapper = payOrderMapper;
@@ -219,8 +225,14 @@ public class BookingService {
                 throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID);
             }
             slotMapper.releaseByBooking(booking.getId());
+            coachSlotMapper.releaseByBooking(booking.getId());
             audit.write(booking.getId(), BookingStatus.PENDING_PAYMENT.name(),
                     BookingStatus.CANCELLED.name(), "USER", "用户取消");
+            return;
+        }
+        if (booking.getType() == BookingType.COACH && booking.getStatus() == BookingStatus.CONFIRMED) {
+            // 教练课：开场前 ≥24h 全退/退课时；<24h 不退/扣课时（硬边界，不用场地阶梯）
+            cancelCoachConfirmed(booking);
             return;
         }
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
@@ -238,6 +250,32 @@ public class BookingService {
             return;
         }
         throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID);
+    }
+
+    private void cancelCoachConfirmed(Booking booking) {
+        LocalDateTime firstStart = firstItemStart(booking.getId());
+        boolean freeCancel = LocalDateTime.now().isBefore(firstStart.minusHours(24));
+        int refund = 0;
+        if (booking.getPackageId() != null) {
+            // 课包单：≥24h 退回课时；<24h 课时照扣
+            if (freeCancel) {
+                coachPackageMapper.restoreSession(booking.getPackageId());
+            }
+        } else if (freeCancel && booking.getPaidCents() > 0) {
+            refund = booking.getPaidCents();
+            refundService.refundForReschedule(booking, refund, "取消私教（24h 前全退）");
+        }
+        if (bookingMapper.markCancelledConfirmed(booking.getId(),
+                freeCancel ? "USER_CANCEL_24H" : "USER_CANCEL_LATE") == 0) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID);
+        }
+        slotMapper.releaseBookedByBooking(booking.getId());
+        slotMapper.releaseByBooking(booking.getId());
+        coachSlotMapper.releaseBookedByBooking(booking.getId());
+        coachSlotMapper.releaseByBooking(booking.getId());
+        audit.write(booking.getId(), BookingStatus.CONFIRMED.name(),
+                BookingStatus.CANCELLED.name(), "USER",
+                freeCancel ? "取消私教，退款 " + refund + " 分" : "24h 内取消，费用/课时不退");
     }
 
     /**

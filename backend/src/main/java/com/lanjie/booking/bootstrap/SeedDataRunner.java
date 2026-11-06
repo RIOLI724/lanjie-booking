@@ -1,6 +1,9 @@
 package com.lanjie.booking.bootstrap;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.lanjie.booking.entity.Coach;
+import com.lanjie.booking.entity.CoachScheduleRule;
+import com.lanjie.booking.entity.CoachService;
 import com.lanjie.booking.entity.Court;
 import com.lanjie.booking.entity.PriceRule;
 import com.lanjie.booking.entity.RechargePlan;
@@ -13,12 +16,16 @@ import com.lanjie.booking.enums.DayType;
 import com.lanjie.booking.enums.UserRole;
 import com.lanjie.booking.enums.UserStatus;
 import com.lanjie.booking.enums.VenueStatus;
+import com.lanjie.booking.mapper.CoachMapper;
+import com.lanjie.booking.mapper.CoachScheduleRuleMapper;
+import com.lanjie.booking.mapper.CoachServiceMapper;
 import com.lanjie.booking.mapper.CourtMapper;
 import com.lanjie.booking.mapper.PriceRuleMapper;
 import com.lanjie.booking.mapper.RechargePlanMapper;
 import com.lanjie.booking.mapper.UserMapper;
 import com.lanjie.booking.mapper.VenueHoursMapper;
 import com.lanjie.booking.mapper.VenueMapper;
+import com.lanjie.booking.service.CoachSlotGenerationService;
 import com.lanjie.booking.service.SlotGenerationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
@@ -42,21 +49,32 @@ public class SeedDataRunner implements ApplicationRunner {
     private final PriceRuleMapper priceRuleMapper;
     private final UserMapper userMapper;
     private final RechargePlanMapper rechargePlanMapper;
+    private final CoachMapper coachMapper;
+    private final CoachScheduleRuleMapper coachScheduleRuleMapper;
+    private final CoachServiceMapper coachServiceMapper;
     private final PasswordEncoder passwordEncoder;
     private final SlotGenerationService slotGenerationService;
+    private final CoachSlotGenerationService coachSlotGenerationService;
 
     public SeedDataRunner(VenueMapper venueMapper, VenueHoursMapper venueHoursMapper,
                           CourtMapper courtMapper, PriceRuleMapper priceRuleMapper,
                           UserMapper userMapper, RechargePlanMapper rechargePlanMapper,
-                          PasswordEncoder passwordEncoder, SlotGenerationService slotGenerationService) {
+                          CoachMapper coachMapper, CoachScheduleRuleMapper coachScheduleRuleMapper,
+                          CoachServiceMapper coachServiceMapper, PasswordEncoder passwordEncoder,
+                          SlotGenerationService slotGenerationService,
+                          CoachSlotGenerationService coachSlotGenerationService) {
         this.venueMapper = venueMapper;
         this.venueHoursMapper = venueHoursMapper;
         this.courtMapper = courtMapper;
         this.priceRuleMapper = priceRuleMapper;
         this.userMapper = userMapper;
         this.rechargePlanMapper = rechargePlanMapper;
+        this.coachMapper = coachMapper;
+        this.coachScheduleRuleMapper = coachScheduleRuleMapper;
+        this.coachServiceMapper = coachServiceMapper;
         this.passwordEncoder = passwordEncoder;
         this.slotGenerationService = slotGenerationService;
+        this.coachSlotGenerationService = coachSlotGenerationService;
     }
 
     @Override
@@ -65,7 +83,68 @@ public class SeedDataRunner implements ApplicationRunner {
             seed();
         }
         seedAdminAndPlans();
+        seedCoaches();
         slotGenerationService.generateOnStartup();
+        coachSlotGenerationService.generateOnStartup();
+    }
+
+    /** 演示教练：3 位教练账号 + 档期规则 + 私教服务 */
+    private void seedCoaches() {
+        if (coachMapper.selectCount(null) > 0) {
+            return;
+        }
+        String[][] coaches = {
+                {"13900000001", "张教练", "前省队 · 基础 / 步法", "30000"},
+                {"13900000002", "李教练", "投篮专项 · 出手节奏", "28000"},
+                {"13900000003", "王教练", "青少年 · 体能与协调", "26000"},
+        };
+        int sort = 1;
+        for (String[] c : coaches) {
+            User coachUser = new User();
+            coachUser.setPhone(c[0]);
+            coachUser.setPasswordHash(passwordEncoder.encode("coach123"));
+            coachUser.setNickname(c[1]);
+            coachUser.setRole(UserRole.COACH);
+            coachUser.setStatus(UserStatus.ACTIVE);
+            coachUser.setCumulativeRechargeCents(0L);
+            userMapper.insert(coachUser);
+
+            Coach coach = new Coach();
+            coach.setUserId(coachUser.getId());
+            coach.setDisplayName(c[1]);
+            coach.setBio("十年教学经验，教得细、纠得准");
+            coach.setSpecialties(c[2]);
+            coach.setRating(new java.math.BigDecimal("4.9"));
+            coach.setRatingCount(100);
+            coach.setBasePriceCents(Integer.parseInt(c[3]));
+            coach.setCommissionRate(new java.math.BigDecimal("0.200"));
+            coach.setStatus("ACTIVE");
+            coach.setSortOrder(sort++);
+            coachMapper.insert(coach);
+
+            for (int weekday = 1; weekday <= 7; weekday++) {
+                CoachScheduleRule rule = new CoachScheduleRule();
+                rule.setCoachId(coach.getId());
+                rule.setWeekday(weekday);
+                rule.setStartTime(java.time.LocalTime.of(9, 0));
+                rule.setEndTime(java.time.LocalTime.of(22, 0));
+                rule.setStatus("ACTIVE");
+                coachScheduleRuleMapper.insert(rule);
+            }
+
+            CoachService service = new CoachService();
+            service.setCoachId(coach.getId());
+            service.setType(com.lanjie.booking.enums.CoachServiceType.PRIVATE);
+            service.setTitle("私教单节（含场地）");
+            service.setDurationMin(60);
+            service.setPriceCents(Integer.parseInt(c[3]));
+            service.setIncludesCourt(true);
+            service.setMinStudents(1);
+            service.setMaxStudents(1);
+            service.setStatus("ACTIVE");
+            coachServiceMapper.insert(service);
+        }
+        log.info("seeded 3 demo coaches");
     }
 
     /** 前台管理员账号 + 充值档位（幂等：按数量判断） */

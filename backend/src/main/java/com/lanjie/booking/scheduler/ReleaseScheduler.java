@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.lanjie.booking.entity.Booking;
 import com.lanjie.booking.enums.BookingStatus;
 import com.lanjie.booking.mapper.BookingMapper;
+import com.lanjie.booking.mapper.CoachSlotMapper;
 import com.lanjie.booking.mapper.SlotMapper;
 import com.lanjie.booking.service.BookingAuditService;
 import lombok.extern.slf4j.Slf4j;
@@ -23,11 +24,14 @@ public class ReleaseScheduler {
 
     private final BookingMapper bookingMapper;
     private final SlotMapper slotMapper;
+    private final CoachSlotMapper coachSlotMapper;
     private final BookingAuditService audit;
 
-    public ReleaseScheduler(BookingMapper bookingMapper, SlotMapper slotMapper, BookingAuditService audit) {
+    public ReleaseScheduler(BookingMapper bookingMapper, SlotMapper slotMapper,
+                            CoachSlotMapper coachSlotMapper, BookingAuditService audit) {
         this.bookingMapper = bookingMapper;
         this.slotMapper = slotMapper;
+        this.coachSlotMapper = coachSlotMapper;
         this.audit = audit;
     }
 
@@ -35,6 +39,7 @@ public class ReleaseScheduler {
     public void sweep() {
         LocalDateTime now = LocalDateTime.now();
         int releasedHolds = slotMapper.releaseExpired(now);
+        int releasedCoachHolds = coachSlotMapper.releaseExpired(now);
 
         List<Booking> expired = bookingMapper.selectList(new LambdaQueryWrapper<Booking>()
                 .eq(Booking::getStatus, BookingStatus.PENDING_PAYMENT)

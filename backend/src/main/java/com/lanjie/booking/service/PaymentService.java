@@ -6,6 +6,8 @@ import com.lanjie.booking.common.ErrorCode;
 import com.lanjie.booking.dto.PayRequest;
 import com.lanjie.booking.dto.RechargeRequest;
 import com.lanjie.booking.entity.Booking;
+import com.lanjie.booking.entity.CoachPackage;
+import com.lanjie.booking.entity.CoachSlot;
 import com.lanjie.booking.entity.PayOrder;
 import com.lanjie.booking.entity.RechargePlan;
 import com.lanjie.booking.entity.Slot;
@@ -13,11 +15,15 @@ import com.lanjie.booking.enums.BookingStatus;
 import com.lanjie.booking.enums.PayChannel;
 import com.lanjie.booking.enums.PayOrderStatus;
 import com.lanjie.booking.enums.PayPurpose;
+import com.lanjie.booking.enums.SlotStatus;
 import com.lanjie.booking.enums.WalletTxnType;
 import com.lanjie.booking.mapper.BookingMapper;
+import com.lanjie.booking.mapper.CoachPackageMapper;
+import com.lanjie.booking.mapper.CoachSlotMapper;
 import com.lanjie.booking.mapper.PayOrderMapper;
 import com.lanjie.booking.mapper.RechargePlanMapper;
 import com.lanjie.booking.mapper.SlotMapper;
+import com.lanjie.booking.dto.PackagePurchaseRequest;
 import com.lanjie.booking.security.LoginUser;
 import com.lanjie.booking.vo.PayVO;
 import lombok.extern.slf4j.Slf4j;
@@ -44,21 +50,31 @@ public class PaymentService {
     private final BookingMapper bookingMapper;
     private final PayOrderMapper payOrderMapper;
     private final SlotMapper slotMapper;
+    private final CoachSlotMapper coachSlotMapper;
+    private final CoachPackageMapper coachPackageMapper;
     private final RechargePlanMapper rechargePlanMapper;
+    private final com.lanjie.booking.mapper.BookingItemMapper bookingItemMapper;
     private final WalletService walletService;
     private final BookingService bookingService;
+    private final PackageService packageService;
     private final BookingAuditService audit;
 
     public PaymentService(BookingMapper bookingMapper, PayOrderMapper payOrderMapper,
-                          SlotMapper slotMapper, RechargePlanMapper rechargePlanMapper,
+                          SlotMapper slotMapper, CoachSlotMapper coachSlotMapper,
+                          CoachPackageMapper coachPackageMapper, RechargePlanMapper rechargePlanMapper,
+                          com.lanjie.booking.mapper.BookingItemMapper bookingItemMapper,
                           WalletService walletService, BookingService bookingService,
-                          BookingAuditService audit) {
+                          PackageService packageService, BookingAuditService audit) {
         this.bookingMapper = bookingMapper;
         this.payOrderMapper = payOrderMapper;
         this.slotMapper = slotMapper;
+        this.coachSlotMapper = coachSlotMapper;
+        this.coachPackageMapper = coachPackageMapper;
         this.rechargePlanMapper = rechargePlanMapper;
+        this.bookingItemMapper = bookingItemMapper;
         this.walletService = walletService;
         this.bookingService = bookingService;
+        this.packageService = packageService;
         this.audit = audit;
     }
 
@@ -71,6 +87,10 @@ public class PaymentService {
         if (booking.getHoldExpiresAt() == null || booking.getHoldExpiresAt().isBefore(LocalDateTime.now())) {
             throw new BusinessException(ErrorCode.BOOKING_HOLD_EXPIRED);
         }
+        if (request.getChannel() == PayChannel.PACKAGE) {
+            // 课包核销：0 元，消耗一节课时
+            return createPackageBookingPayment(loginUser, booking, request.getPackageId());
+        }
         PayOrder payOrder = createPayOrder(booking.getUserId(), bookingId, bookingId,
                 PayPurpose.BOOKING, request.getChannel(), booking.getPayableCents());
         if (request.getChannel() == PayChannel.WALLET) {
@@ -80,6 +100,55 @@ public class PaymentService {
             confirmBookingPayment(payOrder);
         }
         return new PayVO(payOrder.getPayNo(), payOrder.getAmountCents(), payOrder.getChannel().name());
+    }
+
+    /** 课包核销私教课：校验归属与教练匹配，条件扣课时，0 元完成订单 */
+    private PayVO createPackageBookingPayment(LoginUser loginUser, Booking booking, Long packageId) {
+        if (packageId == null) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "请选择课包");
+        }
+        CoachPackage pkg = coachPackageMapper.selectById(packageId);
+        if (pkg == null || !pkg.getUserId().equals(booking.getUserId())) {
+            throw new BusinessException(ErrorCode.PACKAGE_UNAVAILABLE);
+        }
+        Long coachId = coachIdOfBooking(booking.getId());
+        if (coachId == null || !pkg.getCoachId().equals(coachId)) {
+            throw new BusinessException(ErrorCode.PACKAGE_UNAVAILABLE);
+        }
+        if (booking.getPayableCents() != 0) {
+            throw new BusinessException(ErrorCode.PACKAGE_UNAVAILABLE, "该订单不适用课包");
+        }
+        PayOrder payOrder = createPayOrder(booking.getUserId(), booking.getId(), booking.getId(),
+                PayPurpose.BOOKING, PayChannel.PACKAGE, 0);
+        if (coachPackageMapper.consumeSession(packageId) == 0) {
+            throw new BusinessException(ErrorCode.PACKAGE_UNAVAILABLE);
+        }
+        confirmBookingPayment(payOrder);
+        return new PayVO(payOrder.getPayNo(), 0, PayChannel.PACKAGE.name());
+    }
+
+    private Long coachIdOfBooking(Long bookingId) {
+        var item = bookingItemOf(bookingId, com.lanjie.booking.enums.BookingItemType.COACH_SESSION);
+        if (item == null) {
+            return null;
+        }
+        CoachSlot coachSlot = coachSlotMapper.selectById(item.getRefId());
+        return coachSlot != null ? coachSlot.getCoachId() : null;
+    }
+
+    private com.lanjie.booking.entity.BookingItem bookingItemOf(Long bookingId,
+                                                                com.lanjie.booking.enums.BookingItemType type) {
+        return bookingItemMapper.selectOne(new LambdaQueryWrapper<com.lanjie.booking.entity.BookingItem>()
+                .eq(com.lanjie.booking.entity.BookingItem::getBookingId, bookingId)
+                .eq(com.lanjie.booking.entity.BookingItem::getItemType, type)
+                .last("LIMIT 1"));
+    }
+
+    /** 课包购买入口：委托 PackageService 创建待支付课包与支付单 */
+    @Transactional
+    public PayVO createPackagePayment(LoginUser loginUser, PackagePurchaseRequest request) {
+        return packageService.purchase(loginUser.userId(), request.getCoachId(),
+                request.getSessions(), request.getChannel());
     }
 
     @Transactional
@@ -116,7 +185,16 @@ public class PaymentService {
             case BOOKING -> confirmBookingPayment(payOrder);
             case RECHARGE -> confirmRecharge(payOrder);
             case RESCHEDULE_DIFF -> confirmRescheduleDiff(payOrder);
+            case COACH_PACKAGE -> confirmPackage(payOrder);
         }
+    }
+
+    private void confirmPackage(PayOrder payOrder) {
+        if (coachPackageMapper.activate(payOrder.getBizRef(), payOrder.getId()) == 0) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "课包已激活");
+        }
+        finishPayOrder(payOrder);
+        log.info("package activated: payNo={} package={}", payOrder.getPayNo(), payOrder.getBizRef());
     }
 
     /** 先条件确认订单，再落支付成功：迟到的成功不会把钱落在已取消的订单上 */
@@ -125,6 +203,7 @@ public class PaymentService {
             throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "订单已取消，本次支付不会生效");
         }
         slotMapper.confirmByBooking(payOrder.getBookingId());
+        coachSlotMapper.confirmByBooking(payOrder.getBookingId());
         finishPayOrder(payOrder);
         audit.write(payOrder.getBookingId(), BookingStatus.PENDING_PAYMENT.name(),
                 BookingStatus.CONFIRMED.name(), "USER", "支付成功 " + payOrder.getPayNo());

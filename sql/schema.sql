@@ -167,6 +167,7 @@ CREATE TABLE IF NOT EXISTS `booking`
     `checked_in_at`    DATETIME        NULL COMMENT '核销时间（W4）',
     `cancel_reason`    VARCHAR(100)    NULL,
     `reschedule_count` INT             NOT NULL DEFAULT 0,
+    `package_id`       BIGINT UNSIGNED NULL COMMENT '课包核销的订单指向所消耗的课包',
     `checkin_token`    VARCHAR(64)     NULL COMMENT '一次性核销码，核销成功立即作废',
     `created_at`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`       DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -329,3 +330,386 @@ CREATE TABLE IF NOT EXISTS `user_ban`
     PRIMARY KEY (`id`),
     KEY `idx_ban_user` (`user_id`, `end_at`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户封禁';
+
+-- 教练 -----------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `coach`
+(
+    `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`         BIGINT UNSIGNED NOT NULL COMMENT '教练登录账号',
+    `display_name`    VARCHAR(50)     NOT NULL,
+    `avatar_url`      VARCHAR(255)    NULL,
+    `bio`             VARCHAR(255)    NOT NULL DEFAULT '',
+    `specialties`     VARCHAR(100)    NOT NULL DEFAULT '' COMMENT '专项标签',
+    `rating`          DECIMAL(2, 1)   NOT NULL DEFAULT 5.0,
+    `rating_count`    INT             NOT NULL DEFAULT 0,
+    `base_price_cents` INT            NOT NULL COMMENT '私教单节价（分）',
+    `commission_rate` DECIMAL(4, 3)   NOT NULL DEFAULT 0.200 COMMENT '平台抽成比例',
+    `status`          VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',
+    `sort_order`      INT             NOT NULL DEFAULT 0,
+    `created_at`      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_coach_user` (`user_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '教练';
+
+-- 教练每周可约规则 -------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `coach_schedule_rule`
+(
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `coach_id`   BIGINT UNSIGNED NOT NULL,
+    `weekday`    TINYINT         NOT NULL COMMENT '1=周一 … 7=周日',
+    `start_time` TIME            NOT NULL,
+    `end_time`   TIME            NOT NULL,
+    `status`     VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',
+    PRIMARY KEY (`id`),
+    KEY `idx_rule_coach` (`coach_id`, `weekday`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '教练每周可约规则';
+
+-- 教练档期（1 小时一格，真正被锁/被卖）----------------------------------------
+CREATE TABLE IF NOT EXISTS `coach_slot`
+(
+    `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `coach_id`        BIGINT UNSIGNED NOT NULL,
+    `start_at`        DATETIME        NOT NULL,
+    `end_at`          DATETIME        NOT NULL,
+    `status`          VARCHAR(20)     NOT NULL DEFAULT 'AVAILABLE' COMMENT 'AVAILABLE/HELD/BOOKED/CLOSED',
+    `hold_token`      VARCHAR(64)     NULL,
+    `hold_expires_at` DATETIME        NULL,
+    `owner_type`      VARCHAR(20)     NULL COMMENT 'BOOKING/GROUP_CLASS',
+    `owner_id`        BIGINT UNSIGNED NULL,
+    `version`         INT             NOT NULL DEFAULT 0,
+    `created_at`      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_coach_slot_start` (`coach_id`, `start_at`),
+    KEY `idx_coach_slot_date` (`coach_id`, `start_at`, `status`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '教练档期';
+
+-- 教练请假（关联时段关闭）------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `coach_time_off`
+(
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `coach_id`   BIGINT UNSIGNED NOT NULL,
+    `start_at`   DATETIME        NOT NULL,
+    `end_at`     DATETIME        NOT NULL,
+    `reason`     VARCHAR(100)    NOT NULL DEFAULT '',
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_timeoff_coach` (`coach_id`, `start_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '教练请假';
+
+-- 教练服务商品（私教/团课）-----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `coach_service`
+(
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `coach_id`       BIGINT UNSIGNED NOT NULL,
+    `type`           VARCHAR(20)     NOT NULL DEFAULT 'PRIVATE' COMMENT 'PRIVATE/GROUP',
+    `title`          VARCHAR(50)     NOT NULL,
+    `duration_min`   INT             NOT NULL DEFAULT 60,
+    `price_cents`    INT             NOT NULL COMMENT '单节价（含场地时已含）',
+    `includes_court` TINYINT(1)      NOT NULL DEFAULT 1 COMMENT '是否含场地',
+    `min_students`   INT             NOT NULL DEFAULT 1,
+    `max_students`   INT             NOT NULL DEFAULT 1,
+    `status`         VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',
+    `created_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_service_coach` (`coach_id`, `type`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '教练服务商品';
+
+-- 课包（5/10/20 节，95/90/85 折，12 个月有效）---------------------------------
+CREATE TABLE IF NOT EXISTS `coach_package`
+(
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`           BIGINT UNSIGNED NOT NULL,
+    `coach_id`          BIGINT UNSIGNED NOT NULL,
+    `service_id`        BIGINT UNSIGNED NOT NULL,
+    `total_sessions`    INT             NOT NULL,
+    `used_sessions`     INT             NOT NULL DEFAULT 0,
+    `remaining_sessions` INT            NOT NULL,
+    `price_cents`       INT             NOT NULL,
+    `pay_order_id`      BIGINT UNSIGNED NULL,
+    `expires_at`        DATETIME        NOT NULL COMMENT '购买日起 12 个月',
+    `status`            VARCHAR(20)     NOT NULL DEFAULT 'PENDING_PAYMENT'
+                                        COMMENT 'PENDING_PAYMENT/ACTIVE/EXHAUSTED/EXPIRED/REFUNDED',
+    `created_at`        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_pkg_user` (`user_id`, `status`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '教练课包';
+
+-- 团课场次（4 人开班、上限 8 人）-----------------------------------------------
+CREATE TABLE IF NOT EXISTS `group_class`
+(
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `coach_id`       BIGINT UNSIGNED NOT NULL,
+    `service_id`     BIGINT UNSIGNED NOT NULL,
+    `coach_slot_id`  BIGINT UNSIGNED NULL COMMENT '教练档期（owner_type=GROUP_CLASS 占用）',
+    `court_slot_id`  BIGINT UNSIGNED NULL COMMENT '场地格（含场地时占用）',
+    `title`          VARCHAR(100)    NOT NULL,
+    `start_at`       DATETIME        NOT NULL,
+    `end_at`         DATETIME        NOT NULL,
+    `min_students`   INT             NOT NULL DEFAULT 4,
+    `max_students`   INT             NOT NULL DEFAULT 8,
+    `price_cents`    INT             NOT NULL COMMENT '人均价',
+    `enrolled_count` INT             NOT NULL DEFAULT 0,
+    `status`         VARCHAR(20)     NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN/FULL/CANCELLED/COMPLETED',
+    `created_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_class_coach` (`coach_id`, `start_at`),
+    KEY `idx_class_status` (`status`, `start_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '团课场次';
+
+-- 团课报名/候补 ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `group_enrollment`
+(
+    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `class_id`      BIGINT UNSIGNED NOT NULL,
+    `user_id`       BIGINT UNSIGNED NOT NULL,
+    `booking_id`    BIGINT UNSIGNED NULL COMMENT '确认席位的订单',
+    `status`        VARCHAR(20)     NOT NULL DEFAULT 'CONFIRMED' COMMENT 'CONFIRMED/WAITLIST/CANCELLED',
+    `created_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_enroll_class_user` (`class_id`, `user_id`),
+    KEY `idx_enroll_class` (`class_id`, `status`, `created_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '团课报名';
+
+-- 拼场（发起人付全场，份子钱托管，开赛结算）------------------------------------
+CREATE TABLE IF NOT EXISTS `pickup_game`
+(
+    `id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `initiator_id`    BIGINT UNSIGNED NOT NULL,
+    `booking_id`      BIGINT UNSIGNED NOT NULL COMMENT '场地的订单（发起人付全场）',
+    `slot_id`         BIGINT UNSIGNED NOT NULL,
+    `format`          VARCHAR(20)     NOT NULL COMMENT '3v3/4v4/5v5',
+    `total_players`   INT             NOT NULL,
+    `joined_players`  INT             NOT NULL DEFAULT 1,
+    `price_per_person_cents` INT      NOT NULL,
+    `note`            VARCHAR(100)    NOT NULL DEFAULT '',
+    `status`          VARCHAR(20)     NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN/FULL/CANCELLED/COMPLETED',
+    `settled`         TINYINT(1)      NOT NULL DEFAULT 0 COMMENT '份子钱是否已结算给发起人',
+    `created_at`      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_game_status` (`status`, `created_at`),
+    KEY `idx_game_slot` (`slot_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '拼场';
+
+-- 拼场参与者（份子钱订单挂在 booking type=PICKUP）------------------------------
+CREATE TABLE IF NOT EXISTS `pickup_participant`
+(
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `game_id`    BIGINT UNSIGNED NOT NULL,
+    `user_id`    BIGINT UNSIGNED NOT NULL,
+    `booking_id` BIGINT UNSIGNED NULL COMMENT '份子钱订单',
+    `status`     VARCHAR(20)     NOT NULL DEFAULT 'PENDING_PAYMENT'
+                                 COMMENT 'PENDING_PAYMENT/CONFIRMED/WAITLIST/CANCELLED',
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_participant_game_user` (`game_id`, `user_id`),
+    KEY `idx_participant_game` (`game_id`, `status`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '拼场参与者';
+
+-- 会员等级 ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `member_level`
+(
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `code`           VARCHAR(20)     NOT NULL,
+    `name`           VARCHAR(20)     NOT NULL,
+    `threshold_cents` BIGINT         NOT NULL COMMENT '累计充值门槛',
+    `discount_pct`   INT             NOT NULL DEFAULT 100 COMMENT '折扣百分位，95 = 95 折',
+    `points_rate`    DECIMAL(3, 1)   NOT NULL DEFAULT 1.0 COMMENT '积分倍率',
+    `sort`           INT             NOT NULL DEFAULT 0,
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '会员等级';
+
+-- 优惠券模板 / 用户券 -----------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `coupon_template`
+(
+    `id`                BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name`              VARCHAR(50)     NOT NULL,
+    `type`              VARCHAR(20)     NOT NULL DEFAULT 'FIXED' COMMENT 'FIXED/PERCENT',
+    `value_cents`       INT             NOT NULL DEFAULT 0 COMMENT '满减面额',
+    `percent`           INT             NOT NULL DEFAULT 100 COMMENT '折扣百分位（PERCENT 用）',
+    `max_discount_cents` INT            NOT NULL DEFAULT 0 COMMENT '折扣上限（PERCENT 用，0=不限）',
+    `min_amount_cents`  INT             NOT NULL DEFAULT 0 COMMENT '门槛（按原价）',
+    `scope`             VARCHAR(20)     NOT NULL DEFAULT 'COURT' COMMENT 'ALL/COURT/COACH/GROUP/PICKUP',
+    `valid_from`        DATETIME        NULL,
+    `valid_to`          DATETIME        NULL,
+    `total_quantity`    INT             NOT NULL DEFAULT 0 COMMENT '0=不限',
+    `issued_quantity`   INT             NOT NULL DEFAULT 0,
+    `per_user_limit`    INT             NOT NULL DEFAULT 1,
+    `status`            VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',
+    `created_at`        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '优惠券模板';
+
+CREATE TABLE IF NOT EXISTS `user_coupon`
+(
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`     BIGINT UNSIGNED NOT NULL,
+    `template_id` BIGINT UNSIGNED NOT NULL,
+    `status`      VARCHAR(20)     NOT NULL DEFAULT 'UNUSED' COMMENT 'UNUSED/USED/EXPIRED',
+    `received_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `used_at`     DATETIME        NULL,
+    `booking_id`  BIGINT UNSIGNED NULL,
+    `expires_at`  DATETIME        NOT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_coupon_user` (`user_id`, `status`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户优惠券';
+
+-- 积分账户 / 流水 ---------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `points_account`
+(
+    `id`           BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`      BIGINT UNSIGNED NOT NULL,
+    `balance`      INT             NOT NULL DEFAULT 0,
+    `total_earned` INT             NOT NULL DEFAULT 0,
+    `total_spent`  INT             NOT NULL DEFAULT 0,
+    `version`      INT             NOT NULL DEFAULT 0,
+    `created_at`   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`   DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_points_user` (`user_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '积分账户';
+
+CREATE TABLE IF NOT EXISTS `points_transaction`
+(
+    `id`            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`       BIGINT UNSIGNED NOT NULL,
+    `type`          VARCHAR(20)     NOT NULL COMMENT 'EARN/SPEND/REFUND/ADJUST',
+    `points`        INT             NOT NULL COMMENT '正得负耗',
+    `balance_after` INT             NOT NULL,
+    `biz_type`      VARCHAR(30)     NOT NULL,
+    `biz_id`        BIGINT UNSIGNED NOT NULL,
+    `created_at`    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_points_txn` (`user_id`, `type`, `biz_type`, `biz_id`),
+    KEY `idx_points_user` (`user_id`, `created_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '积分流水';
+
+-- AI 会话 / 消息 / 工具调用 / 转人工 / 反馈 ------------------------------------
+CREATE TABLE IF NOT EXISTS `ai_session`
+(
+    `id`             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `user_id`        BIGINT UNSIGNED NOT NULL,
+    `status`         VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE' COMMENT 'ACTIVE/CLOSED/HANDOFF',
+    `model`          VARCHAR(40)     NOT NULL DEFAULT 'mock',
+    `prompt_version` VARCHAR(20)     NOT NULL DEFAULT 'v1',
+    `started_at`     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `ended_at`       DATETIME        NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_ai_session_user` (`user_id`, `started_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 会话';
+
+CREATE TABLE IF NOT EXISTS `ai_message`
+(
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `session_id` BIGINT UNSIGNED NOT NULL,
+    `role`       VARCHAR(20)     NOT NULL COMMENT 'USER/ASSISTANT/TOOL/SYSTEM',
+    `content`    TEXT            NOT NULL,
+    `ui_json`    TEXT            NULL COMMENT '结构化卡片（方案/锁位/订单）',
+    `tokens_in`  INT             NOT NULL DEFAULT 0,
+    `tokens_out` INT             NOT NULL DEFAULT 0,
+    `latency_ms` INT             NOT NULL DEFAULT 0,
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_ai_msg_session` (`session_id`, `created_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 消息';
+
+CREATE TABLE IF NOT EXISTS `ai_tool_call`
+(
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `session_id`  BIGINT UNSIGNED NOT NULL,
+    `message_id`  BIGINT UNSIGNED NULL,
+    `tool_name`   VARCHAR(40)     NOT NULL,
+    `args_json`   TEXT            NULL,
+    `result_json` TEXT            NULL,
+    `status`      VARCHAR(20)     NOT NULL DEFAULT 'OK' COMMENT 'OK/ERROR/DENIED',
+    `error`       VARCHAR(200)    NULL,
+    `latency_ms`  INT             NOT NULL DEFAULT 0,
+    `created_at`  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_ai_tool_session` (`session_id`, `created_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 工具调用';
+
+CREATE TABLE IF NOT EXISTS `ai_handoff`
+(
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `session_id`  BIGINT UNSIGNED NOT NULL,
+    `user_id`     BIGINT UNSIGNED NOT NULL,
+    `reason`      VARCHAR(30)     NOT NULL COMMENT 'USER_REQUEST/PAYMENT/COMPLAINT/OUT_OF_SCOPE/REPEATED_FAILURE',
+    `summary`     VARCHAR(255)    NOT NULL DEFAULT '',
+    `status`      VARCHAR(20)     NOT NULL DEFAULT 'OPEN' COMMENT 'OPEN/RESOLVED',
+    `created_at`  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `resolved_at` DATETIME        NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_handoff_status` (`status`, `created_at`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '转人工工单';
+
+-- 规则库（RAG 源）---------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `knowledge_doc`
+(
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `title`      VARCHAR(100)    NOT NULL,
+    `category`   VARCHAR(30)     NOT NULL COMMENT 'REFUND/RESCHEDULE/NOSHOW/PACKAGE/GROUP/PICKUP/VENUE/AI',
+    `content`    TEXT            NOT NULL,
+    `version`    INT             NOT NULL DEFAULT 1,
+    `status`     VARCHAR(20)     NOT NULL DEFAULT 'ACTIVE',
+    `created_at` DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '规则库文档';
+
+CREATE TABLE IF NOT EXISTS `knowledge_chunk`
+(
+    `id`         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `doc_id`     BIGINT UNSIGNED NOT NULL,
+    `seq`        INT             NOT NULL DEFAULT 0,
+    `content`    VARCHAR(500)    NOT NULL,
+    `keywords`   VARCHAR(200)    NOT NULL DEFAULT '' COMMENT '命中关键词，逗号分隔',
+    PRIMARY KEY (`id`),
+    KEY `idx_chunk_doc` (`doc_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '规则库切块';
+
+-- AI 评测（金标集 / 运行 / 结果）------------------------------------------------
+CREATE TABLE IF NOT EXISTS `ai_eval_case`
+(
+    `id`                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `name`               VARCHAR(60)     NOT NULL,
+    `category`           VARCHAR(30)     NOT NULL COMMENT 'BOOKING/COACH/POLICY/HANDOFF/INJECTION/LANGUAGE',
+    `input`              VARCHAR(300)    NOT NULL,
+    `expected_tools`     VARCHAR(200)    NOT NULL DEFAULT '' COMMENT '逗号分隔的必含工具',
+    `expected_contains`  VARCHAR(200)    NOT NULL DEFAULT '' COMMENT '答案必须包含（| 分隔任一）',
+    `expected_handoff`   TINYINT(1)      NOT NULL DEFAULT 0,
+    `enabled`            TINYINT(1)      NOT NULL DEFAULT 1,
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 评测金标集';
+
+CREATE TABLE IF NOT EXISTS `ai_eval_run`
+(
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `model`       VARCHAR(40)     NOT NULL,
+    `prompt_version` VARCHAR(20)  NOT NULL,
+    `total`       INT             NOT NULL DEFAULT 0,
+    `passed`      INT             NOT NULL DEFAULT 0,
+    `failed`      INT             NOT NULL DEFAULT 0,
+    `cost_cents`  INT             NOT NULL DEFAULT 0,
+    `report_json` TEXT            NULL,
+    `started_at`  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `finished_at` DATETIME        NULL,
+    PRIMARY KEY (`id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 评测运行';
+
+CREATE TABLE IF NOT EXISTS `ai_eval_result`
+(
+    `id`          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `run_id`      BIGINT UNSIGNED NOT NULL,
+    `case_id`     BIGINT UNSIGNED NOT NULL,
+    `passed`      TINYINT(1)      NOT NULL,
+    `actual_tools` VARCHAR(200)   NOT NULL DEFAULT '',
+    `actual_answer` VARCHAR(500)  NOT NULL DEFAULT '',
+    `latency_ms`  INT             NOT NULL DEFAULT 0,
+    `error`       VARCHAR(200)    NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_eval_result_run` (`run_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = 'AI 评测结果';
