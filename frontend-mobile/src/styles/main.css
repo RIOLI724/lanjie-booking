@@ -917,8 +917,8 @@ button {
 .sheet-quick a { flex: 1; text-align: center; text-decoration: none; padding: 8px 0; border-radius: 9px; background: rgba(255, 255, 255, .05); color: rgba(233, 242, 230, .65); font-size: 11px; }
 .sheet-reopen { position: absolute; z-index: 3; left: 50%; bottom: calc(78px + env(safe-area-inset-bottom)); transform: translateX(-50%); padding: 9px 18px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .2); background: rgba(8, 23, 15, .7); color: #fff; font-size: 12px; backdrop-filter: blur(10px); }
 .home-demo .dock { background: rgba(6, 18, 12, .92); border-top: 1px solid rgba(255, 255, 255, .08); backdrop-filter: blur(14px); }
-.home-demo .dock a { color: rgba(233, 242, 230, .5); }
-.home-demo .dock a i { background: rgba(255, 255, 255, .12); }
+.home-demo .dock a { color: rgba(233, 242, 230, .82); }
+.home-demo .dock a i { background: rgba(255, 255, 255, .18); }
 .home-demo .dock a.active { color: var(--lime); }
 .home-demo .dock a.active i { background: var(--lime); }
 
@@ -954,3 +954,26 @@ button {
 .book-legend .lg.booked { background: #edf0e7; }
 .book-legend .lg.held { border-color: #ead9a4; background: #fdf3d8; }
 .book-legend .lg.sel { border-color: var(--ink); background: var(--lime); }
+
+/* ---- demo 还原：顶灯 + 木地板舞台 ---- */
+.home-stage { position: absolute; inset: 0; z-index: 0; overflow: hidden; background: radial-gradient(circle at 50% 58%, #0d1b12 0%, #07100a 55%, #040806 100%); }
+.home-stage::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, .38), transparent 28%, transparent 70%, rgba(0, 0, 0, .5)); }
+.home-spot { position: absolute; z-index: 0; left: 50%; top: 28px; width: 330px; height: 330px; transform: translateX(-50%); border-radius: 50%;
+  background: radial-gradient(circle at 50% 42%, #fbfbf6 0%, #eeeeE7 35%, #d3d4cc 55%, #9da098 73%, #40433c 91%, #171a15 100%);
+  box-shadow: 0 0 70px rgba(245, 248, 225, .14); border-radius: 48% 52% 49% 51% / 52% 48% 52% 48%; }
+.home-line { position: absolute; z-index: 2; left: 50%; top: 0; width: 1.5px; height: 196px; transform: translateX(-50%); background: linear-gradient(180deg, #050806 0%, rgba(5, 8, 6, .55) 75%, transparent 100%); }
+.home-floor { position: absolute; z-index: 1; left: -16%; right: -16%; top: 50%; height: 35%; border-top: 2px solid rgba(238, 232, 205, .42);
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, .25), transparent 18%, rgba(255, 226, 170, .07) 50%, transparent 82%, rgba(0, 0, 0, .28)),
+    repeating-linear-gradient(90deg, #8b512c 0 2px, #9d5f38 2px 44px, #774326 44px 47px);
+  clip-path: polygon(0 0, 100% 0, 116% 100%, -16% 100%); }
+.home-floor i { position: absolute; left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); background: var(--lime); box-shadow: 0 0 10px rgba(200, 241, 105, .5); }
+.home-floor::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255, 226, 170, .16), transparent 45%); }
+.home-top, .home-date, .court-sheet, .sheet-reopen { z-index: 3; }
+
+.book-head h1 { font-size: 27px; }
+.book-table { grid-template-columns: 64px repeat(var(--hours), 70px); gap: 3px; }
+.book-cell { height: 86px; }
+.book-cell b { font-size: 13px; }
+.book-court { font-size: 13px; }
+.book-hour { font-size: 11px; }

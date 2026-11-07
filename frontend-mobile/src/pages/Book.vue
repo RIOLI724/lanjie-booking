@@ -43,7 +43,7 @@ const selectedDay = computed(() => days.value.find((x) => x.date === selectedDat
 const selectedDayTitle = computed(() => {
   if (!selectedDay.value) return isReschedule.value ? '改期' : '订场'
   const date = new Date(`${selectedDate.value}T00:00:00`)
-  return `${date.getMonth() + 1} 月 ${date.getDate()} 日 ${WEEK_LABELS[date.getDay()]}`
+  return `${date.getMonth() + 1}月${date.getDate()}日 ${WEEK_LABELS[date.getDay()]}`
 })
 
 const hours = computed<string[]>(() => {
@@ -204,7 +204,7 @@ onMounted(async () => {
     <header class="book-head">
       <div>
         <h1>{{ isReschedule ? '改期' : selectedDayTitle }}</h1>
-        <p>{{ courts.length }} 片全场 · {{ selectedDay?.openTime }}–{{ selectedDay?.closeTime }}</p>
+        <p>{{ courts.length }}片全场 · {{ selectedDay?.openTime }}-{{ selectedDay?.closeTime }}</p>
       </div>
       <button class="ai-pick" @click="aiPick">
         <span>✧</span> AI 帮我选

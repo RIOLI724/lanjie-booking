@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import DockBar from '@/components/DockBar.vue'
-import CourtBackdrop from '@/components/CourtBackdrop.vue'
 import { loadMe, sessionState } from '@/stores/session'
 import { fetchSlots } from '@/api/venue'
 
@@ -29,7 +28,11 @@ onMounted(async () => {
 
 <template>
   <div class="page home-demo">
-    <CourtBackdrop />
+    <div class="home-stage" aria-hidden="true">
+      <div class="home-spot"></div>
+      <div class="home-line"></div>
+      <div class="home-floor"><i></i></div>
+    </div>
     <div class="home-demo-shade"></div>
 
     <header class="home-top">
@@ -47,11 +50,6 @@ onMounted(async () => {
         <span class="caret">⌄</span>
       </router-link>
     </header>
-
-    <div class="home-greeting">
-      <small>城东体育馆 · 4 片全场</small>
-      <h1>你好，{{ sessionState.me?.nickname ?? '球友' }}<br />今晚，去哪片场？</h1>
-    </div>
 
     <section v-if="sheetOpen" class="court-sheet">
       <div class="sheet-handle"></div>
