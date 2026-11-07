@@ -410,9 +410,8 @@ public class AdminCoachOpsService {
             }
             if (booking.getPackageId() != null) {
                 coachPackageMapper.restoreSession(booking.getPackageId());
-            } else if (booking.getPaidCents() != null && booking.getPaidCents() > 0) {
-                refundService.refundForReschedule(booking, booking.getPaidCents(), reason);
             }
+            refundService.refundFull(booking, reason);
         } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
             if (bookingMapper.markCancelled(bookingId, "ADMIN_TIME_OFF") == 0) {
                 return;

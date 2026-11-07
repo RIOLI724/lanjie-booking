@@ -330,7 +330,7 @@ public class PickupService {
             if (booking.getStatus() == BookingStatus.CONFIRMED) {
                 if (bookingMapper.markCancelledConfirmed(booking.getId(), "PICKUP_CANCELLED") > 0
                         && booking.getPaidCents() > 0) {
-                    refundService.refundForReschedule(booking, booking.getPaidCents(), reason);
+                    refundService.refundFull(booking, reason);
                 }
             } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
                 bookingMapper.markCancelled(booking.getId(), "PICKUP_CANCELLED");
@@ -530,9 +530,8 @@ public class PickupService {
                         .in(PickupParticipant::getStatus, "CONFIRMED", "PENDING_PAYMENT"))) {
             Booking booking = bookingMapper.selectById(participant.getBookingId());
             if (booking != null && booking.getStatus() == BookingStatus.CONFIRMED) {
-                if (bookingMapper.markCancelledConfirmed(booking.getId(), "INITIATOR_NO_SHOW") > 0
-                        && booking.getPaidCents() > 0) {
-                    refundService.refundForReschedule(booking, booking.getPaidCents(), safeReason);
+                if (bookingMapper.markCancelledConfirmed(booking.getId(), "INITIATOR_NO_SHOW") > 0) {
+                    refundService.refundFull(booking, safeReason);
                     refunded++;
                 }
             } else if (booking != null && booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
@@ -585,9 +584,8 @@ public class PickupService {
         }
         Booking booking = bookingMapper.selectById(participant.getBookingId());
         if (booking != null && booking.getStatus() == BookingStatus.CONFIRMED) {
-            if (bookingMapper.markCancelledConfirmed(booking.getId(), "PICKUP_SHARE_REFUND") > 0
-                    && booking.getPaidCents() > 0) {
-                refundService.refundForReschedule(booking, booking.getPaidCents(),
+            if (bookingMapper.markCancelledConfirmed(booking.getId(), "PICKUP_SHARE_REFUND") > 0) {
+                refundService.refundFull(booking,
                         reason == null || reason.isBlank() ? "份子钱争议退款" : reason);
             }
         } else if (booking != null && booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
@@ -618,9 +616,8 @@ public class PickupService {
                         .in(PickupParticipant::getStatus, "CONFIRMED", "PENDING_PAYMENT", "NO_SHOW"))) {
             Booking booking = bookingMapper.selectById(participant.getBookingId());
             if (booking != null && booking.getStatus() == BookingStatus.CONFIRMED) {
-                if (bookingMapper.markCancelledConfirmed(booking.getId(), "PICKUP_ABORTED") > 0
-                        && booking.getPaidCents() > 0) {
-                    refundService.refundForReschedule(booking, booking.getPaidCents(), reason);
+                if (bookingMapper.markCancelledConfirmed(booking.getId(), "PICKUP_ABORTED") > 0) {
+                    refundService.refundFull(booking, reason);
                     refunded++;
                 }
             } else if (booking != null && booking.getStatus() == BookingStatus.PENDING_PAYMENT) {

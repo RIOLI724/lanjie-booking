@@ -18,6 +18,10 @@ const couponCount = ref(0)
 const orderFilter = ref<'all' | 'pay' | 'soon' | 'done'>('all')
 const qrBookingId = ref<number | null>(null)
 
+const discountText = computed(() => {
+  const pct = member.value?.discountPct ?? 100
+  return pct % 10 === 0 ? String(pct / 10) : (pct / 10).toFixed(1)
+})
 const packageSessions = computed(() => packages.value.reduce((sum, p) => sum + p.remainingSessions, 0))
 const filteredOrders = computed(() => {
   const all = bookings.value.slice(0, 6)
@@ -47,6 +51,13 @@ function courtBadge(b: BookingInfo): string {
   if (b.type === 'PICKUP') return '拼'
   const match = orderTitle(b).match(/\d+/)
   return match ? match[0].padStart(2, '0') : '场'
+}
+
+function statusClass(b: BookingInfo): string {
+  if (b.status === 'PENDING_PAYMENT') return 'pay'
+  if (b.status === 'CONFIRMED') return 'soon'
+  if (b.status === 'CANCELLED' || b.status === 'NO_SHOW') return 'refund'
+  return 'done'
 }
 
 function orderAction(b: BookingInfo): string {
@@ -113,7 +124,7 @@ onMounted(async () => {
           <span class="me-avatar">{{ sessionState.me?.nickname?.slice(0, 1) ?? '球' }}</span>
           <div>
             <b>{{ sessionState.me?.nickname ?? '球友' }}</b>
-            <small>{{ member?.levelName ?? '普通会员' }} · 订场 {{ member?.discountPct ?? 100 }} 折</small>
+            <small>{{ member?.levelName ?? '普通会员' }} · 订场 {{ discountText }} 折</small>
           </div>
           <button class="me-level" @click="router.push('/wallet')">会员中心 <i data-lucide="chevron-right"></i></button>
         </div>
@@ -159,7 +170,7 @@ onMounted(async () => {
                 <span class="order-price">¥{{ (b.paidCents || b.payableCents) / 100 }}</span>
               </div>
               <div class="order-foot">
-                <span class="status" :class="b.status.toLowerCase()">{{ STATUS_TEXT[b.status] ?? b.status }}</span>
+                <span class="status" :class="statusClass(b)">{{ STATUS_TEXT[b.status] ?? b.status }}</span>
                 <button class="order-action" @click="onOrderAction(b)">{{ orderAction(b) }}</button>
               </div>
             </div>

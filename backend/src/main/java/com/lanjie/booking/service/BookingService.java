@@ -250,10 +250,13 @@ public class BookingService {
             LocalDateTime firstStart = firstItemStart(bookingId);
             boolean initiator = pickupService.isInitiatorBooking(bookingId);
             boolean freeCancel = LocalDateTime.now().isBefore(firstStart.minusHours(24));
-            int refund = initiator ? refundService.quoteRefund(booking, firstStart)
-                    : (freeCancel ? booking.getPaidCents() : 0);
-            if (refund > 0) {
-                refundService.refundForReschedule(booking, refund, "取消拼场");
+            int refund;
+            if (initiator) {
+                refund = refundService.refundForCancel(booking, firstStart, "取消拼场");
+            } else if (freeCancel) {
+                refund = refundService.refundFull(booking, "取消拼场（24h 前全退）");
+            } else {
+                refund = 0;
             }
             if (bookingMapper.markCancelledConfirmed(booking.getId(),
                     freeCancel ? "USER_CANCEL_24H" : "USER_CANCEL_LATE") == 0) {
@@ -273,11 +276,9 @@ public class BookingService {
             // 团课：开场前 ≥24h 全退；<24h 不退（硬边界）。取消后触发候补递补
             LocalDateTime firstStart = firstItemStart(bookingId);
             boolean freeCancel = LocalDateTime.now().isBefore(firstStart.minusHours(24));
-            int refund = 0;
-            if (freeCancel && booking.getPaidCents() > 0) {
-                refund = booking.getPaidCents();
-                refundService.refundForReschedule(booking, refund, "取消团课（24h 前全退）");
-            }
+            int refund = freeCancel
+                    ? refundService.refundFull(booking, "取消团课（24h 前全退）")
+                    : 0;
             if (bookingMapper.markCancelledConfirmed(booking.getId(),
                     freeCancel ? "USER_CANCEL_24H" : "USER_CANCEL_LATE") == 0) {
                 throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID);
@@ -317,14 +318,12 @@ public class BookingService {
         LocalDateTime firstStart = firstItemStart(booking.getId());
         boolean freeCancel = LocalDateTime.now().isBefore(firstStart.minusHours(24));
         int refund = 0;
-        if (booking.getPackageId() != null) {
-            // 课包单：≥24h 退回课时；<24h 课时照扣
-            if (freeCancel) {
+        if (freeCancel) {
+            // 课包单：≥24h 退回课时；<24h 课时照扣。全退同时返还券/积分。
+            if (booking.getPackageId() != null) {
                 coachPackageMapper.restoreSession(booking.getPackageId());
             }
-        } else if (freeCancel && booking.getPaidCents() > 0) {
-            refund = booking.getPaidCents();
-            refundService.refundForReschedule(booking, refund, "取消私教（24h 前全退）");
+            refund = refundService.refundFull(booking, "取消私教（24h 前全退）");
         }
         if (bookingMapper.markCancelledConfirmed(booking.getId(),
                 freeCancel ? "USER_CANCEL_24H" : "USER_CANCEL_LATE") == 0) {

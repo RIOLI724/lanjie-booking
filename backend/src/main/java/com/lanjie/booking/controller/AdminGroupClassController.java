@@ -68,7 +68,12 @@ public class AdminGroupClassController {
 
     @GetMapping
     public Result<List<Map<String, Object>>> list(@RequestParam(required = false) String date) {
-        LocalDate day = date == null || date.isBlank() ? LocalDate.now() : LocalDate.parse(date);
+        LocalDate day;
+        try {
+            day = date == null || date.isBlank() ? LocalDate.now() : LocalDate.parse(date);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "日期格式应为 yyyy-MM-dd");
+        }
         List<GroupClass> classes = classMapper.selectList(new LambdaQueryWrapper<GroupClass>()
                 .apply("DATE(start_at) = {0}", day)
                 .orderByAsc(GroupClass::getStartAt));

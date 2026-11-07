@@ -66,6 +66,7 @@ public class AdminFinanceService {
         long revenue = 0;
         long recharge = 0;
         long orderCount = 0;
+        long bookingRevenue = 0;
         Map<String, Long> byType = new LinkedHashMap<>();
         Map<String, Long> byChannel = new LinkedHashMap<>();
         Map<LocalDate, long[]> trend = new LinkedHashMap<>();
@@ -91,6 +92,7 @@ public class AdminFinanceService {
             byChannel.merge(pay.getChannel().name(), (long) pay.getAmountCents(), Long::sum);
             if (pay.getPurpose() == PayPurpose.BOOKING) {
                 orderCount++;
+                bookingRevenue += pay.getAmountCents();
                 if (row != null) {
                     row[2]++;
                 }
@@ -127,7 +129,7 @@ public class AdminFinanceService {
         data.put("refundCents", refundTotal);
         data.put("netCents", revenue - refundTotal);
         data.put("orderCount", orderCount);
-        data.put("avgOrderCents", orderCount == 0 ? 0 : revenue / orderCount);
+        data.put("avgOrderCents", orderCount == 0 ? 0 : bookingRevenue / orderCount);
         data.put("trend", trendRows);
         data.put("byType", typeRows);
         data.put("byChannel", channelRows);
@@ -279,7 +281,11 @@ public class AdminFinanceService {
     }
 
     private String csvCell(String value) {
-        String text = value == null ? "" : value.replace("\"", "\"\"");
-        return "\"" + text + "\"";
+        String text = value == null ? "" : value;
+        // 防 CSV 公式注入：Excel/WPS 会执行以 = + - @ 开头的单元格
+        if (!text.isEmpty() && "=+-@".indexOf(text.charAt(0)) >= 0) {
+            text = "'" + text;
+        }
+        return "\"" + text.replace("\"", "\"\"") + "\"";
     }
 }

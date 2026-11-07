@@ -11,12 +11,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 前台（管理端）操作：扫码核销。ADMIN 角色限定，用户管理/退款记录等后台页 W11 陆续接入。
- */
+/** 前台（管理端）操作：扫码核销。前台值班与店长都可执行。 */
 @RestController
 @RequestMapping("/api/v1/admin")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'FRONT_DESK')")
 public class AdminBookingController {
 
     private final BookingService bookingService;

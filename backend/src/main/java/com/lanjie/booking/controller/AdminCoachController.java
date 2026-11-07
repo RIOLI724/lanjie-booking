@@ -130,7 +130,12 @@ public class AdminCoachController {
     @GetMapping("/{id}/slots")
     public Result<List<Map<String, Object>>> slots(@PathVariable Long id,
                                                    @RequestParam(required = false) String date) {
-        LocalDate day = date == null || date.isBlank() ? LocalDate.now() : LocalDate.parse(date);
+        LocalDate day;
+        try {
+            day = date == null || date.isBlank() ? LocalDate.now() : LocalDate.parse(date);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "日期格式应为 yyyy-MM-dd");
+        }
         LocalDateTime now = LocalDateTime.now();
         List<Map<String, Object>> available = opsService.upcomingSlots(id, day, 1).stream()
                 .filter(row -> "AVAILABLE".equals(row.get("status")))

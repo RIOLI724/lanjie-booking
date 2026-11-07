@@ -14,7 +14,6 @@ const error = ref('')
 const loading = ref(false)
 const tab = ref<'today' | 'schedule' | 'orders' | 'coaches' | 'classes' | 'pickups' | 'customer' | 'refunds' | 'users' | 'audit' | 'finance' | 'analytics' | 'health'>('today')
 
-const today = ref<Record<string, any>>({})
 const schedule = ref<Array<Record<string, any>>>([])
 const scheduleDate = ref(localToday())
 const orders = ref<Array<Record<string, any>>>([])
@@ -145,7 +144,6 @@ async function openTab(next: typeof tab.value) {
   error.value = ''
   loading.value = true
   try {
-    if (next === 'today') today.value = await api('/admin/today')
     if (next === 'schedule') schedule.value = await api(`/admin/schedule?date=${scheduleDate.value}`)
     if (next === 'orders') orders.value = await api(`/admin/orders?date=${orderDate.value}`)
     if (next === 'coaches') coachList.value = await api('/admin/coaches')

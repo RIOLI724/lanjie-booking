@@ -67,7 +67,7 @@ class AdminCustomerOpsTest extends IntegrationTestBase {
         String actor = JsonPath.read(
                 get("/api/v1/admin/audit-logs?date=" + LocalDate.now(), admin).getBody(),
                 "$.data[0].actorName");
-        assertEquals("前台王姐", actor);
+        assertEquals("店长", actor);
     }
 
     @Test

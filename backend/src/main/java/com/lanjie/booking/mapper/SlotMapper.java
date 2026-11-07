@@ -53,4 +53,21 @@ public interface SlotMapper extends BaseMapper<Slot> {
             + "owner_type = NULL, owner_id = NULL, version = version + 1 "
             + "WHERE status = 'HELD' AND hold_expires_at < #{now}")
     int releaseExpired(@Param("now") LocalDateTime now);
+
+
+    /** 管理端关场：只有仍可订时才允许，防止与顾客锁位并发覆盖 */
+    @Update("UPDATE slot SET status = 'CLOSED', hold_token = NULL, hold_expires_at = NULL, "
+            + "owner_type = NULL, owner_id = NULL, version = version + 1 "
+            + "WHERE id = #{id} AND status = 'AVAILABLE'")
+    int closeIfAvailable(@Param("id") Long id);
+
+    /** 管理端重新开放：只有已关且无主时才允许 */
+    @Update("UPDATE slot SET status = 'AVAILABLE', version = version + 1 "
+            + "WHERE id = #{id} AND status = 'CLOSED'")
+    int reopenIfClosed(@Param("id") Long id);
+
+    /** 管理端改价：只改仍可订的格子 */
+    @Update("UPDATE slot SET price_cents = #{priceCents}, version = version + 1 "
+            + "WHERE id = #{id} AND status = 'AVAILABLE'")
+    int updatePriceIfAvailable(@Param("id") Long id, @Param("priceCents") Integer priceCents);
 }

@@ -133,6 +133,35 @@ class AdminOpsTest extends IntegrationTestBase {
     }
 
     @Test
+    void forceCancelRestoresCouponAndPoints() {
+        String admin = adminLogin();
+        String customer = registerAndLogin();
+        Slot slot = pickSlot(4, 2);
+        long bookingId = holdAndPay(customer, List.of(slot.getId()));
+        long userId = jdbcTemplate.queryForObject(
+                "SELECT user_id FROM booking WHERE id = ?", Long.class, bookingId);
+
+        long couponId = jdbcTemplate.queryForObject(
+                "SELECT id FROM coupon_template ORDER BY id LIMIT 1", Long.class);
+        jdbcTemplate.update("INSERT INTO user_coupon (user_id, template_id, status, used_at, booking_id, expires_at) "
+                + "VALUES (?, ?, 'USED', NOW(), ?, DATE_ADD(NOW(), INTERVAL 30 DAY))",
+                userId, couponId, bookingId);
+        long userCouponId = jdbcTemplate.queryForObject(
+                "SELECT id FROM user_coupon WHERE user_id = ? ORDER BY id DESC LIMIT 1", Long.class, userId);
+        jdbcTemplate.update("UPDATE booking SET coupon_id = ?, points_used = 100 WHERE id = ?",
+                userCouponId, bookingId);
+        jdbcTemplate.update("INSERT INTO points_account (user_id, balance, total_earned, total_spent, version) "
+                + "VALUES (?, 0, 0, 100, 0)", userId);
+
+        assertEquals(0, code(post("/api/v1/admin/orders/" + bookingId + "/force-cancel",
+                Map.of("reason", "场馆原因，全额退"), admin)));
+        assertEquals("UNUSED", jdbcTemplate.queryForObject(
+                "SELECT status FROM user_coupon WHERE id = ?", String.class, userCouponId));
+        assertEquals(100, jdbcTemplate.queryForObject(
+                "SELECT balance FROM points_account WHERE user_id = ?", Integer.class, userId));
+    }
+
+    @Test
     void customerCannotUseAdminOps() {
         String customer = registerAndLogin();
         ResponseEntity<String> response = get("/api/v1/admin/orders", customer);

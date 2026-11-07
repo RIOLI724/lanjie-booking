@@ -320,9 +320,8 @@ public class GroupClassService {
         for (GroupEnrollment enrollment : enrollments) {
             Booking booking = bookingMapper.selectById(enrollment.getBookingId());
             if (booking != null && booking.getStatus() == BookingStatus.CONFIRMED) {
-                if (bookingMapper.markCancelledConfirmed(booking.getId(), "CLASS_CANCELLED") > 0
-                        && booking.getPaidCents() > 0) {
-                    refundService.refundForReschedule(booking, booking.getPaidCents(), reason);
+                if (bookingMapper.markCancelledConfirmed(booking.getId(), "CLASS_CANCELLED") > 0) {
+                    refundService.refundFull(booking, reason);
                 }
             } else if (booking != null && booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
                 bookingMapper.markCancelled(booking.getId(), "CLASS_CANCELLED");

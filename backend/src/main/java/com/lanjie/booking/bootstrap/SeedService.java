@@ -217,7 +217,7 @@ public class SeedService {
         User admin = new User();
         admin.setPhone("13800000000");
         admin.setPasswordHash(passwordEncoder.encode("admin123"));
-        admin.setNickname("前台王姐");
+        admin.setNickname("店长");
         admin.setRole(UserRole.ADMIN);
         admin.setStatus(UserStatus.ACTIVE);
         admin.setCumulativeRechargeCents(0L);

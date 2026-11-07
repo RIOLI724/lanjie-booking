@@ -88,6 +88,20 @@ public class RefundService {
         return refund;
     }
 
+    /** 场馆原因 / 全额退款：全额原路退回，并返还优惠券与积分 */
+    @Transactional
+    public int refundFull(Booking booking, String reason) {
+        int paid = booking.getPaidCents() == null ? 0 : booking.getPaidCents();
+        if (paid > 0) {
+            createRefund(booking, paid, reason);
+            applyItemRefunds(booking.getId(), paid, paid);
+        }
+        couponService.restore(booking.getCouponId());
+        int points = booking.getPointsUsed() == null ? 0 : booking.getPointsUsed();
+        pointsService.restoreSpend(booking.getUserId(), points, booking.getId());
+        return paid;
+    }
+
     /** 改期差价退回（新时段更便宜） */
     @Transactional
     public void refundForReschedule(Booking booking, int amount, String reason) {

@@ -192,10 +192,8 @@ public class AdminOpsController {
             if (bookingMapper.markCancelledConfirmed(id, "ADMIN_" + reason) == 0) {
                 throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "订单状态已变化，请刷新后重试");
             }
-            if (booking.getPaidCents() != null && booking.getPaidCents() > 0) {
-                refund = booking.getPaidCents();
-                refundService.refundForReschedule(booking, refund, reason);
-            }
+            refund = booking.getPaidCents() == null ? 0 : booking.getPaidCents();
+            refundService.refundFull(booking, reason);
         } else if (booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
             if (bookingMapper.markCancelled(id, "ADMIN_" + reason) == 0) {
                 throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "订单状态已变化，请刷新后重试");
@@ -231,6 +229,15 @@ public class AdminOpsController {
                 ? "场馆原因关场" : req.getReason();
         Map<String, Object> data = new LinkedHashMap<>();
         if (slot.getStatus() == SlotStatus.BOOKED || slot.getStatus() == SlotStatus.HELD) {
+            if (!"BOOKING".equals(slot.getOwnerType())) {
+                throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID,
+                        "该时段被团课或拼场占用，请到对应处置页处理");
+            }
+            Booking owner = slot.getOwnerId() == null ? null : bookingMapper.selectById(slot.getOwnerId());
+            if (owner != null && owner.getType() != BookingType.COURT) {
+                throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID,
+                        "该时段属于拼场订单，请到拼场处置处理");
+            }
             List<Map<String, Object>> affected = new ArrayList<>();
             if ("BOOKING".equals(slot.getOwnerType()) && slot.getOwnerId() != null) {
                 Booking booking = bookingMapper.selectById(slot.getOwnerId());
@@ -254,12 +261,12 @@ public class AdminOpsController {
                 forceCancel((Long) row.get("bookingId"), cancelRequest(reason), actor);
             }
         }
-        slot.setStatus(SlotStatus.CLOSED);
-        slot.setHoldToken(null);
-        slot.setHoldExpiresAt(null);
-        slot.setOwnerType(null);
-        slot.setOwnerId(null);
-        slotMapper.updateById(slot);
+        if (slotMapper.closeIfAvailable(slotId) == 0) {
+            Slot fresh = slotMapper.selectById(slotId);
+            if (fresh == null || fresh.getStatus() != SlotStatus.CLOSED) {
+                throw new BusinessException(ErrorCode.SLOT_TAKEN, "该时段刚被预订，请刷新后重试");
+            }
+        }
         adminAudit.record(actor.userId(), "SLOT_CLOSE", "SLOT", slotId,
                 "关场 " + slot.getSlotDate() + " " + slot.getStartAt().toLocalTime()
                         + "，原因：" + reason + (force ? "（含已售订单全退）" : ""));
@@ -279,8 +286,9 @@ public class AdminOpsController {
         if (slot.getStatus() != SlotStatus.CLOSED) {
             throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "只有已关闭的时段可以开放");
         }
-        slot.setStatus(SlotStatus.AVAILABLE);
-        slotMapper.updateById(slot);
+        if (slotMapper.reopenIfClosed(slotId) == 0) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "时段状态已变化，请刷新后重试");
+        }
         adminAudit.record(actor.userId(), "SLOT_REOPEN", "SLOT", slotId,
                 "重新开放 " + slot.getSlotDate() + " " + slot.getStartAt().toLocalTime());
         return Result.ok();
@@ -302,8 +310,9 @@ public class AdminOpsController {
             throw new BusinessException(ErrorCode.PARAM_INVALID, "价格必须大于 0");
         }
         int oldPrice = slot.getPriceCents();
-        slot.setPriceCents(req.getPriceCents());
-        slotMapper.updateById(slot);
+        if (slotMapper.updatePriceIfAvailable(slotId, req.getPriceCents()) == 0) {
+            throw new BusinessException(ErrorCode.BOOKING_STATUS_INVALID, "时段刚被预订，不能改价");
+        }
         adminAudit.record(actor.userId(), "SLOT_PRICE", "SLOT", slotId,
                 "改价 " + oldPrice + " → " + req.getPriceCents() + " 分");
         return Result.ok();

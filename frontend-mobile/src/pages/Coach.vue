@@ -35,6 +35,11 @@ const error = ref('')
 
 const days = ['今天', '明天', '后天'] as const
 
+function localDate(offset = 0): string {
+  const d = new Date(Date.now() + offset * 86_400_000)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const dateIso = computed(() => {
   const offset = selectedDate.value === '今天' ? 0 : selectedDate.value === '明天' ? 1 : 2
   const d = new Date(Date.now() + offset * 86_400_000)
@@ -56,7 +61,8 @@ function timeLabel(iso: string): string {
 async function loadSlots() {
   selectedSlot.value = null
   if (!selectedCoach.value) return
-  slots.value = await fetchCoachSlots(selectedCoach.value.id, dateIso.value)
+  slots.value = (await fetchCoachSlots(selectedCoach.value.id, dateIso.value))
+    .filter((s) => new Date(s.startAt).getTime() > Date.now())
   const first = slots.value.find((s) => s.status === 'AVAILABLE')
   if (first) selectedSlot.value = first
 }
@@ -140,7 +146,8 @@ async function enroll(clazz: GroupClassInfo) {
     } else {
       window.alert('已加入候补，有人退出会通知你')
     }
-    groupClasses.value = await fetchGroupClasses(new Date().toISOString().slice(0, 10))
+    groupClasses.value = (await fetchGroupClasses(localDate()))
+      .filter((g) => new Date(g.startAt).getTime() > Date.now())
   } catch (e) {
     error.value = e instanceof ApiError ? e.message : '网络异常，请稍后再试'
   } finally {
@@ -149,7 +156,8 @@ async function enroll(clazz: GroupClassInfo) {
 }
 
 async function loadGroups() {
-  groupClasses.value = await fetchGroupClasses(new Date().toISOString().slice(0, 10))
+  groupClasses.value = (await fetchGroupClasses(localDate()))
+    .filter((g) => new Date(g.startAt).getTime() > Date.now())
 }
 
 onMounted(async () => {

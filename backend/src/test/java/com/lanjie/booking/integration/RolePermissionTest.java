@@ -66,6 +66,15 @@ class RolePermissionTest extends IntegrationTestBase {
     }
 
     @Test
+    void frontDeskCanReachCheckinEndpoint() {
+        String front = login("13800000001", "front123");
+        ResponseEntity<String> response = post("/api/v1/admin/bookings/999999/checkin",
+                Map.of("token", "123456"), front);
+        // 不应被权限拦成 403；订单不存在走业务错误
+        assertEquals(200, response.getStatusCode().value());
+    }
+
+    @Test
     void frontDeskCannotForceCloseBookedSlot() {
         String front = login("13800000001", "front123");
         String manager = login("13800000000", "admin123");
