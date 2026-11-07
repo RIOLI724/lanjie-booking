@@ -110,7 +110,9 @@ class CoachBookingTest extends IntegrationTestBase {
         assertEquals("CONFIRMED", bookingStatus(bookingId));
         assertEquals(4, remaining(packageId));
 
-        // ≥24h 取消 → 课时退回
+        // ≥24h 取消 → 课时退回（把场次移到 30 小时后，避免晚上跑测试落到 24h 内）
+        jdbcTemplate.update("UPDATE booking_item SET start_at = DATE_ADD(NOW(), INTERVAL 30 HOUR), "
+                + "end_at = DATE_ADD(NOW(), INTERVAL 31 HOUR) WHERE booking_id = ?", bookingId);
         assertEquals(0, code(post("/api/v1/bookings/" + bookingId + "/cancel", Map.of(), token)));
         assertEquals(5, remaining(packageId));
         assertEquals("AVAILABLE", coachSlotStatus(coachSlot.getId()));

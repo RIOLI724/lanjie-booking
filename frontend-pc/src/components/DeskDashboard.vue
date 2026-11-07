@@ -116,18 +116,19 @@ const recent = computed(() => orders.value.slice(0, 5))
 
 onMounted(async () => {
   try {
-    const [todayData, scheduleData, orderData, refundData, aiData] = await Promise.all([
+    const results = await Promise.allSettled([
       api('/admin/today'),
       api(`/admin/schedule?date=${todayIso}`),
       api(`/admin/orders?date=${todayIso}`),
       api('/admin/refunds'),
       api('/admin/ai/summary'),
     ])
-    today.value = todayData
-    schedule.value = scheduleData
-    orders.value = orderData
-    refunds.value = refundData
-    ai.value = aiData
+    const value = (index: number) => results[index].status === 'fulfilled' ? (results[index] as PromiseFulfilledResult<any>).value : null
+    today.value = value(0) ?? {}
+    schedule.value = value(1) ?? []
+    orders.value = value(2) ?? []
+    refunds.value = value(3) ?? []
+    ai.value = value(4) ?? {}
   } catch (e) {
     error.value = e instanceof Error ? e.message : '加载失败'
   } finally {
