@@ -171,3 +171,30 @@ export function requestHandoff(sessionId: number): Promise<void> {
 }
 
 export type { BookingInfo, HoldInfo }
+
+
+// ---- 团课 ----
+export interface GroupClassInfo {
+  id: number
+  title: string
+  coachName: string
+  startAt: string
+  endAt: string
+  minStudents: number
+  maxStudents: number
+  priceCents: number
+  enrolledCount: number
+  status: string
+}
+
+export const fetchGroupClasses = (date: string) =>
+  request<GroupClassInfo[]>(`/group-classes?date=${date}`, { auth: true })
+
+export function enrollGroupClass(classId: number): Promise<{ id: number; bookingId: number; status: string }> {
+  return request(`/group-classes/${classId}/enroll`, {
+    method: 'POST',
+    body: {},
+    auth: true,
+    idempotencyKey: uuid(),
+  })
+}
