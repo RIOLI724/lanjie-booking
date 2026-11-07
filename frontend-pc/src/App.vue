@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import CourtBackdrop from './components/CourtBackdrop.vue'
+import DeskDashboard from './components/DeskDashboard.vue'
 
 const BASE = '/api/v1'
 const token = ref(localStorage.getItem('lanjie.admin.token') ?? '')
@@ -133,6 +134,10 @@ function logout() {
   role.value = ''
   localStorage.removeItem('lanjie.admin.token')
   localStorage.removeItem('lanjie.admin.role')
+}
+
+function goTab(next: string) {
+  openTab(next as typeof tab.value)
 }
 
 async function openTab(next: typeof tab.value) {
@@ -871,53 +876,7 @@ onMounted(async () => {
     <main class="main">
       <p v-if="error" class="err">{{ error }}</p>
 
-      <template v-if="tab === 'today' && today.summary">
-        <h3>前台工作台</h3>
-        <div class="cards">
-          <div class="stat"><small>今天进账</small><b>{{ money(today.summary.revenueCents) }}</b></div>
-          <div class="stat"><small>待核销</small><b>{{ today.summary.checkinCount }}</b></div>
-          <div class="stat"><small>待处理（AI 转人工）</small><b>{{ today.summary.handoffCount }}</b></div>
-          <div class="stat"><small>场地占用</small><b>{{ today.summary.occupancyPct }}%</b></div>
-        </div>
-        <p class="alert-line" v-if="today.summary.noShows || today.summary.overduePending">
-          <span v-if="today.summary.noShows">今天 {{ today.summary.noShows }} 人爽约；</span>
-          <span v-if="today.summary.overduePending">{{ today.summary.overduePending }} 单超时未支付已自动取消。</span>
-        </p>
-
-        <div class="queue">
-          <h4>待核销 <small>客人到了，核销码对一下</small></h4>
-          <div v-for="row in today.checkinQueue" :key="row.bookingId" class="qrow">
-            <div class="qmain">
-              <b>{{ row.time }} · {{ row.userName }}</b>
-              <small>{{ row.title }} · {{ row.userPhone }}</small>
-            </div>
-            <button class="btn sm" @click="checkin(row)">核销</button>
-          </div>
-          <p v-if="!today.checkinQueue.length" class="empty">现在没有待核销的客人</p>
-        </div>
-
-        <div class="queue">
-          <h4>待处理 <small>AI 办不了的事，轮到人了</small></h4>
-          <div v-for="row in today.handoffQueue" :key="row.handoffId" class="qrow">
-            <div class="qmain">
-              <b>{{ row.userName }}：{{ row.lastWords }}</b>
-              <small>{{ REASON_TEXT[row.reason] ?? row.reason }} · {{ relative(row.createdAt) }}</small>
-            </div>
-            <div class="qactions">
-              <button class="btn sm ghost" @click="viewHandoff(row)">看对话</button>
-              <button class="btn sm" @click="resolveHandoff(row)">已处理</button>
-            </div>
-          </div>
-          <p v-if="!today.handoffQueue.length" class="empty">AI 今天没把难题甩过来</p>
-        </div>
-
-        <div class="queue" v-if="today.refundQueue?.length">
-          <h4>待退款 <small>系统自动退失败才需要你</small></h4>
-          <div v-for="row in today.refundQueue" :key="row.id" class="qrow">
-            <div class="qmain"><b>{{ money(row.amountCents) }}</b><small>{{ row.reason }} · {{ REFUND_TEXT[row.status] ?? row.status }}</small></div>
-          </div>
-        </div>
-      </template>
+      <DeskDashboard v-if="tab === 'today'" @go="goTab" />
 
       <template v-if="tab === 'schedule'">
         <h3>今日排期</h3>
