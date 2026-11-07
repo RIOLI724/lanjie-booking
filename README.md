@@ -1,5 +1,7 @@
 # 篮界 · 篮球馆预约系统
 
+![CI](https://github.com/RIOLI724/lanjie-booking/actions/workflows/ci.yml/badge.svg)
+
 4 片全场篮球馆的 **订场 + 教练 + 团课 + 拼场 + 会员营销 + AI 前台** 全栈作品集。  
 手机端优先，配 PC 前台工作台；业务规则、并发防超订、退款/改期、权限与 AI 工具调用均按真实场馆流程实现。
 
@@ -57,7 +59,7 @@ cd backend && mvn test
 
 ## 快速开始
 
-依赖：MySQL 8（3306）、Redis（6379），也可 `docker compose up -d`。
+依赖：MySQL 8（3306）、Redis（6379），也可 `docker compose up -d`（默认 root/root，自动导入表结构）。
 
 ```bash
 # 1. 建库 + 表结构
@@ -101,7 +103,7 @@ backend/                 Spring Boot API（订场/支付/退款/教练/团课/�
 frontend-mobile/         手机端（Vue3 + Vite，3D 球馆、订场、教练、AI、拼场、我的）
 frontend-pc/             PC 前台工作台（今日看板、排期、订单、教练/团课、财务、审计）
 frontend-mobile/public/demo/  视觉原型（mock 数据，供设计对照）
-sql/schema.sql           44 张业务表
+sql/schema.sql           45 张业务表
 docs/product-brief.md    产品说明与冻结基线
 docs/api.md              接口清单
 ```
