@@ -23,7 +23,7 @@ Spring Boot 3.5 · MyBatis-Plus · MySQL 8 · Redis · JWT · Vue 3 + Vite + Typ
    mysql -uroot -p lanjie < sql/schema.sql
    ```
 
-2. 数据库账号密码写进 `backend/src/main/resources/application-dev.yml`（或用环境变量 `DB_USER` / `DB_PASSWORD`）
+2. 复制 `backend/src/main/resources/application-dev.example.yml` 为 `application-dev.yml`，填入本机数据库密码（该文件已被 gitignore；也可直接用环境变量 `DB_USER` / `DB_PASSWORD`）
 
 3. 起后端（8082）：
 

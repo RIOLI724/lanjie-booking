@@ -7,3 +7,5 @@ dist/
 logs/
 .env
 方案.md
+
+backend/src/main/resources/application-dev.yml

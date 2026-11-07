@@ -1,0 +1,9 @@
+# 复制为 application-dev.yml 后填入本机数据库密码；application-dev.yml 已被 gitignore
+spring:
+  datasource:
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:}
+
+logging:
+  level:
+    com.lanjie.booking: DEBUG
