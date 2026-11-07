@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import DockBar from '@/components/DockBar.vue'
 import BookingSheet from '@/components/BookingSheet.vue'
 import { confirmMockPay, holdSlots, rescheduleBooking } from '@/api/bookings'
 import { ApiError } from '@/api/http'
@@ -13,6 +12,7 @@ import {
   type CourtInfo,
   type SlotInfo,
 } from '@/api/venue'
+import { ensureLucide, renderIcons } from '@/utils/icons'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,8 +43,10 @@ const selectedDay = computed(() => days.value.find((x) => x.date === selectedDat
 const selectedDayTitle = computed(() => {
   if (!selectedDay.value) return isReschedule.value ? '改期' : '订场'
   const date = new Date(`${selectedDate.value}T00:00:00`)
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${WEEK_LABELS[date.getDay()]}`
+  return `${date.getMonth() + 1} 月 ${date.getDate()} 日 ${WEEK_LABELS[date.getDay()]}`
 })
+const dayOpen = computed(() => selectedDay.value?.openTime ?? '10:00')
+const dayClose = computed(() => selectedDay.value?.closeTime ?? '22:00')
 
 const hours = computed<string[]>(() => {
   if (!selectedDay.value) return []
@@ -64,6 +66,22 @@ const slotMap = computed(() => {
 })
 
 const totalCents = computed(() => selected.value.reduce((sum, s) => sum + s.priceCents, 0))
+const selectedCourt = computed(() => courts.value.find((c) => c.id === selected.value[0]?.courtId))
+const selectedRange = computed(() => {
+  if (!selected.value.length) return ''
+  const hours = selected.value.map((s) => toMin(s.startAt)).sort((a, b) => a - b)
+  const contiguous = hours.every((h, i) => i === 0 || h - hours[i - 1] === HOUR)
+  if (contiguous && hours.length > 1) return `${toStr(hours[0])}–${toStr(hours[hours.length - 1] + HOUR)}`
+  return hours.map(toStr).join('、')
+})
+const barTitle = computed(() =>
+  selectedCourt.value && selected.value.length
+    ? `${selectedCourt.value.name} · ${selected.value.length} 小时`
+    : '选一个时段开始',
+)
+const barSub = computed(() =>
+  selected.value.length ? `${selectedDayTitle.value} · ${selectedRange.value}` : '支持连选，最多 4 小时',
+)
 
 function chipLabel(d: CalendarDay): string {
   const date = new Date(`${d.date}T00:00:00`)
@@ -72,12 +90,8 @@ function chipLabel(d: CalendarDay): string {
   const diff = Math.round((date.getTime() - today.getTime()) / 86_400_000)
   if (diff === 0) return '今天'
   if (diff === 1) return '明天'
+  if (diff === 2) return '后天'
   return WEEK_LABELS[date.getDay()]
-}
-
-function chipDate(d: CalendarDay): string {
-  const [, m, day] = d.date.split('-')
-  return `${Number(m)}.${Number(day)}`
 }
 
 function cellSlot(court: CourtInfo, hour: string): SlotInfo | undefined {
@@ -102,6 +116,11 @@ function cellState(court: CourtInfo, hour: string): CellState {
   return 'avail'
 }
 
+function demoClass(court: CourtInfo, hour: string): string {
+  const state = cellState(court, hour)
+  return state === 'avail' ? 'free' : state
+}
+
 function cellMain(court: CourtInfo, hour: string): string {
   const slot = cellSlot(court, hour)
   if (!slot) return ''
@@ -115,7 +134,9 @@ function cellMain(court: CourtInfo, hour: string): string {
 
 function cellSub(court: CourtInfo, hour: string): string {
   const state = cellState(court, hour)
-  return state === 'sel' || state === 'avail' ? '空' : ''
+  if (state === 'sel' || state === 'avail') return '空'
+  if (state === 'booked' || state === 'held') return '—'
+  return ''
 }
 
 /** 连选约束：同一场地、时间连续、最多 4 格 */
@@ -193,81 +214,138 @@ onMounted(async () => {
   const from = new Date()
   const to = new Date(Date.now() + 6 * 86_400_000)
   days.value = await fetchCalendar(localIso(from), localIso(to))
-  selectedDate.value = days.value[0]?.date ?? ''
+  const wantedDate = String(route.query.date ?? '')
+  selectedDate.value = days.value.some((d) => d.date === wantedDate)
+    ? wantedDate
+    : days.value[0]?.date ?? ''
   courts.value = await fetchCourts()
   slots.value = selectedDate.value ? await fetchSlots(selectedDate.value) : []
+
+  // 从首页 3D 球馆带过来的球场/时段
+  const wantedCourt = Number(route.query.court)
+  const wantedHours = String(route.query.hours ?? '')
+    .split(',')
+    .filter(Boolean)
+    .map(Number)
+  if (wantedCourt && wantedHours.length) {
+    selected.value = wantedHours
+      .map((hour) =>
+        slots.value.find(
+          (s) => s.courtId === wantedCourt && Number(s.startAt.slice(0, 2)) === hour && isSelectable(s),
+        ),
+      )
+      .filter((s): s is SlotInfo => Boolean(s))
+      .sort((a, b) => a.startAt.localeCompare(b.startAt))
+  }
+
+  await nextTick()
+  // 和 demo 一样默认滚到 18:00 附近，优先展示晚场
+  const scroller = document.querySelector('.grid-scroll') as HTMLElement | null
+  if (scroller) scroller.scrollLeft = 8 * 64
+  try {
+    await ensureLucide()
+    renderIcons(16)
+  } catch {
+    // 图标失败不影响订场
+  }
 })
 </script>
 
 <template>
-  <div class="page book-page">
-    <header class="book-head">
-      <div>
-        <h1>{{ isReschedule ? '改期' : selectedDayTitle }}</h1>
-        <p>{{ courts.length }}片全场 · {{ selectedDay?.openTime }}-{{ selectedDay?.closeTime }}</p>
-      </div>
-      <button class="ai-pick" @click="aiPick">
-        <span>✧</span> AI 帮我选
-      </button>
-    </header>
-
-    <div class="date-strip">
-      <button
-        v-for="d in days"
-        :key="d.date"
-        class="date-chip"
-        :class="{ active: d.date === selectedDate }"
-        @click="pick(d)"
-      >
-        <span>{{ chipLabel(d) }}</span>
-        <b>{{ chipDate(d) }}</b>
-      </button>
-    </div>
-
-    <div class="book-scroll">
-      <div class="book-table" :style="{ '--hours': hours.length }">
-        <div class="book-corner">场地</div>
-        <div v-for="h in hours" :key="h" class="book-hour">{{ h }}</div>
-        <template v-for="c in courts" :key="c.id">
-          <div class="book-court" @click="router.push(`/courts/${c.id}`)">{{ c.name }}</div>
-          <button
-            v-for="h in hours"
-            :key="`${c.id}-${h}`"
-            class="book-cell"
-            :class="cellState(c, h)"
-            @click="tapCell(c, h)"
-          >
-            <b>{{ cellMain(c, h) }}</b>
-            <span v-if="cellSub(c, h)">{{ cellSub(c, h) }}</span>
-          </button>
-        </template>
-      </div>
-    </div>
-
-    <div class="book-legend">
-      <span><i class="lg avail"></i>可订</span>
-      <span><i class="lg booked"></i>已订</span>
-      <span><i class="lg held"></i>待支付</span>
-      <span><i class="lg sel"></i>已选</span>
-    </div>
-
-    <div v-if="selected.length" class="select-bar book-select-bar">
-      <span :class="{ 'bar-error': holdError }">{{ holdError || `${selected.length} 格连场` }}</span>
-      <div class="bar-right">
-        <b>¥{{ totalCents / 100 }}</b>
-        <button class="hold-btn" :disabled="holding" @click="onHold">
-          {{ holding ? (isReschedule ? '改期中…' : '锁位中…') : isReschedule ? '改期' : '锁位' }}
+  <div id="lanjie-proto" class="demo-book">
+    <div class="phone-screen">
+      <div class="sub-head">
+        <button class="icon-btn" aria-label="返回" @click="router.push('/')">
+          <i data-lucide="arrow-left"></i>
+        </button>
+        <b>{{ isReschedule ? '改期' : '订场' }}</b>
+        <button class="icon-btn" aria-label="我的订单" @click="router.push('/orders')">
+          <i data-lucide="scan-line"></i>
         </button>
       </div>
+
+      <div class="book-body">
+        <div class="date-strip" aria-label="选择日期">
+          <button
+            v-for="d in days"
+            :key="d.date"
+            class="date-chip"
+            :class="{ active: d.date === selectedDate }"
+            @click="pick(d)"
+          >
+            <small>{{ chipLabel(d) }}</small>
+            <b>{{ Number(d.date.slice(8)) }}</b>
+          </button>
+        </div>
+
+        <div class="book-summary">
+          <div>
+            <b>{{ selectedDayTitle }}</b>
+            <small>{{ courts.length }} 片全场 · {{ dayOpen }}–{{ dayClose }}</small>
+          </div>
+          <button class="ai-chip" @click="aiPick">
+            <i data-lucide="sparkles"></i> AI 帮我选
+          </button>
+        </div>
+
+        <div class="grid-scroll">
+          <div class="grid-table" :style="{ '--hours': hours.length }" role="grid" aria-label="场地时段表">
+            <div class="corner">场地</div>
+            <div v-for="h in hours" :key="h" class="time-head">{{ h }}</div>
+            <template v-for="c in courts" :key="c.id">
+              <div class="court-head" @click="router.push(`/courts/${c.id}`)">{{ c.name }}</div>
+              <button
+                v-for="h in hours"
+                :key="`${c.id}-${h}`"
+                class="cell"
+                :class="demoClass(c, h)"
+                :aria-pressed="cellState(c, h) === 'sel'"
+                @click="tapCell(c, h)"
+              >
+                <b>{{ cellMain(c, h) }}</b>
+                <small v-if="cellSub(c, h)">{{ cellSub(c, h) }}</small>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div class="grid-legend">
+          <span><i class="lg free"></i>可订</span>
+          <span><i class="lg booked"></i>已订</span>
+          <span><i class="lg held"></i>待支付</span>
+          <span><i class="lg sel"></i>已选</span>
+        </div>
+
+        <div class="book-rule">
+          <div class="rule-row"><span>{{ dayOpen }}–18:00</span><b>平日 / 周末价</b></div>
+          <div class="rule-row"><span>18:00–{{ dayClose }}</span><b>晚场价</b></div>
+        </div>
+
+        <div class="book-note">
+          <i data-lucide="shield-check"></i>
+          <div><b>锁位 15 分钟</b><small>未支付自动释放；开场前 24 小时可全额退</small></div>
+        </div>
+      </div>
+
+      <div class="book-bar" aria-live="polite">
+        <div class="bb-main">
+          <b class="bb-title">{{ barTitle }}</b>
+          <small class="bb-sub">{{ barSub }}</small>
+        </div>
+        <span class="bb-price">{{ selected.length ? `¥${totalCents / 100}` : '—' }}</span>
+        <button class="bb-btn" :disabled="!selected.length || holding" @click="onHold">
+          {{ holding ? '锁位中…' : isReschedule ? '改期' : '去支付' }}
+        </button>
+      </div>
+
+      <p v-if="holdError" class="book-error">{{ holdError }}</p>
+
+      <BookingSheet
+        v-if="sheetBookingId"
+        :booking-id="sheetBookingId"
+        @close="sheetBookingId = null"
+        @paid="onPaid"
+      />
     </div>
-
-    <BookingSheet
-      v-if="sheetBookingId"
-      :booking-id="sheetBookingId"
-      @close="sheetBookingId = null"
-      @paid="onPaid"
-    />
-
-    <DockBar />
   </div>
 </template>
