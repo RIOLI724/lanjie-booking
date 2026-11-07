@@ -229,7 +229,7 @@ onMounted(async () => {
         <div class="book-corner">场地</div>
         <div v-for="h in hours" :key="h" class="book-hour">{{ h }}</div>
         <template v-for="c in courts" :key="c.id">
-          <div class="book-court">{{ c.name }}</div>
+          <div class="book-court" @click="router.push(`/courts/${c.id}`)">{{ c.name }}</div>
           <button
             v-for="h in hours"
             :key="`${c.id}-${h}`"

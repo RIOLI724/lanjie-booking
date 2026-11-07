@@ -82,7 +82,7 @@ onMounted(async () => {
         <div><b>3D 球馆</b><span>4 片全场</span></div>
         <em>空 {{ freeCourts }} 片</em>
       </div>
-      <div class="venue-map" @click="router.push('/book')">
+      <div class="venue-map" @click="router.push('/courts/1')">
         <img :src="courtMap" :style="{ transform: viewStyle }" alt="3D 球馆" />
       </div>
       <div class="venue-foot">
