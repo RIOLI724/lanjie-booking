@@ -239,9 +239,13 @@ onMounted(async () => {
   }
 
   await nextTick()
-  // 和 demo 一样默认滚到 18:00 附近，优先展示晚场
+  // 有带入选中的时段就滚到它，否则和 demo 一样默认展示晚场
   const scroller = document.querySelector('.grid-scroll') as HTMLElement | null
-  if (scroller) scroller.scrollLeft = 8 * 64
+  if (scroller) {
+    const target = selected.value[0]?.startAt ?? '18:00'
+    const index = Math.max(0, hours.value.indexOf(target))
+    scroller.scrollLeft = Math.max(0, (index - 2) * 64)
+  }
   try {
     await ensureLucide()
     renderIcons(16)
