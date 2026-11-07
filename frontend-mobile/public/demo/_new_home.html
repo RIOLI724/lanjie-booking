@@ -1,0 +1,154 @@
+  <!-- ========== 手机首页 ========== -->
+  <section class="proto-view active" id="view-home" aria-label="手机首页">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen screen-dark">
+          <div class="statusbar statusbar-dark">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <div class="home-hero">
+            <div class="home-aurora" aria-hidden="true"></div>
+
+            <header class="home-top">
+              <div class="brand-lockup">
+                <span class="brand-orb" aria-hidden="true"></span>
+                <div><b>篮界</b><small>LANJIE</small></div>
+              </div>
+              <button class="glass-pill" aria-label="选择日期">
+                <i data-lucide="calendar-days"></i><span>今天 · 11/06</span><i data-lucide="chevron-down"></i>
+              </button>
+            </header>
+
+            <div class="home-title">
+              <div class="eyebrow"><span class="pulse-dot"></span>城东体育馆 · 余量实时</div>
+              <h1>今晚，<span>3 片场</span><br>空着</h1>
+              <p>点球场，看今晚的时段和价格</p>
+            </div>
+
+            <div class="home-scene">
+              <div class="scene-floor" aria-hidden="true"></div>
+              <div class="deck deck-hero" id="deck">
+                <div class="deck-grid">
+                  <button class="court3d free" data-court="1" aria-label="1 号场，今晚 19 点后可订">
+                    <span class="cnum">01</span><span class="hoop"></span><span class="court-tag">19:00 后空</span>
+                  </button>
+                  <button class="court3d busy" data-court="2" aria-label="2 号场，今晚已订满">
+                    <span class="cnum">02</span><span class="hoop"></span><span class="court-tag">已订满</span>
+                  </button>
+                  <button class="court3d free" data-court="3" aria-label="3 号场，今晚 18 点后可订">
+                    <span class="cnum">03</span><span class="hoop"></span><span class="court-tag">18:00 后空</span>
+                  </button>
+                  <button class="court3d free" data-court="4" aria-label="4 号场，今晚 20 点后可订">
+                    <span class="cnum">04</span><span class="hoop"></span><span class="court-tag">20:00 后空</span>
+                  </button>
+                </div>
+              </div>
+              <button class="scene-rotate" id="angleBtn" aria-label="换个视角">
+                <i data-lucide="rotate-3d"></i><span>换个视角</span>
+              </button>
+            </div>
+
+            <div class="home-legend">
+              <span><i class="lg-dot free"></i>可订</span>
+              <span><i class="lg-dot busy"></i>已订</span>
+              <span class="legend-spacer"></span>
+              <span><i data-lucide="zap"></i>15 分钟锁位</span>
+            </div>
+          </div>
+
+          <div class="home-dock">
+            <button class="ai-orb" data-go="ai">
+              <span class="orb"><i data-lucide="sparkles"></i></span>
+              <span class="orb-copy"><b>AI 前台</b><small>问一句就能订</small></span>
+              <span class="orb-arrow"><i data-lucide="arrow-up-right"></i></span>
+            </button>
+            <nav class="dock-nav" aria-label="手机导航">
+              <button class="dock-item active"><i data-lucide="home"></i><span>首页</span></button>
+              <button class="dock-item" data-go="book"><i data-lucide="calendar-days"></i><span>订场</span></button>
+              <button class="dock-item" data-ai="帮我找今晚的拼场"><i data-lucide="users"></i><span>拼场</span></button>
+              <button class="dock-item" data-ai="我的余额和课包还剩多少"><i data-lucide="user-round"></i><span>我的</span></button>
+            </nav>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 手机球场详情 ========== -->
+  <section class="proto-view" id="view-court" aria-label="手机球场详情">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen screen-dark">
+          <div class="statusbar statusbar-dark">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <div class="court-hero">
+            <div class="court-hero-top">
+              <button class="glass-round" data-go="home" aria-label="返回"><i data-lucide="arrow-left"></i></button>
+              <span class="glass-tag"><i data-lucide="circle-check"></i>可订</span>
+              <button class="glass-round" aria-label="收藏"><i data-lucide="heart"></i></button>
+            </div>
+            <div class="court-hero-art">
+              <div class="court-art">
+                <span class="ca-hoop"></span><span class="ca-center"></span><span class="ca-arc"></span>
+              </div>
+            </div>
+            <div class="court-hero-num">01</div>
+            <div class="court-hero-glow" aria-hidden="true"></div>
+          </div>
+
+          <div class="court-sheet">
+            <div class="sheet-handle" aria-hidden="true"></div>
+            <div class="sheet-head">
+              <div>
+                <div class="eyebrow">COURT 01 · 木地板</div>
+                <h1>1 号场</h1>
+                <p>今晚 19:00 后空 · 4 片全场</p>
+              </div>
+              <button class="text-btn" data-go="book">全部场地 <i data-lucide="chevron-right"></i></button>
+            </div>
+
+            <div class="date-seg" role="group" aria-label="选择日期">
+              <button class="seg active" data-court-day="11-06">今天 <b>6</b></button>
+              <button class="seg" data-court-day="11-07">明天 <b>7</b></button>
+              <button class="seg" data-court-day="11-08">后天 <b>8</b></button>
+            </div>
+
+            <div class="ai-suggest">
+              <span class="ai-suggest-icon"><i data-lucide="sparkles"></i></span>
+              <div><b>AI 建议</b><small>周六 20:00–22:00 最划算，2 小时 ¥320；拼场还差 2 人</small></div>
+              <button class="mini-btn" data-suggest>用这个</button>
+            </div>
+
+            <div class="court-slots" id="courtSlots" role="grid" aria-label="球场时段"></div>
+
+            <div class="price-note">
+              <span>10:00–18:00 <b>¥120/时</b></span>
+              <span>18:00–22:00 <b>¥160/时</b></span>
+              <span class="price-note-lock"><i data-lucide="shield-check"></i>锁位 15 分钟</span>
+            </div>
+          </div>
+
+          <div class="book-bar" id="courtBar" aria-live="polite">
+            <div class="bb-main">
+              <b class="bb-title">选一个时段</b>
+              <small class="bb-sub">点上面的时段，可连选</small>
+            </div>
+            <span class="bb-price">—</span>
+            <button class="bb-btn" disabled>去支付</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+

@@ -1,0 +1,277 @@
+  <!-- ========== 手机拼场 ========== -->
+  <section class="proto-view" id="view-pickup" aria-label="手机拼场">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen screen-dark pickup-screen">
+          <div class="statusbar statusbar-dark">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <div class="pickup-head">
+            <button class="glass-round" data-go="home" aria-label="返回"><i data-lucide="arrow-left"></i></button>
+            <b>拼场</b>
+            <button class="pickup-create" id="pickupCreate"><i data-lucide="plus"></i>发起</button>
+          </div>
+
+          <div class="pickup-body">
+            <div class="eyebrow"><span class="pulse-dot"></span>今晚 · 城东体育馆</div>
+            <h1>找个人，<br><span>一起打</span></h1>
+            <p class="pickup-sub">3v3 / 4v4 / 5v5，按人头 AA；缺人的局都在这。</p>
+
+            <div class="pickup-filters" role="group" aria-label="赛制筛选">
+              <button class="filter active" data-format="all">全部</button>
+              <button class="filter" data-format="3v3">3v3</button>
+              <button class="filter" data-format="4v4">4v4</button>
+              <button class="filter" data-format="5v5">5v5</button>
+            </div>
+
+            <div class="pickup-list">
+              <article class="pickup-card" data-card-format="3v3">
+                <div class="pickup-top">
+                  <span class="pickup-court">01</span>
+                  <div class="pickup-when"><b>1 号场</b><small>今晚 20:00–22:00</small></div>
+                  <span class="pickup-format">3v3</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need">缺 2 人</span>
+                  <span class="pickup-price">¥53<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>杰</span><span>林</span><span>+2</span></div>
+                  <span class="pickup-host">阿杰 发起</span>
+                  <button class="join-btn" data-join>加入</button>
+                </div>
+              </article>
+
+              <article class="pickup-card" data-card-format="5v5">
+                <div class="pickup-top">
+                  <span class="pickup-court">04</span>
+                  <div class="pickup-when"><b>4 号场</b><small>今晚 19:00–21:00</small></div>
+                  <span class="pickup-format">5v5</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need">缺 3 人</span>
+                  <span class="pickup-price">¥32<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>雨</span><span>凯</span><span>周</span><span>+4</span></div>
+                  <span class="pickup-host">小雨 发起</span>
+                  <button class="join-btn" data-join>加入</button>
+                </div>
+              </article>
+
+              <article class="pickup-card" data-card-format="4v4">
+                <div class="pickup-top">
+                  <span class="pickup-court">02</span>
+                  <div class="pickup-when"><b>2 号场</b><small>明天 19:00–21:00</small></div>
+                  <span class="pickup-format">4v4</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need">缺 1 人</span>
+                  <span class="pickup-price">¥40<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>陈</span><span>吴</span><span>许</span><span>+5</span></div>
+                  <span class="pickup-host">老陈 发起</span>
+                  <button class="join-btn" data-join>加入</button>
+                </div>
+              </article>
+
+              <article class="pickup-card full" data-card-format="3v3">
+                <div class="pickup-top">
+                  <span class="pickup-court">03</span>
+                  <div class="pickup-when"><b>3 号场</b><small>明天 20:00–22:00</small></div>
+                  <span class="pickup-format">3v3</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need muted">已满</span>
+                  <span class="pickup-price">¥53<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>北</span><span>张</span><span>李</span><span>王</span><span>赵</span><span>钱</span></div>
+                  <span class="pickup-host">小北 发起</span>
+                  <button class="join-btn" disabled>已满</button>
+                </div>
+              </article>
+            </div>
+
+            <div class="pickup-mine">
+              <div class="section-head"><h2>我发起的</h2><button class="text-btn" data-pickup-link>全部 <i data-lucide="chevron-right"></i></button></div>
+              <article class="pickup-card mine-card">
+                <div class="pickup-top">
+                  <span class="pickup-court">04</span>
+                  <div class="pickup-when"><b>4 号场</b><small>今晚 19:00–21:00</small></div>
+                  <span class="pickup-format">5v5</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need">已 7/10</span>
+                  <span class="pickup-price">¥32<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>林</span><span>杰</span><span>凯</span><span>+4</span></div>
+                  <span class="pickup-host">我发起的</span>
+                  <button class="join-btn ghost" data-pickup-manage>管理</button>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div class="home-dock pickup-dock">
+            <nav class="dock-nav" aria-label="手机导航">
+              <button class="dock-item" data-go="home"><i data-lucide="home"></i><span>首页</span></button>
+              <button class="dock-item" data-go="book"><i data-lucide="calendar-days"></i><span>订场</span></button>
+              <button class="dock-item active" data-go="pickup"><i data-lucide="users"></i><span>拼场</span></button>
+              <button class="dock-item" data-go="me"><i data-lucide="user-round"></i><span>我的</span></button>
+            </nav>
+          </div>
+
+          <div class="page-toast" aria-live="polite"></div>
+          <div class="page-veil" id="pickupVeil"></div>
+
+          <section class="pickup-sheet" id="pickupSheet" aria-hidden="true" aria-label="发起拼场">
+            <div class="sheet-grab" data-pickup-close></div>
+            <div class="sheet-head-simple">
+              <h2>发起拼场</h2>
+              <button class="sheet-close" id="pickupCancel" aria-label="关闭"><i data-lucide="x"></i></button>
+            </div>
+            <div class="form-row"><span>场地 / 时间</span><button class="form-pill" data-pickup-link>1 号场 · 今晚 20:00–22:00</button></div>
+            <div class="form-row"><span>赛制</span><div class="seg-row"><button class="on" data-pickup-option>3v3</button><button data-pickup-option>4v4</button><button data-pickup-option>5v5</button></div></div>
+            <div class="form-row"><span>还差几人</span><div class="seg-row"><button data-pickup-option>1</button><button class="on" data-pickup-option>2</button><button data-pickup-option>3</button></div></div>
+            <div class="form-row"><span>每人费用</span><b class="form-price">¥53</b></div>
+            <button class="publish-btn" id="publishPickup">发布拼场</button>
+            <p class="form-hint">拼场挂在你的场地订单上；开场前 24 小时可退。</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 手机我的 ========== -->
+  <section class="proto-view" id="view-me" aria-label="手机我的">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen me-screen">
+          <div class="statusbar">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <div class="me-head">
+            <b>我的</b>
+            <button class="icon-btn" data-me-settings aria-label="设置"><i data-lucide="settings"></i></button>
+          </div>
+
+          <div class="me-body">
+            <div class="me-profile">
+              <span class="me-avatar">林</span>
+              <div><b>林一</b><small>黄金会员 · 订场 95 折</small></div>
+              <button class="me-level" data-me-link>会员中心 <i data-lucide="chevron-right"></i></button>
+            </div>
+
+            <div class="wallet-card">
+              <div class="wallet-top"><span>账户余额</span><button data-recharge>充值</button></div>
+              <div class="wallet-amount" id="walletAmount" data-value="240">¥240<span>.00</span></div>
+              <div class="wallet-foot"><span>场地次卡 6 次 · 教练课包 4 节</span><button data-wallet-detail>明细 <i data-lucide="chevron-right"></i></button></div>
+            </div>
+
+            <div class="asset-grid">
+              <div class="asset"><b>6</b><small>场地次卡</small></div>
+              <div class="asset"><b>4</b><small>教练课包</small></div>
+              <div class="asset"><b>3</b><small>优惠券</small></div>
+              <div class="asset"><b>1280</b><small>积分</small></div>
+            </div>
+
+            <div class="me-orders">
+              <div class="section-head"><h2>我的订单</h2><button class="text-btn" data-me-link>全部 <i data-lucide="chevron-right"></i></button></div>
+              <div class="order-tabs" role="group" aria-label="订单筛选">
+                <button class="active" data-order-filter="all">全部</button>
+                <button data-order-filter="pay">待支付</button>
+                <button data-order-filter="soon">待到店</button>
+                <button data-order-filter="done">已完成</button>
+              </div>
+              <div class="order-list">
+                <div class="order-row" data-status="soon">
+                  <span class="order-court">01</span>
+                  <div class="order-info"><b>1 号场 · 20:00–22:00</b><small>11 月 7 日 周六 · 2 小时</small></div>
+                  <span class="order-price">¥320</span>
+                  <span class="status soon">待到店</span>
+                  <button class="order-action" data-qr aria-label="出示二维码"><i data-lucide="qr-code"></i></button>
+                </div>
+                <div class="order-row" data-status="soon">
+                  <span class="order-court">教</span>
+                  <div class="order-info"><b>张教练 · 私教</b><small>11 月 8 日 周日 · 19:00–20:00</small></div>
+                  <span class="order-price">¥300</span>
+                  <span class="status soon">已预约</span>
+                  <button class="order-action" data-me-link>详情</button>
+                </div>
+                <div class="order-row" data-status="pay">
+                  <span class="order-court">02</span>
+                  <div class="order-info"><b>2 号场 · 19:00–21:00</b><small>11 月 9 日 周一 · 2 小时</small></div>
+                  <span class="order-price">¥320</span>
+                  <span class="status pay">待支付</span>
+                  <button class="order-action" data-me-link>去支付</button>
+                </div>
+                <div class="order-row" data-status="done">
+                  <span class="order-court">03</span>
+                  <div class="order-info"><b>3 号场 · 18:00–20:00</b><small>11 月 2 日 周日 · 已完成</small></div>
+                  <span class="order-price">¥320</span>
+                  <span class="status done">已完成</span>
+                  <button class="order-action" data-me-link>再来一单</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="me-links">
+              <button data-go="pickup"><span><i data-lucide="users"></i>我的拼场</span><i data-lucide="chevron-right"></i></button>
+              <button data-me-link><span><i data-lucide="receipt"></i>发票与报销</span><i data-lucide="chevron-right"></i></button>
+              <button data-me-link><span><i data-lucide="headphones"></i>联系客服</span><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+
+          <nav class="me-tabs" aria-label="手机导航">
+            <button data-go="home"><i data-lucide="home"></i><span>首页</span></button>
+            <button data-go="book"><i data-lucide="calendar-days"></i><span>订场</span></button>
+            <button data-go="pickup"><i data-lucide="users"></i><span>拼场</span></button>
+            <button class="active" data-go="me"><i data-lucide="user-round"></i><span>我的</span></button>
+          </nav>
+
+          <div class="page-toast" aria-live="polite"></div>
+          <div class="page-veil" id="rechargeVeil"></div>
+          <section class="me-sheet" id="rechargeSheet" aria-hidden="true" aria-label="充值">
+            <div class="sheet-grab" id="rechargeGrab"></div>
+            <div class="sheet-head-simple">
+              <h2>充值</h2>
+              <button class="sheet-close" id="rechargeCancel" aria-label="关闭"><i data-lucide="x"></i></button>
+            </div>
+            <p class="recharge-note">充 1000 送 100；赠送金不可退，消费时优先使用赠送金。</p>
+            <div class="recharge-grid">
+              <button data-amount="100">¥100</button>
+              <button class="on" data-amount="500">¥500</button>
+              <button data-amount="1000">¥1000<small>送 100</small></button>
+            </div>
+            <div class="recharge-actions">
+              <button class="recharge-cancel" id="rechargeCancel2">取消</button>
+              <button class="publish-btn" id="doRecharge">确认充值</button>
+            </div>
+          </section>
+
+          <div class="qr-modal" id="qrModal" aria-hidden="true">
+            <div class="qr-card">
+              <div class="qr-top"><b>到店出示</b><button id="qrClose" aria-label="关闭"><i data-lucide="x"></i></button></div>
+              <div class="qr-grid" id="qrGrid" aria-label="核销二维码"></div>
+              <div class="qr-info"><b>1 号场 · 11/07 20:00–22:00</b><small>订单号 BK20261107001</small></div>
+            </div>
+          </div>
+          <div class="page-veil" id="qrVeil"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+

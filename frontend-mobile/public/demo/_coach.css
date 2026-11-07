@@ -1,0 +1,94 @@
+
+  /* ---------- v3: coach ---------- */
+  #lanjie-proto .coach-screen { background: var(--paper); }
+  #lanjie-proto .coach-head {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px 8px;
+  }
+  #lanjie-proto .coach-head b { font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
+  #lanjie-proto .coach-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 18px 14px; scrollbar-width: none; }
+  #lanjie-proto .coach-body::-webkit-scrollbar { display: none; }
+  #lanjie-proto .coach-eyebrow { color: var(--muted); }
+  #lanjie-proto .coach-body h1 {
+    margin: 8px 0 0; color: var(--ink); font-size: 28px; line-height: 1.1;
+    letter-spacing: -.045em; font-weight: 700;
+  }
+  #lanjie-proto .coach-body h1 span { color: var(--deep-2); }
+  #lanjie-proto .coach-sub { margin: 7px 0 0; color: var(--muted); font-size: 9.5px; }
+  #lanjie-proto .coach-seg {
+    display: flex; gap: 4px; margin: 12px 0; padding: 4px;
+    background: #E9EEE6; border-radius: 14px;
+  }
+  #lanjie-proto .coach-seg button {
+    flex: 1; border: 0; background: transparent; border-radius: 10px; padding: 7px;
+    font: inherit; font-size: 10px; color: var(--muted); cursor: pointer;
+  }
+  #lanjie-proto .coach-seg button.active {
+    background: #fff; color: var(--ink); font-weight: 650;
+    box-shadow: 0 2px 7px rgba(11,31,23,.08);
+  }
+  #lanjie-proto .coach-list { display: flex; flex-direction: column; gap: 9px; }
+  #lanjie-proto .coach-list[hidden] { display: none; }
+  #lanjie-proto .coach-card {
+    display: grid; grid-template-columns: 42px 1fr auto; grid-template-rows: auto auto;
+    gap: 0 9px; align-items: center; background: #fff;
+    border: 1px solid var(--line); border-radius: 18px; padding: 12px;
+  }
+  #lanjie-proto .coach-avatar {
+    width: 42px; height: 42px; border-radius: 50%; grid-row: span 2;
+    background: linear-gradient(135deg, var(--deep-2), var(--ink));
+    color: var(--lime); display: grid; place-items: center; font-size: 14px; font-weight: 700;
+  }
+  #lanjie-proto .coach-info b { display: block; font-size: 12.5px; font-weight: 650; }
+  #lanjie-proto .coach-info small { display: block; margin-top: 1px; font-size: 8.5px; color: var(--muted); }
+  #lanjie-proto .coach-tags {
+    display: inline-block; margin-top: 3px; font-size: 7px; color: var(--deep-2);
+    background: var(--paper); border-radius: 999px; padding: 2px 6px;
+  }
+  #lanjie-proto .coach-right { text-align: right; }
+  #lanjie-proto .coach-right b { font-size: 15px; font-weight: 700; color: var(--deep-2); font-variant-numeric: tabular-nums; }
+  #lanjie-proto .coach-right small { display: block; margin-top: 1px; font-size: 7px; color: var(--muted); }
+  #lanjie-proto .coach-foot {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line-2);
+  }
+  #lanjie-proto .coach-foot > span { font-size: 8px; color: var(--muted); }
+  #lanjie-proto .coach-foot > b { margin-left: auto; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .coach-foot > b small { font-size: 7.5px; color: var(--muted); font-weight: 400; }
+  #lanjie-proto .coach-foot button {
+    border: 0; border-radius: 999px; background: var(--ink); color: var(--lime);
+    font: inherit; font-size: 8.5px; font-weight: 650; padding: 6px 11px; cursor: pointer; flex-shrink: 0;
+  }
+  #lanjie-proto .group-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 11px 12px; }
+  #lanjie-proto .group-top { display: flex; align-items: center; justify-content: space-between; }
+  #lanjie-proto .group-date { font-size: 9px; color: var(--deep-2); font-weight: 650; }
+  #lanjie-proto .group-card > b { display: block; margin-top: 6px; font-size: 11px; }
+  #lanjie-proto .group-card > small { display: block; margin-top: 2px; font-size: 8px; color: var(--muted); }
+  #lanjie-proto .group-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  #lanjie-proto .group-foot > span { font-size: 15px; font-weight: 700; }
+  #lanjie-proto .group-foot > span small { font-size: 7.5px; color: var(--muted); font-weight: 400; }
+  #lanjie-proto .group-foot .join-btn { background: var(--ink); color: var(--lime); }
+  #lanjie-proto .group-foot .join-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  #lanjie-proto .coach-tabs button.active svg { color: var(--deep-2); }
+
+  /* coach booking sheet */
+  #lanjie-proto .coach-sheet-eyebrow { color: rgba(255,255,255,.4); }
+  #lanjie-proto .coach-sheet-meta { margin: 2px 0 0; font-size: 8.5px; color: rgba(255,255,255,.45); }
+  #lanjie-proto .coach-packages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0 2px; }
+  #lanjie-proto .coach-pack {
+    border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
+    color: rgba(255,255,255,.6); border-radius: 11px; padding: 8px 4px;
+    font: inherit; font-size: 9px; cursor: pointer;
+  }
+  #lanjie-proto .coach-pack small { display: block; margin-top: 2px; font-size: 7.5px; color: rgba(255,255,255,.4); font-weight: 400; }
+  #lanjie-proto .coach-pack.on { background: var(--lime); border-color: var(--lime); color: var(--ink); font-weight: 650; }
+  #lanjie-proto .coach-pack.on small { color: rgba(11,31,23,.6); }
+  #lanjie-proto .coach-bar {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  #lanjie-proto .coach-bar > div { flex: 1; min-width: 0; }
+  #lanjie-proto .coach-bar b { display: block; color: #fff; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lanjie-proto .coach-bar small { display: block; margin-top: 1px; color: rgba(255,255,255,.4); font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lanjie-proto .coach-bar > span { color: var(--lime); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .coach-bar .publish-btn { width: auto; margin-top: 0; padding: 9px 14px; }

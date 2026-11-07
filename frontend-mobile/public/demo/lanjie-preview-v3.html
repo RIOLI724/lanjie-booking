@@ -1,0 +1,3921 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>篮界 · 3D 原型</title><style>html,body{margin:0;padding:0;background:#F7F8F4}body{padding:28px 32px 40px}</style><script src="./lucide-1.17.0.js"></script></head><body><div id="lanjie-proto">
+<style>
+  #lanjie-proto {
+    --ink: #0B1F17;
+    --ink-soft: #244236;
+    --deep: #0E3B2E;
+    --deep-2: #14553F;
+    --lime: #CDFB5A;
+    --lime-2: #E9FF9E;
+    --paper: #F3F5EF;
+    --white: #FFFFFF;
+    --muted: #6E7F75;
+    --line: #DDE5DE;
+    --line-2: #EAF0EA;
+    --amber: #F5B942;
+    --amber-soft: #FFF4DA;
+    --red: #D9554A;
+    --red-soft: #FDECEA;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: var(--ink);
+    background: transparent;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  #lanjie-proto *, #lanjie-proto *::before, #lanjie-proto *::after { box-sizing: border-box; }
+  #lanjie-proto button { font-family: inherit; }
+  #lanjie-proto button:focus-visible { outline: 2px solid var(--deep-2); outline-offset: 2px; }
+  #lanjie-proto svg { display: block; }
+
+  /* ---------- prototype chrome ---------- */
+  #lanjie-proto .proto-head {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+    padding: 2px 2px 14px; border-bottom: 1px solid var(--line);
+  }
+  #lanjie-proto .proto-brand {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; font-weight: 650; letter-spacing: .02em; color: var(--ink);
+  }
+  #lanjie-proto .proto-mark {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--lime);
+    box-shadow: inset 0 0 0 3px var(--ink); flex-shrink: 0;
+  }
+  #lanjie-proto .proto-tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  #lanjie-proto .proto-tab {
+    border: 1px solid var(--line); background: transparent; color: var(--ink-soft);
+    font: inherit; font-size: 12px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  #lanjie-proto .proto-tab:hover { border-color: var(--ink-soft); }
+  #lanjie-proto .proto-tab.active { background: var(--ink); color: var(--lime); border-color: var(--ink); }
+  #lanjie-proto .proto-stage { padding: 22px 0 10px; display: flex; justify-content: center; }
+  #lanjie-proto .proto-view { display: none; width: 100%; }
+  #lanjie-proto .proto-view.active { display: block; }
+
+  /* ---------- phone shell ---------- */
+  #lanjie-proto .phone-wrap { display: flex; justify-content: center; }
+  #lanjie-proto .phone {
+    position: relative; width: 390px; max-width: 100%; height: 844px;
+    padding: 8px; border-radius: 48px; background: #0B1F17; flex-shrink: 0;
+    box-shadow: 0 34px 80px rgba(11, 31, 23, .24), 0 2px 0 rgba(255,255,255,.08) inset;
+  }
+  #lanjie-proto .phone-screen {
+    position: relative; width: 100%; height: 100%; border-radius: 40px;
+    background: var(--paper); overflow: hidden; display: flex; flex-direction: column;
+  }
+  #lanjie-proto .notch {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 112px; height: 26px; background: #0B1F17; border-radius: 0 0 16px 16px; z-index: 20;
+  }
+  #lanjie-proto .statusbar {
+    height: 44px; padding: 14px 22px 0; display: flex; align-items: center;
+    justify-content: space-between; font-size: 11.5px; font-weight: 650; flex-shrink: 0;
+    color: var(--ink);
+  }
+  #lanjie-proto .status-icons { display: flex; align-items: center; gap: 5px; color: var(--ink); }
+  #lanjie-proto .status-icons svg { width: 12px; height: 12px; }
+  #lanjie-proto .phone-body {
+    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 18px 18px;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  #lanjie-proto .phone-body::-webkit-scrollbar { display: none; }
+  #lanjie-proto .icon-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line);
+    background: rgba(255,255,255,.7); display: grid; place-items: center;
+    color: var(--ink); flex-shrink: 0; cursor: pointer;
+  }
+  #lanjie-proto .icon-btn svg { width: 16px; height: 16px; }
+  #lanjie-proto .icon-btn:hover { background: #fff; border-color: var(--ink-soft); }
+
+  /* ---------- home ---------- */
+  #lanjie-proto .home-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    padding: 4px 0 2px;
+  }
+  #lanjie-proto .mini-label {
+    font-size: 10.5px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase;
+  }
+  #lanjie-proto .home-head h1 {
+    margin: 7px 0 0; font-size: 25px; line-height: 1.16; letter-spacing: -.035em; font-weight: 700;
+  }
+  #lanjie-proto .lime-text { color: var(--deep-2); background: linear-gradient(180deg, transparent 62%, var(--lime) 62%); padding: 0 2px; }
+  #lanjie-proto .mini-sub { margin: 7px 0 0; font-size: 11px; color: var(--muted); }
+  #lanjie-proto .bell { position: relative; }
+  #lanjie-proto .bell .dot {
+    position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 0 0 2px var(--paper);
+  }
+
+  #lanjie-proto .arena-card {
+    position: relative; margin-top: 14px; padding: 12px 14px 10px; border-radius: 26px;
+    background: var(--ink); color: #fff; overflow: hidden;
+  }
+  #lanjie-proto .arena-card::before {
+    content: ""; position: absolute; inset: -45% -20% auto; height: 74%;
+    background: radial-gradient(ellipse at 50% 50%, rgba(205,251,90,.2), transparent 62%);
+    pointer-events: none;
+  }
+  #lanjie-proto .arena-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 6px; }
+  #lanjie-proto .arena-label { font-size: 11.5px; font-weight: 650; letter-spacing: .05em; color: rgba(255,255,255,.72); }
+  #lanjie-proto .arena-pill {
+    font-size: 10px; padding: 3px 8px; border-radius: 999px;
+    background: rgba(255,255,255,.1); color: rgba(255,255,255,.82);
+  }
+  #lanjie-proto .arena-pill.lime { background: var(--lime); color: var(--ink); font-weight: 650; }
+  #lanjie-proto .scene3d {
+    position: relative; height: 182px; margin: 1px -6px 0; perspective: 900px;
+    perspective-origin: 50% 24%; overflow: hidden;
+  }
+  #lanjie-proto .deck {
+    position: absolute; left: 50%; top: 53%; width: 276px; height: 174px;
+    transform: translate(-50%, -50%) rotateX(58deg) rotateZ(-32deg);
+    transform-style: preserve-3d; transition: transform .7s cubic-bezier(.2,.8,.2,1);
+  }
+  #lanjie-proto .deck::before {
+    content: ""; position: absolute; inset: -14px; border-radius: 22px;
+    background: linear-gradient(135deg, rgba(205,251,90,.12), rgba(20,85,63,.32));
+    box-shadow: 0 30px 60px rgba(0,0,0,.5);
+  }
+  #lanjie-proto .deck-grid {
+    position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; height: 100%;
+  }
+  #lanjie-proto .court3d {
+    position: relative; padding: 0; border: 2px solid rgba(255,255,255,.42);
+    background: linear-gradient(160deg, rgba(20,85,63,.92), rgba(11,31,23,.92));
+    border-radius: 6px; cursor: pointer; overflow: hidden;
+    transition: border-color .15s, box-shadow .15s, opacity .15s;
+  }
+  #lanjie-proto .court3d::before {
+    content: ""; position: absolute; inset: 7px; border: 1px solid rgba(255,255,255,.24);
+    border-radius: 2px; pointer-events: none;
+  }
+  #lanjie-proto .court3d::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 30px; height: 30px;
+    transform: translate(-50%,-50%); border: 1px solid rgba(255,255,255,.32); border-radius: 50%;
+    pointer-events: none;
+  }
+  #lanjie-proto .court3d .cnum {
+    position: absolute; left: 7px; top: 4px; z-index: 2; font-size: 10.5px; font-weight: 700;
+    letter-spacing: .04em; color: rgba(255,255,255,.62);
+  }
+  #lanjie-proto .court3d .hoop {
+    position: absolute; left: 50%; top: 7px; width: 14px; height: 14px; transform: translateX(-50%);
+    border: 2px solid rgba(255,255,255,.5); border-radius: 50%; z-index: 2;
+  }
+  #lanjie-proto .court3d.free { border-color: var(--lime); box-shadow: 0 0 0 1px rgba(205,251,90,.22), 0 0 28px rgba(205,251,90,.16); }
+  #lanjie-proto .court3d.free .cnum { color: var(--lime); }
+  #lanjie-proto .court3d.busy { border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.05); opacity: .52; }
+  #lanjie-proto .court3d.busy::after, #lanjie-proto .court3d.busy .hoop { border-color: rgba(255,255,255,.14); }
+  #lanjie-proto .court3d.active { outline: 2px solid var(--lime); outline-offset: 3px; }
+  #lanjie-proto .arena-bottom {
+    position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-top: 2px; font-size: 10.5px; color: rgba(255,255,255,.62);
+  }
+  #lanjie-proto .arena-btn {
+    border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.08); color: #fff;
+    font-size: 10px; padding: 5px 9px; border-radius: 999px; cursor: pointer; flex-shrink: 0;
+  }
+  #lanjie-proto .arena-btn:hover { background: rgba(255,255,255,.14); }
+
+  #lanjie-proto .quick-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  #lanjie-proto .quick {
+    border: 1px solid var(--line); background: #fff; border-radius: 16px; padding: 9px 10px 8px;
+    text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0;
+    transition: border-color .15s, transform .15s;
+  }
+  #lanjie-proto .quick:hover { border-color: var(--ink-soft); transform: translateY(-1px); }
+  #lanjie-proto .quick .q-icon {
+    width: 26px; height: 26px; border-radius: 9px; background: var(--paper); color: var(--deep-2);
+    display: grid; place-items: center; margin-bottom: 4px;
+  }
+  #lanjie-proto .quick .q-icon svg { width: 14px; height: 14px; }
+  #lanjie-proto .quick b { font-size: 12px; font-weight: 650; }
+  #lanjie-proto .quick small { font-size: 9.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  #lanjie-proto .ai-card {
+    width: 100%; margin-top: 8px; display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--lime); background: linear-gradient(120deg, #F4FFD9, #E9F9C9);
+    border-radius: 18px; padding: 11px 12px; text-align: left; cursor: pointer;
+  }
+  #lanjie-proto .ai-card:hover { filter: brightness(.985); }
+  #lanjie-proto .ai-spark {
+    width: 32px; height: 32px; border-radius: 11px; background: var(--ink); color: var(--lime);
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  #lanjie-proto .ai-spark svg { width: 16px; height: 16px; }
+  #lanjie-proto .ai-copy { flex: 1; min-width: 0; }
+  #lanjie-proto .ai-copy b { display: block; font-size: 12.5px; font-weight: 650; }
+  #lanjie-proto .ai-copy small { display: block; margin-top: 2px; font-size: 10px; color: var(--ink-soft); }
+  #lanjie-proto .ai-card > svg { width: 16px; height: 16px; color: var(--ink-soft); }
+
+  #lanjie-proto .section-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 7px; }
+  #lanjie-proto .section-head h2 { margin: 0; font-size: 13px; font-weight: 650; letter-spacing: -.01em; }
+  #lanjie-proto .text-btn {
+    display: flex; align-items: center; gap: 1px; border: 0; background: transparent;
+    color: var(--deep-2); font-size: 10.5px; padding: 0; cursor: pointer;
+  }
+  #lanjie-proto .text-btn svg { width: 13px; height: 13px; }
+  #lanjie-proto .slot-list { display: flex; flex-direction: column; gap: 6px; }
+  #lanjie-proto .slot-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  }
+  #lanjie-proto .court-badge {
+    width: 30px; height: 30px; border-radius: 10px; background: var(--ink); color: var(--lime);
+    display: grid; place-items: center; font-size: 11px; font-weight: 700; flex-shrink: 0;
+  }
+  #lanjie-proto .slot-main { flex: 1; min-width: 0; }
+  #lanjie-proto .slot-main b { display: block; font-size: 11.5px; font-weight: 650; }
+  #lanjie-proto .slot-main small { display: block; margin-top: 1px; font-size: 9.5px; color: var(--muted); }
+  #lanjie-proto .slot-price { text-align: right; }
+  #lanjie-proto .slot-price b { display: block; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .slot-price small { display: block; font-size: 9px; color: var(--muted); }
+  #lanjie-proto .mini-btn {
+    border: 1px solid var(--ink); background: transparent; color: var(--ink); border-radius: 999px;
+    font-size: 10.5px; padding: 5px 11px; cursor: pointer; flex-shrink: 0;
+  }
+  #lanjie-proto .mini-btn:hover { background: var(--ink); color: var(--lime); }
+
+  #lanjie-proto .tabbar {
+    flex-shrink: 0; height: 64px; display: grid; grid-template-columns: repeat(4, 1fr);
+    background: rgba(255,255,255,.94); border-top: 1px solid var(--line); padding: 5px 10px 9px;
+  }
+  #lanjie-proto .tab {
+    border: 0; background: transparent; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px; color: var(--muted); font-size: 9px; cursor: pointer; border-radius: 12px;
+  }
+  #lanjie-proto .tab svg { width: 17px; height: 17px; }
+  #lanjie-proto .tab.active { color: var(--ink); font-weight: 650; }
+  #lanjie-proto .tab.active svg { color: var(--deep-2); }
+
+  /* ---------- booking ---------- */
+  #lanjie-proto .sub-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 0 2px 10px; flex-shrink: 0;
+  }
+  #lanjie-proto .sub-head b { font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
+  #lanjie-proto .book-body { flex: 1; overflow-y: auto; padding: 0 18px 12px; scrollbar-width: none; }
+  #lanjie-proto .book-body::-webkit-scrollbar { display: none; }
+  #lanjie-proto .date-strip { display: flex; gap: 6px; margin: 0 -2px 12px; overflow-x: auto; scrollbar-width: none; padding: 2px; }
+  #lanjie-proto .date-strip::-webkit-scrollbar { display: none; }
+  #lanjie-proto .date-chip {
+    flex-shrink: 0; width: 60px; padding: 7px 0; border-radius: 14px; border: 1px solid var(--line);
+    background: #fff; color: var(--muted); cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; gap: 1px;
+  }
+  #lanjie-proto .date-chip small { font-size: 9px; }
+  #lanjie-proto .date-chip b { font-size: 15px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  #lanjie-proto .date-chip.active { background: var(--ink); border-color: var(--ink); color: rgba(255,255,255,.62); }
+  #lanjie-proto .date-chip.active b { color: var(--lime); }
+  #lanjie-proto .book-summary {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px;
+  }
+  #lanjie-proto .book-summary b { display: block; font-size: 12px; font-weight: 650; }
+  #lanjie-proto .book-summary small { display: block; margin-top: 1px; font-size: 9.5px; color: var(--muted); }
+  #lanjie-proto .ai-chip {
+    display: flex; align-items: center; gap: 4px; border: 1px solid var(--lime);
+    background: #F4FFD9; color: var(--ink); border-radius: 999px; padding: 6px 9px;
+    font-size: 10px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+  }
+  #lanjie-proto .ai-chip svg { width: 12px; height: 12px; color: var(--deep-2); }
+  #lanjie-proto .grid-scroll { overflow-x: auto; margin: 0 -18px; padding: 0 18px 6px; scrollbar-width: none; }
+  #lanjie-proto .grid-scroll::-webkit-scrollbar { display: none; }
+  #lanjie-proto .grid-table {
+    display: grid; grid-template-columns: 52px repeat(12, 64px); width: max-content;
+    border-top: 1px solid var(--line); border-left: 1px solid var(--line);
+    border-radius: 12px; background: #fff; padding-right: 120px;
+  }
+  #lanjie-proto .grid-table > * { border-right: 1px solid var(--line-2); border-bottom: 1px solid var(--line-2); }
+  #lanjie-proto .corner, #lanjie-proto .time-head {
+    height: 30px; background: #F8FAF6; font-size: 9.5px; color: var(--muted);
+    display: flex; align-items: center; justify-content: center; position: sticky; top: 0; z-index: 2;
+  }
+  #lanjie-proto .corner { left: 0; z-index: 3; background: #F3F7F1; font-weight: 600; }
+  #lanjie-proto .court-head {
+    height: 64px; background: #F8FAF6; font-size: 10.5px; font-weight: 650; color: var(--ink-soft);
+    display: flex; align-items: center; justify-content: center; position: sticky; left: 0; z-index: 2;
+  }
+  #lanjie-proto .cell {
+    height: 64px; background: #fff; border: 0; border-right: 1px solid var(--line-2);
+    border-bottom: 1px solid var(--line-2); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1px; color: var(--ink-soft);
+    padding: 0; cursor: pointer; font-size: 10px;
+  }
+  #lanjie-proto .cell b { font-size: 10.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .cell small { font-size: 9px; color: var(--muted); }
+  #lanjie-proto .cell:hover { background: #F6FBEF; }
+  #lanjie-proto .cell.booked { background: #EDF1EC; color: #9AA89F; cursor: not-allowed; }
+  #lanjie-proto .cell.booked small { color: #A9B5AD; }
+  #lanjie-proto .cell.held { background: var(--amber-soft); color: #8A5A0B; cursor: not-allowed; }
+  #lanjie-proto .cell.held small { color: #A97A2A; }
+  #lanjie-proto .cell.sel { background: var(--lime); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+  #lanjie-proto .cell.sel small { color: var(--ink-soft); }
+  #lanjie-proto .grid-legend {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 10px 2px 0;
+    font-size: 9.5px; color: var(--muted);
+  }
+  #lanjie-proto .lg { width: 8px; height: 8px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: -1px; }
+  #lanjie-proto .lg.free { background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+  #lanjie-proto .lg.booked { background: #E3E9E1; }
+  #lanjie-proto .lg.held { background: var(--amber); }
+  #lanjie-proto .lg.sel { background: var(--lime); box-shadow: inset 0 0 0 1px var(--ink); }
+  #lanjie-proto .book-rule { display: flex; gap: 8px; margin: 12px 2px 0; }
+  #lanjie-proto .rule-row {
+    flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 8px 10px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 9.5px; color: var(--muted);
+  }
+  #lanjie-proto .rule-row b { color: var(--ink); font-size: 10.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .book-note {
+    display: flex; gap: 9px; align-items: flex-start; margin: 10px 2px 0;
+    background: #EDF6E4; border: 1px solid #DCEBCF; border-radius: 14px; padding: 10px 11px;
+  }
+  #lanjie-proto .book-note > svg { width: 15px; height: 15px; color: var(--deep-2); flex-shrink: 0; margin-top: 1px; }
+  #lanjie-proto .book-note b { display: block; font-size: 10.5px; font-weight: 650; }
+  #lanjie-proto .book-note small { display: block; margin-top: 2px; font-size: 9px; color: var(--muted); line-height: 1.45; }
+  #lanjie-proto .book-bar {
+    flex-shrink: 0; margin: 0 12px 12px; padding: 11px 12px 11px 14px; border-radius: 20px;
+    background: var(--ink); color: #fff; display: flex; align-items: center; gap: 10px;
+    box-shadow: 0 14px 34px rgba(11,31,23,.26);
+  }
+  #lanjie-proto .bb-main { flex: 1; min-width: 0; }
+  #lanjie-proto .bb-main b { display: block; font-size: 11.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lanjie-proto .bb-main small { display: block; margin-top: 2px; font-size: 9.5px; color: rgba(255,255,255,.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lanjie-proto .bb-price { font-size: 18px; font-weight: 700; color: var(--lime); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .bb-btn {
+    border: 0; border-radius: 999px; background: var(--lime); color: var(--ink);
+    font-size: 11.5px; font-weight: 700; padding: 10px 15px; cursor: pointer; flex-shrink: 0;
+  }
+  #lanjie-proto .bb-btn:disabled { opacity: .38; cursor: not-allowed; }
+
+  /* ---------- AI chat ---------- */
+  #lanjie-proto .ai-head {
+    display: flex; align-items: center; gap: 9px; padding: 0 18px 10px; flex-shrink: 0;
+  }
+  #lanjie-proto .ai-avatar {
+    width: 32px; height: 32px; border-radius: 11px; background: var(--ink); color: var(--lime);
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  #lanjie-proto .ai-avatar svg { width: 16px; height: 16px; }
+  #lanjie-proto .ai-id { flex: 1; min-width: 0; }
+  #lanjie-proto .ai-id b { display: block; font-size: 12.5px; font-weight: 650; }
+  #lanjie-proto .ai-id small { display: block; margin-top: 1px; font-size: 9.5px; color: var(--muted); }
+  #lanjie-proto .chat {
+    flex: 1; overflow-y: auto; padding: 2px 18px 12px; display: flex; flex-direction: column;
+    gap: 9px; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  #lanjie-proto .chat::-webkit-scrollbar { display: none; }
+  #lanjie-proto .msg { display: flex; flex-direction: column; }
+  #lanjie-proto .msg.user { align-items: flex-end; }
+  #lanjie-proto .msg.ai { align-items: flex-start; }
+  #lanjie-proto .bubble {
+    max-width: 86%; padding: 9px 11px; border-radius: 16px; font-size: 11.5px; line-height: 1.55;
+  }
+  #lanjie-proto .msg.ai .bubble {
+    background: #fff; border: 1px solid var(--line); color: var(--ink-soft);
+    border-bottom-left-radius: 5px;
+  }
+  #lanjie-proto .msg.user .bubble {
+    background: var(--ink); color: #fff; border-bottom-right-radius: 5px;
+  }
+  #lanjie-proto .tool-card {
+    width: 88%; background: #fff; border: 1px solid var(--line); border-radius: 14px;
+    padding: 8px 10px; display: flex; flex-direction: column; gap: 5px;
+  }
+  #lanjie-proto .tool-row { display: flex; align-items: center; gap: 6px; font-size: 9.5px; color: var(--muted); }
+  #lanjie-proto .tool-row svg { width: 11px; height: 11px; color: var(--deep-2); flex-shrink: 0; }
+  #lanjie-proto .tool-row em { margin-left: auto; font-style: normal; color: var(--ink-soft); font-weight: 600; }
+  #lanjie-proto .options { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+  #lanjie-proto .option {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: #fff; border: 1px solid var(--line); border-radius: 13px; padding: 8px 10px;
+    text-align: left; cursor: pointer;
+  }
+  #lanjie-proto .option:hover { border-color: var(--ink-soft); }
+  #lanjie-proto .option.sel { border-color: var(--lime); box-shadow: inset 0 0 0 1px var(--lime); background: #FAFFEE; }
+  #lanjie-proto .opt-main b { display: block; font-size: 11.5px; font-weight: 650; }
+  #lanjie-proto .opt-main small { display: block; margin-top: 1px; font-size: 9.5px; color: var(--muted); }
+  #lanjie-proto .opt-side { text-align: right; flex-shrink: 0; }
+  #lanjie-proto .opt-side b { display: block; font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .opt-tag {
+    display: inline-block; margin-top: 2px; font-size: 8.5px; padding: 1px 5px; border-radius: 999px;
+    background: var(--lime-2); color: #4A5D1F;
+  }
+  #lanjie-proto .lock-card {
+    width: 92%; background: var(--ink); color: #fff; border-radius: 18px; padding: 12px 13px;
+    box-shadow: 0 14px 30px rgba(11,31,23,.2);
+  }
+  #lanjie-proto .lock-top { display: flex; align-items: center; gap: 6px; font-size: 10px; color: rgba(255,255,255,.62); }
+  #lanjie-proto .lock-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--lime); }
+  #lanjie-proto .lock-top b { color: var(--lime); font-variant-numeric: tabular-nums; }
+  #lanjie-proto .lock-body { display: flex; align-items: baseline; gap: 8px; margin-top: 7px; }
+  #lanjie-proto .lock-body b { font-size: 14px; font-weight: 700; }
+  #lanjie-proto .lock-body span { font-size: 10px; color: rgba(255,255,255,.62); }
+  #lanjie-proto .lock-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 9px; }
+  #lanjie-proto .lock-foot > span { font-size: 18px; font-weight: 700; color: var(--lime); font-variant-numeric: tabular-nums; }
+  #lanjie-proto .pay-btn {
+    border: 0; border-radius: 999px; background: var(--lime); color: var(--ink);
+    font-size: 11px; font-weight: 700; padding: 8px 14px; cursor: pointer;
+  }
+  #lanjie-proto .lock-note { margin: 7px 0 0; font-size: 9px; color: rgba(255,255,255,.45); }
+  #lanjie-proto .cite {
+    display: inline-flex; align-items: center; gap: 3px; margin-top: 5px;
+    background: #EEF4EB; color: var(--deep-2); border-radius: 6px; padding: 2px 6px;
+    font-size: 9px; font-weight: 600;
+  }
+  #lanjie-proto .cite svg { width: 10px; height: 10px; }
+  #lanjie-proto .quick-replies { display: flex; flex-wrap: wrap; gap: 6px; margin: 1px 0 2px; }
+  #lanjie-proto .quick-reply {
+    border: 1px solid var(--line); background: #fff; color: var(--ink-soft);
+    border-radius: 999px; padding: 5px 10px; font-size: 10px; cursor: pointer;
+  }
+  #lanjie-proto .quick-reply:hover { border-color: var(--ink-soft); }
+  #lanjie-proto .chat-input {
+    flex-shrink: 0; display: flex; align-items: center; gap: 7px; padding: 9px 14px 16px;
+    background: var(--paper); border-top: 1px solid var(--line);
+  }
+  #lanjie-proto .ci-btn {
+    width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: #fff;
+    display: grid; place-items: center; color: var(--ink-soft); flex-shrink: 0; cursor: pointer;
+  }
+  #lanjie-proto .ci-btn svg { width: 14px; height: 14px; }
+  #lanjie-proto .chat-input input {
+    flex: 1; min-width: 0; height: 34px; border: 1px solid var(--line); border-radius: 999px;
+    background: #fff; padding: 0 12px; font: inherit; font-size: 11px; color: var(--ink); outline: none;
+  }
+  #lanjie-proto .chat-input input:focus { border-color: var(--deep-2); box-shadow: 0 0 0 2px rgba(20,85,63,.12); }
+  #lanjie-proto .chat-input input::placeholder { color: #A6B2AA; }
+  #lanjie-proto .ci-send {
+    width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ink); color: var(--lime);
+    display: grid; place-items: center; flex-shrink: 0; cursor: pointer;
+  }
+  #lanjie-proto .ci-send svg { width: 15px; height: 15px; }
+
+  /* ---------- desktop dashboard ---------- */
+  #lanjie-proto .desk {
+    display: flex; min-height: 780px; border-radius: 20px; overflow: hidden;
+    border: 1px solid var(--line); background: var(--paper);
+    box-shadow: 0 30px 70px rgba(11,31,23,.12);
+  }
+  #lanjie-proto .desk-side {
+    width: 196px; flex-shrink: 0; background: var(--ink); color: #fff;
+    padding: 18px 12px 14px; display: flex; flex-direction: column; gap: 16px;
+  }
+  #lanjie-proto .desk-logo { display: flex; align-items: center; gap: 8px; padding: 0 6px; font-size: 14px; font-weight: 700; }
+  #lanjie-proto .desk-mark {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--lime);
+    box-shadow: inset 0 0 0 3px var(--ink); flex-shrink: 0;
+  }
+  #lanjie-proto .desk-venue { margin-top: 5px; padding: 0 6px; font-size: 9.5px; color: rgba(255,255,255,.45); }
+  #lanjie-proto .desk-nav { display: flex; flex-direction: column; gap: 2px; }
+  #lanjie-proto .nav-item {
+    width: 100%; display: flex; align-items: center; gap: 9px; padding: 9px 10px;
+    border: 0; border-radius: 10px; background: transparent; color: rgba(255,255,255,.6);
+    font: inherit; font-size: 11.5px; text-align: left; cursor: pointer;
+  }
+  #lanjie-proto .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+  #lanjie-proto .nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+  #lanjie-proto .nav-item.active { background: var(--lime); color: var(--ink); font-weight: 650; }
+  #lanjie-proto .nav-item[aria-disabled="true"] { opacity: .5; cursor: default; }
+  #lanjie-proto .nav-item[aria-disabled="true"]:hover { background: transparent; color: rgba(255,255,255,.6); }
+  #lanjie-proto .nav-item .badge {
+    margin-left: auto; font-size: 8px; font-weight: 700; letter-spacing: .05em;
+    background: rgba(205,251,90,.16); color: var(--lime); border-radius: 999px; padding: 2px 5px;
+  }
+  #lanjie-proto .desk-user {
+    margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 10px 7px 0;
+    border-top: 1px solid rgba(255,255,255,.1); font-size: 10px; color: rgba(255,255,255,.65);
+  }
+  #lanjie-proto .avatar {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--lime); color: var(--ink);
+    display: grid; place-items: center; font-size: 10.5px; font-weight: 700; flex-shrink: 0;
+  }
+  #lanjie-proto .user-text b { display: block; font-size: 10.5px; color: #fff; font-weight: 600; }
+  #lanjie-proto .user-text small { display: block; font-size: 8.5px; color: rgba(255,255,255,.42); margin-top: 1px; }
+  #lanjie-proto .desk-version { padding: 8px 7px 0; font-size: 8.5px; color: rgba(255,255,255,.28); }
+  #lanjie-proto .desk-main {
+    flex: 1; min-width: 0; padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 12px;
+  }
+  #lanjie-proto .desk-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #lanjie-proto .desk-title { font-size: 21px; font-weight: 700; letter-spacing: -.03em; }
+  #lanjie-proto .desk-sub { margin-top: 3px; font-size: 10.5px; color: var(--muted); }
+  #lanjie-proto .desk-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  #lanjie-proto .search {
+    display: flex; align-items: center; gap: 6px; background: #fff; border: 1px solid var(--line);
+    border-radius: 10px; padding: 7px 10px; font-size: 10px; color: var(--muted); min-width: 170px;
+  }
+  #lanjie-proto .search svg { width: 13px; height: 13px; }
+  #lanjie-proto .btn-dark {
+    display: flex; align-items: center; gap: 5px; border: 0; border-radius: 10px;
+    background: var(--ink); color: var(--lime); padding: 8px 13px;
+    font: inherit; font-size: 10.5px; font-weight: 650; cursor: pointer;
+  }
+  #lanjie-proto .btn-dark svg { width: 13px; height: 13px; }
+  #lanjie-proto .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  #lanjie-proto .kpi { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; min-width: 0; }
+  #lanjie-proto .kpi .label { display: flex; align-items: center; gap: 5px; font-size: 9.5px; color: var(--muted); }
+  #lanjie-proto .kpi .label svg { width: 12px; height: 12px; }
+  #lanjie-proto .kpi .value { margin-top: 4px; font-size: 22px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .kpi .delta { margin-top: 2px; font-size: 8.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lanjie-proto .kpi .delta.up { color: #2E7D4F; }
+  #lanjie-proto .desk-grid { display: grid; grid-template-columns: 1.65fr 1fr; gap: 12px; align-items: start; }
+  #lanjie-proto .panel { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 13px 14px; min-width: 0; }
+  #lanjie-proto .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  #lanjie-proto .panel-title { display: flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 650; }
+  #lanjie-proto .panel-title svg { width: 14px; height: 14px; color: var(--deep-2); }
+  #lanjie-proto .panel-action {
+    display: flex; align-items: center; gap: 2px; border: 0; background: transparent;
+    color: var(--deep-2); font: inherit; font-size: 9.5px; padding: 0; cursor: pointer;
+  }
+  #lanjie-proto .panel-action svg { width: 11px; height: 11px; }
+  #lanjie-proto .tl-hours {
+    display: grid; grid-template-columns: 44px repeat(12, 1fr); font-size: 8px; color: var(--muted);
+    margin-bottom: 4px;
+  }
+  #lanjie-proto .tl-hours span:not(:first-child) { text-align: center; }
+  #lanjie-proto .tl-row { display: grid; grid-template-columns: 44px 1fr; align-items: center; margin-bottom: 5px; }
+  #lanjie-proto .tl-label { font-size: 9.5px; font-weight: 650; color: var(--ink-soft); }
+  #lanjie-proto .tl-track {
+    position: relative; height: 32px; border-radius: 6px; background: #F6F8F4; overflow: hidden;
+    background-image: repeating-linear-gradient(to right, transparent 0, transparent calc(8.3333% - 1px), #E6ECE4 calc(8.3333% - 1px), #E6ECE4 8.3333%);
+  }
+  #lanjie-proto .blk {
+    position: absolute; top: 4px; bottom: 4px; border-radius: 5px; font-size: 8px;
+    padding: 2px 5px; display: flex; align-items: center; gap: 3px; overflow: hidden;
+    white-space: nowrap; text-overflow: ellipsis;
+  }
+  #lanjie-proto .blk.done { background: var(--deep); color: #fff; }
+  #lanjie-proto .blk.soon { background: var(--lime); color: var(--ink); }
+  #lanjie-proto .blk.pay { background: var(--amber); color: var(--ink); }
+  #lanjie-proto .tl-legend {
+    display: flex; flex-wrap: wrap; gap: 11px; padding-left: 44px; margin-top: 7px;
+    font-size: 8.5px; color: var(--muted);
+  }
+  #lanjie-proto .lg-dot { width: 7px; height: 7px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: -1px; }
+  #lanjie-proto .lg-dot.done { background: var(--deep); }
+  #lanjie-proto .lg-dot.soon { background: var(--lime); }
+  #lanjie-proto .lg-dot.pay { background: var(--amber); }
+  #lanjie-proto .lg-dot.empty { background: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+  #lanjie-proto .side-col { display: flex; flex-direction: column; gap: 12px; }
+  #lanjie-proto .count {
+    font-size: 9px; font-weight: 650; background: var(--paper); color: var(--muted);
+    border-radius: 999px; padding: 2px 7px;
+  }
+  #lanjie-proto .todo-item {
+    display: flex; align-items: flex-start; gap: 8px; padding: 8px 0;
+    border-bottom: 1px solid var(--line-2);
+  }
+  #lanjie-proto .todo-item:last-of-type { border-bottom: 0; }
+  #lanjie-proto .todo-icon {
+    width: 24px; height: 24px; border-radius: 8px; background: var(--paper); color: var(--deep-2);
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  #lanjie-proto .todo-icon svg { width: 12px; height: 12px; }
+  #lanjie-proto .todo-item b { display: block; font-size: 10px; font-weight: 600; }
+  #lanjie-proto .todo-item small { display: block; margin-top: 1px; font-size: 8.5px; color: var(--muted); }
+  #lanjie-proto .todo-action {
+    margin-left: auto; border: 0; background: transparent; color: var(--deep-2);
+    font: inherit; font-size: 9px; cursor: pointer; padding: 2px 0; flex-shrink: 0;
+  }
+  #lanjie-proto .ai-panel { background: var(--ink); color: #fff; border-radius: 16px; padding: 13px 14px; }
+  #lanjie-proto .ai-panel .panel-title { color: #fff; }
+  #lanjie-proto .ai-panel .panel-title svg { color: var(--lime); }
+  #lanjie-proto .live {
+    font-size: 8px; font-weight: 700; letter-spacing: .08em; color: var(--lime);
+    background: rgba(205,251,90,.12); border-radius: 999px; padding: 2px 6px;
+  }
+  #lanjie-proto .ai-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+  #lanjie-proto .ai-stat b { display: block; font-size: 17px; color: var(--lime); font-weight: 700; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .ai-stat small { display: block; margin-top: 2px; font-size: 8.5px; color: rgba(255,255,255,.5); }
+  #lanjie-proto .ai-bars { display: flex; align-items: flex-end; gap: 3px; height: 26px; margin-top: 10px; }
+  #lanjie-proto .ai-bars span { flex: 1; background: rgba(205,251,90,.28); border-radius: 2px 2px 0 0; }
+  #lanjie-proto .ai-bars span.hot { background: var(--lime); }
+  #lanjie-proto .ai-foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: 8.5px; color: rgba(255,255,255,.45); }
+  #lanjie-proto .ai-link {
+    width: 100%; margin-top: 9px; display: flex; align-items: center; justify-content: space-between;
+    border: 1px solid rgba(205,251,90,.32); background: rgba(205,251,90,.09); color: var(--lime);
+    border-radius: 9px; padding: 7px 9px; font: inherit; font-size: 9.5px; cursor: pointer;
+  }
+  #lanjie-proto .ai-link svg { width: 12px; height: 12px; }
+  #lanjie-proto .table-panel { margin-top: 0; }
+  #lanjie-proto .table-wrap { overflow-x: auto; }
+  #lanjie-proto .data-table { width: 100%; border-collapse: collapse; font-size: 9.5px; }
+  #lanjie-proto .data-table th {
+    text-align: left; font-weight: 500; color: var(--muted); font-size: 8.5px; padding: 5px 7px;
+    border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  #lanjie-proto .data-table td {
+    padding: 7px; border-bottom: 1px solid var(--line-2); color: var(--ink-soft); white-space: nowrap;
+  }
+  #lanjie-proto .data-table tr:last-child td { border-bottom: 0; }
+  #lanjie-proto .status { display: inline-block; font-size: 8.5px; padding: 2px 6px; border-radius: 999px; }
+  #lanjie-proto .status.done { background: #E6F4EA; color: #2E7D4F; }
+  #lanjie-proto .status.soon { background: var(--lime-2); color: #4A5D1F; }
+  #lanjie-proto .status.pay { background: var(--amber-soft); color: #8A5A0B; }
+  #lanjie-proto .status.refund { background: var(--red-soft); color: var(--red); }
+  #lanjie-proto .status.wait { background: #EDF1EC; color: #6E7F75; }
+
+  @media (max-width: 980px) {
+    #lanjie-proto .desk-side { width: 64px; padding: 16px 8px 12px; }
+    #lanjie-proto .desk-side .nav-text, #lanjie-proto .desk-venue, #lanjie-proto .user-text, #lanjie-proto .desk-version { display: none; }
+    #lanjie-proto .desk-logo { justify-content: center; padding: 0; }
+    #lanjie-proto .desk-logo span:last-child { display: none; }
+    #lanjie-proto .nav-item { justify-content: center; padding: 10px 0; }
+    #lanjie-proto .nav-item .badge { display: none; }
+    #lanjie-proto .desk-user { justify-content: center; padding-left: 0; padding-right: 0; }
+    #lanjie-proto .kpis { grid-template-columns: repeat(3, 1fr); }
+    #lanjie-proto .desk-grid { grid-template-columns: 1fr; }
+    #lanjie-proto .search { display: none; }
+    #lanjie-proto .table-hide { display: none; }
+  }
+  @media (max-width: 640px) {
+    #lanjie-proto .kpis { grid-template-columns: repeat(2, 1fr); }
+    #lanjie-proto .desk-main { padding: 14px; }
+    #lanjie-proto .desk-actions { margin-left: 0; width: 100%; }
+    #lanjie-proto .desk-actions .btn-dark { flex: 1; justify-content: center; }
+    #lanjie-proto .timeline-panel { overflow-x: auto; }
+    #lanjie-proto .tl-hours, #lanjie-proto .tl-row { min-width: 600px; }
+    #lanjie-proto .data-table { min-width: 500px; }
+    #lanjie-proto .phone { height: 800px; }
+    #lanjie-proto .home-head h1 { font-size: 22px; }
+  }
+
+  /* ---------- v2: immersive home ---------- */
+  #lanjie-proto .screen-dark { background: #07130E; }
+  #lanjie-proto .statusbar-dark { color: #fff; }
+  #lanjie-proto .statusbar-dark .status-icons { color: rgba(255,255,255,.72); }
+  #lanjie-proto .phone::after {
+    content: ""; position: absolute; inset: 8px; border-radius: 40px; pointer-events: none; z-index: 30;
+    background: linear-gradient(135deg, rgba(255,255,255,.09), transparent 24%, transparent 72%, rgba(255,255,255,.03));
+  }
+  #lanjie-proto .home-hero {
+    position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column;
+    padding: 0 18px; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 0%, rgba(20,85,63,.55), transparent 58%), #07130E;
+  }
+  #lanjie-proto .home-aurora {
+    position: absolute; inset: -22% -30% auto; height: 66%; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 50%, rgba(205,251,90,.15), transparent 62%);
+  }
+  #lanjie-proto .home-top {
+    position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding-top: 2px;
+  }
+  #lanjie-proto .brand-lockup { display: flex; align-items: center; gap: 9px; }
+  #lanjie-proto .brand-orb {
+    position: relative; width: 27px; height: 27px; border-radius: 50%; flex-shrink: 0;
+    background: radial-gradient(circle at 34% 28%, #F4FFB8, #CDFB5A 58%, #9BCB2D);
+    box-shadow: 0 0 20px rgba(205,251,90,.35);
+  }
+  #lanjie-proto .brand-orb::before, #lanjie-proto .brand-orb::after {
+    content: ""; position: absolute; background: rgba(7,19,14,.5);
+  }
+  #lanjie-proto .brand-orb::before { left: 50%; top: 0; bottom: 0; width: 1.5px; transform: translateX(-50%); }
+  #lanjie-proto .brand-orb::after { left: 0; right: 0; top: 50%; height: 1.5px; transform: translateY(-50%); }
+  #lanjie-proto .brand-lockup b { display: block; color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+  #lanjie-proto .brand-lockup small { display: block; margin-top: 1px; color: rgba(255,255,255,.38); font-size: 7px; letter-spacing: .2em; }
+  #lanjie-proto .glass-pill {
+    display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06); backdrop-filter: blur(14px); color: rgba(255,255,255,.8);
+    border-radius: 999px; padding: 7px 10px; font-size: 9.5px; cursor: pointer;
+  }
+  #lanjie-proto .glass-pill svg { width: 12px; height: 12px; }
+  #lanjie-proto .home-title { position: relative; z-index: 2; margin-top: 16px; }
+  #lanjie-proto .eyebrow {
+    display: flex; align-items: center; gap: 6px; font-size: 8.5px; letter-spacing: .14em;
+    text-transform: uppercase; color: rgba(255,255,255,.45);
+  }
+  #lanjie-proto .pulse-dot {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--lime);
+    box-shadow: 0 0 0 3px rgba(205,251,90,.12);
+  }
+  #lanjie-proto .home-title h1 {
+    margin: 8px 0 0; color: #fff; font-size: 30px; line-height: 1.1; letter-spacing: -.045em; font-weight: 700;
+  }
+  #lanjie-proto .home-title h1 span { color: var(--lime); }
+  #lanjie-proto .home-title p { margin: 8px 0 0; color: rgba(255,255,255,.48); font-size: 10px; }
+  #lanjie-proto .home-scene {
+    position: relative; flex: 1; min-height: 0; margin: 2px -18px 0; overflow: hidden;
+    perspective: 1100px; perspective-origin: 50% 42%;
+  }
+  #lanjie-proto .scene-floor {
+    position: absolute; inset: 4% -12% 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse at 50% 58%, rgba(205,251,90,.14), transparent 56%),
+      radial-gradient(ellipse at 50% 42%, rgba(20,85,63,.45), transparent 62%),
+      linear-gradient(180deg, transparent, rgba(7,19,14,.4));
+  }
+  #lanjie-proto .scene-floor::after {
+    content: ""; position: absolute; inset: 18% 0 0; opacity: .5;
+    background-image:
+      linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+    transform: perspective(480px) rotateX(62deg); transform-origin: 50% 100%;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 52%, #000 12%, transparent 72%);
+    mask-image: radial-gradient(ellipse at 50% 52%, #000 12%, transparent 72%);
+  }
+  #lanjie-proto .deck-hero {
+    width: 322px; height: 230px; top: 50%;
+    transform: translate(-50%, -50%) rotateX(56deg) rotateZ(-30deg);
+  }
+  #lanjie-proto .deck-hero .court3d { border-radius: 7px; }
+  #lanjie-proto .deck-hero .cnum { left: 9px; top: 7px; font-size: 12px; }
+  #lanjie-proto .deck-hero .court3d::after { width: 34px; height: 34px; }
+  #lanjie-proto .deck-hero .hoop { width: 16px; height: 16px; top: 8px; }
+  #lanjie-proto .court-tag {
+    position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+    white-space: nowrap; font-size: 8.5px; font-weight: 600; padding: 2px 6px;
+    border-radius: 999px; background: rgba(7,19,14,.78); color: var(--lime);
+    border: 1px solid rgba(205,251,90,.3); z-index: 3;
+  }
+  #lanjie-proto .court3d.busy .court-tag { color: rgba(255,255,255,.35); border-color: rgba(255,255,255,.1); }
+  #lanjie-proto .scene-rotate {
+    position: absolute; right: 18px; bottom: 14px; z-index: 3;
+    display: flex; align-items: center; gap: 5px; border: 1px solid rgba(255,255,255,.12);
+    background: rgba(255,255,255,.06); backdrop-filter: blur(14px); color: rgba(255,255,255,.7);
+    border-radius: 999px; padding: 6px 9px; font-size: 9px; cursor: pointer;
+  }
+  #lanjie-proto .scene-rotate svg { width: 12px; height: 12px; }
+  #lanjie-proto .home-legend {
+    position: relative; z-index: 2; display: flex; align-items: center; gap: 12px;
+    padding: 6px 2px 8px; font-size: 9px; color: rgba(255,255,255,.42);
+  }
+  #lanjie-proto .home-legend > span { display: flex; align-items: center; gap: 4px; }
+  #lanjie-proto .home-legend svg { width: 10px; height: 10px; }
+  #lanjie-proto .lg-dot { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
+  #lanjie-proto .lg-dot.free { background: var(--lime); }
+  #lanjie-proto .lg-dot.busy { background: #52655B; }
+  #lanjie-proto .legend-spacer { flex: 1; }
+  #lanjie-proto .home-dock {
+    position: relative; z-index: 4; flex-shrink: 0; padding: 0 14px 14px;
+    background: linear-gradient(180deg, transparent, rgba(7,19,14,.88) 36%, #07130E 70%);
+  }
+  #lanjie-proto .ai-orb {
+    width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; cursor: pointer;
+    border: 1px solid rgba(205,251,90,.26);
+    background: linear-gradient(120deg, rgba(205,251,90,.16), rgba(205,251,90,.04));
+    backdrop-filter: blur(18px); border-radius: 18px; padding: 10px 12px; color: #fff;
+  }
+  #lanjie-proto .orb {
+    width: 34px; height: 34px; border-radius: 50%; background: var(--lime); color: var(--ink);
+    display: grid; place-items: center; flex-shrink: 0; box-shadow: 0 0 22px rgba(205,251,90,.28);
+  }
+  #lanjie-proto .orb svg { width: 16px; height: 16px; }
+  #lanjie-proto .orb-copy { flex: 1; min-width: 0; }
+  #lanjie-proto .orb-copy b { display: block; font-size: 12px; font-weight: 650; }
+  #lanjie-proto .orb-copy small { display: block; margin-top: 1px; font-size: 9px; color: rgba(255,255,255,.5); }
+  #lanjie-proto .orb-arrow {
+    width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14);
+    display: grid; place-items: center; color: rgba(255,255,255,.75); flex-shrink: 0;
+  }
+  #lanjie-proto .orb-arrow svg { width: 13px; height: 13px; }
+  #lanjie-proto .dock-nav {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 9px; padding: 5px;
+    border-radius: 16px; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.06);
+    backdrop-filter: blur(18px);
+  }
+  #lanjie-proto .dock-item {
+    border: 0; background: transparent; color: rgba(255,255,255,.42); border-radius: 11px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    padding: 5px 0; font: inherit; font-size: 8px; cursor: pointer;
+  }
+  #lanjie-proto .dock-item svg { width: 16px; height: 16px; }
+  #lanjie-proto .dock-item.active { color: var(--lime); }
+  #lanjie-proto .dock-item.active svg { filter: drop-shadow(0 0 8px rgba(205,251,90,.4)); }
+
+  /* ---------- v2: court detail ---------- */
+  #lanjie-proto .court-hero {
+    position: relative; height: 280px; flex-shrink: 0; overflow: hidden;
+    background: radial-gradient(ellipse at 50% 28%, rgba(20,85,63,.58), transparent 62%), #07130E;
+  }
+  #lanjie-proto .court-hero-top {
+    position: absolute; top: 54px; left: 18px; right: 18px; z-index: 4;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  #lanjie-proto .glass-round {
+    width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.07); backdrop-filter: blur(14px); color: #fff;
+    display: grid; place-items: center; cursor: pointer;
+  }
+  #lanjie-proto .glass-round svg { width: 17px; height: 17px; }
+  #lanjie-proto .glass-tag {
+    display: flex; align-items: center; gap: 4px; border: 1px solid rgba(205,251,90,.3);
+    background: rgba(205,251,90,.12); color: var(--lime); border-radius: 999px;
+    padding: 5px 9px; font-size: 9px; font-weight: 600; backdrop-filter: blur(12px);
+  }
+  #lanjie-proto .glass-tag svg { width: 11px; height: 11px; }
+  #lanjie-proto .court-hero-art {
+    position: absolute; inset: 50px 0 0; display: grid; place-items: center; perspective: 900px;
+  }
+  #lanjie-proto .court-art {
+    position: relative; width: 250px; height: 138px; border: 2px solid var(--lime); border-radius: 6px;
+    background: linear-gradient(160deg, rgba(20,85,63,.95), rgba(7,19,14,.96));
+    transform: rotateX(56deg) rotateZ(-18deg);
+    box-shadow: 0 0 50px rgba(205,251,90,.2), 0 30px 60px rgba(0,0,0,.5);
+  }
+  #lanjie-proto .court-art::before {
+    content: ""; position: absolute; inset: 8px; border: 1px solid rgba(255,255,255,.28); border-radius: 2px;
+  }
+  #lanjie-proto .court-art::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px;
+    transform: translate(-50%,-50%); border: 1px solid rgba(255,255,255,.4); border-radius: 50%;
+  }
+  #lanjie-proto .ca-hoop {
+    position: absolute; left: 50%; top: 8px; width: 20px; height: 20px; transform: translateX(-50%);
+    border: 2px solid rgba(255,255,255,.62); border-radius: 50%;
+  }
+  #lanjie-proto .ca-center {
+    position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--lime); transform: translate(-50%,-50%);
+  }
+  #lanjie-proto .ca-arc {
+    position: absolute; left: 50%; top: 8px; width: 96px; height: 52px; transform: translateX(-50%);
+    border: 1px solid rgba(255,255,255,.24); border-top: 0; border-radius: 0 0 50% 50%;
+  }
+  #lanjie-proto .court-hero-num {
+    position: absolute; left: 14px; bottom: 18px; z-index: 1; font-size: 104px; line-height: .8;
+    font-weight: 800; letter-spacing: -.08em; color: rgba(255,255,255,.055);
+  }
+  #lanjie-proto .court-hero-glow {
+    position: absolute; left: 50%; bottom: -46px; width: 290px; height: 130px; transform: translateX(-50%);
+    background: radial-gradient(ellipse, rgba(205,251,90,.32), transparent 66%); filter: blur(24px);
+  }
+  #lanjie-proto .court-sheet {
+    position: relative; z-index: 5; flex: 1; min-height: 0; overflow-y: auto;
+    margin-top: -26px; border-radius: 28px 28px 0 0; background: var(--paper);
+    padding: 0 18px 12px; scrollbar-width: none;
+  }
+  #lanjie-proto .court-sheet::-webkit-scrollbar { display: none; }
+  #lanjie-proto .sheet-handle {
+    width: 36px; height: 4px; border-radius: 99px; background: #D6E0D4; margin: 8px auto 10px;
+  }
+  #lanjie-proto .sheet-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px;
+  }
+  #lanjie-proto .sheet-head .eyebrow { color: var(--muted); font-size: 8px; }
+  #lanjie-proto .sheet-head h1 { margin: 3px 0 0; font-size: 21px; font-weight: 700; letter-spacing: -.035em; }
+  #lanjie-proto .sheet-head p { margin: 3px 0 0; font-size: 9px; color: var(--muted); }
+  #lanjie-proto .date-seg {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 4px;
+    background: #E8EDE4; border-radius: 14px;
+  }
+  #lanjie-proto .seg {
+    border: 0; background: transparent; border-radius: 10px; padding: 6px 4px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+    font: inherit; font-size: 9.5px; color: var(--muted);
+  }
+  #lanjie-proto .seg b { font-size: 12px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  #lanjie-proto .seg.active { background: #fff; color: var(--ink); box-shadow: 0 2px 7px rgba(11,31,23,.08); }
+  #lanjie-proto .seg.active b { color: var(--deep-2); }
+  #lanjie-proto .ai-suggest {
+    display: flex; align-items: center; gap: 8px; margin: 10px 0; padding: 8px 9px;
+    background: linear-gradient(120deg, #F4FFD9, #E8F8C7); border: 1px solid #D8EFA7; border-radius: 14px;
+  }
+  #lanjie-proto .ai-suggest-icon {
+    width: 26px; height: 26px; border-radius: 9px; background: var(--ink); color: var(--lime);
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  #lanjie-proto .ai-suggest-icon svg { width: 13px; height: 13px; }
+  #lanjie-proto .ai-suggest > div { flex: 1; min-width: 0; }
+  #lanjie-proto .ai-suggest b { display: block; font-size: 10px; font-weight: 650; }
+  #lanjie-proto .ai-suggest small { display: block; margin-top: 1px; font-size: 8.5px; color: var(--ink-soft); line-height: 1.4; }
+  #lanjie-proto .court-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  #lanjie-proto .court-slot {
+    min-height: 50px; padding: 7px 6px; background: #fff; border: 1px solid var(--line);
+    border-radius: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    cursor: pointer; text-align: left; color: var(--ink-soft); font: inherit;
+    transition: background .15s, border-color .15s, transform .15s;
+  }
+  #lanjie-proto .court-slot b { font-size: 10.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .court-slot small { font-size: 8.5px; color: var(--muted); }
+  #lanjie-proto .court-slot:hover { border-color: var(--ink-soft); }
+  #lanjie-proto .court-slot.booked { background: #EDF1EC; color: #9AA89F; cursor: not-allowed; }
+  #lanjie-proto .court-slot.booked small { color: #A9B5AD; }
+  #lanjie-proto .court-slot.held { background: var(--amber-soft); color: #8A5A0B; cursor: not-allowed; }
+  #lanjie-proto .court-slot.sel {
+    background: var(--ink); border-color: var(--ink); color: #fff;
+    box-shadow: 0 6px 16px rgba(11,31,23,.18); transform: translateY(-1px);
+  }
+  #lanjie-proto .court-slot.sel small { color: var(--lime); }
+  #lanjie-proto .price-note {
+    display: flex; flex-wrap: wrap; gap: 7px 12px; align-items: center; margin-top: 10px;
+    padding: 8px 10px; background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    font-size: 8.5px; color: var(--muted);
+  }
+  #lanjie-proto .price-note b { color: var(--ink); font-size: 9px; font-weight: 650; }
+  #lanjie-proto .price-note-lock { margin-left: auto; display: flex; align-items: center; gap: 3px; color: var(--deep-2); }
+  #lanjie-proto .price-note-lock svg { width: 11px; height: 11px; }
+
+  /* ---------- v2: polish AI + desk ---------- */
+  #lanjie-proto .chat-date {
+    align-self: center; font-size: 8.5px; color: var(--muted); background: #E9EEE6;
+    border-radius: 999px; padding: 3px 8px;
+  }
+  #lanjie-proto .opt-mini {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; position: relative;
+    background: linear-gradient(160deg, var(--deep-2), var(--ink));
+    border: 1px solid rgba(205,251,90,.35);
+  }
+  #lanjie-proto .opt-mini span { position: absolute; inset: 7px; border: 1px solid rgba(205,251,90,.45); border-radius: 2px; }
+  #lanjie-proto .opt-mini span::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px;
+    border: 1px solid rgba(205,251,90,.45); border-radius: 50%; transform: translate(-50%,-50%);
+  }
+  #lanjie-proto .opt-main { flex: 1; min-width: 0; }
+  #lanjie-proto .lock-ring {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; position: relative;
+    display: grid; place-items: center;
+    background: conic-gradient(var(--lime) 0 78%, rgba(255,255,255,.12) 78% 100%);
+  }
+  #lanjie-proto .lock-ring::before { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--ink); }
+  #lanjie-proto .lock-ring span { position: relative; z-index: 1; font-size: 8px; font-weight: 700; color: var(--lime); font-variant-numeric: tabular-nums; }
+  #lanjie-proto .lock-top { gap: 9px; }
+  #lanjie-proto .kpi .label { gap: 7px; }
+  #lanjie-proto .kpi .label svg {
+    width: 22px; height: 22px; padding: 5px; background: var(--paper); border-radius: 8px;
+    color: var(--deep-2); box-sizing: border-box; flex-shrink: 0;
+  }
+  #lanjie-proto .kpi .value { margin-top: 7px; }
+
+
+  /* ---------- v2: page transitions ---------- */
+  #lanjie-proto .proto-view.active { animation: ljViewIn .3s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes ljViewIn {
+    from { opacity: 0; transform: translateY(10px) scale(.996); }
+    to { opacity: 1; transform: none; }
+  }
+  #lanjie-proto #view-court.active { animation: ljCourtIn .46s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes ljCourtIn {
+    from { opacity: .35; transform: translateY(30px) scale(.988); }
+    to { opacity: 1; transform: none; }
+  }
+  #lanjie-proto #view-court.active .court-hero { animation: ljHeroIn .5s ease both; }
+  @keyframes ljHeroIn {
+    from { opacity: .25; transform: scale(1.06); }
+    to { opacity: 1; transform: none; }
+  }
+  #lanjie-proto #view-court.active .court-sheet { animation: ljSheetIn .55s cubic-bezier(.2,.8,.2,1) .05s both; }
+  @keyframes ljSheetIn {
+    from { opacity: 0; transform: translateY(48px); }
+    to { opacity: 1; transform: none; }
+  }
+  #lanjie-proto #view-home.active .home-title { animation: ljRise .5s ease .03s both; }
+  #lanjie-proto #view-home.active .home-scene { animation: ljSceneIn .6s ease .05s both; }
+  #lanjie-proto #view-home.active .home-dock { animation: ljRise .5s ease .1s both; }
+  @keyframes ljRise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes ljSceneIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+  #lanjie-proto .court3d { transition: border-color .15s, box-shadow .15s, opacity .15s, filter .15s; }
+  #lanjie-proto .court3d:active { filter: brightness(1.18); }
+  @media (prefers-reduced-motion: reduce) {
+    #lanjie-proto .proto-view.active,
+    #lanjie-proto #view-court.active,
+    #lanjie-proto #view-court.active .court-hero,
+    #lanjie-proto #view-court.active .court-sheet,
+    #lanjie-proto #view-home.active .home-title,
+    #lanjie-proto #view-home.active .home-scene,
+    #lanjie-proto #view-home.active .home-dock { animation: none; }
+  }
+
+
+  /* ---------- v2: native view transitions ---------- */
+  #lanjie-proto.vt-supported .proto-view.active,
+  #lanjie-proto.vt-supported #view-court.active .court-hero,
+  #lanjie-proto.vt-supported #view-court.active .court-sheet,
+  #lanjie-proto.vt-supported #view-home.active .home-title,
+  #lanjie-proto.vt-supported #view-home.active .home-scene,
+  #lanjie-proto.vt-supported #view-home.active .home-dock { animation: none; }
+  @supports (view-transition-name: none) {
+    #lanjie-proto .proto-head { view-transition-name: proto-head; }
+    ::view-transition-old(proto-head), ::view-transition-new(proto-head) { animation: none; }
+    ::view-transition-old(root) { animation: ljVtOut .22s ease both; }
+    ::view-transition-new(root) { animation: ljVtIn .34s cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes ljVtOut { to { opacity: 0; transform: scale(.992); } }
+    @keyframes ljVtIn { from { opacity: 0; transform: translateY(8px) scale(.996); } to { opacity: 1; transform: none; } }
+  }
+
+
+  /* ---------- v2: shared court morph ---------- */
+  @supports (view-transition-name: none) {
+    #lanjie-proto #view-court .court-art { view-transition-name: court-morph; }
+    #lanjie-proto #view-court .court-sheet { view-transition-name: court-sheet; }
+    ::view-transition-old(court-morph), ::view-transition-new(court-morph) {
+      animation-duration: .5s; animation-timing-function: cubic-bezier(.2,.8,.2,1);
+    }
+    ::view-transition-old(court-sheet) { animation: ljSheetOut .24s ease both; }
+    ::view-transition-new(court-sheet) { animation: ljSheetUp .44s cubic-bezier(.2,.8,.2,1) both; }
+    @keyframes ljSheetUp { from { opacity: 0; transform: translateY(46px); } to { opacity: 1; transform: none; } }
+    @keyframes ljSheetOut { to { opacity: 0; transform: translateY(46px); } }
+  }
+
+
+  /* ---------- v3: real 3D arena ---------- */
+  #lanjie-proto .arena-screen { position: relative; background: #06100B; }
+  #lanjie-proto .arena-screen .statusbar { position: relative; z-index: 8; }
+  #lanjie-proto #arenaCanvas {
+    position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+    z-index: 0; touch-action: none; cursor: grab;
+  }
+  #lanjie-proto #arenaCanvas:active { cursor: grabbing; }
+  #lanjie-proto .arena-vignette {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(6,16,11,.9) 0%, transparent 24%, transparent 56%, rgba(6,16,11,.94) 100%),
+      radial-gradient(ellipse at 50% 46%, transparent 42%, rgba(6,16,11,.42) 100%);
+  }
+  #lanjie-proto .arena-top {
+    position: absolute; top: 50px; left: 18px; right: 18px; z-index: 5;
+    padding: 0; transition: opacity .25s ease;
+  }
+  #lanjie-proto .arena-title {
+    position: absolute; top: 104px; left: 18px; right: 18px; z-index: 4;
+    margin: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease;
+  }
+  #lanjie-proto .arena-title h1 { font-size: 27px; }
+  #lanjie-proto .court-labels {
+    position: absolute; inset: 0; z-index: 3; pointer-events: none;
+    transition: opacity .25s ease;
+  }
+  #lanjie-proto .court-label {
+    position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px; border-radius: 999px; cursor: pointer; pointer-events: auto;
+    background: rgba(7,19,14,.68); border: 1px solid rgba(205,251,90,.26);
+    color: #fff; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.35); font: inherit;
+    transition: border-color .15s, background .15s, opacity .2s;
+  }
+  #lanjie-proto .court-label:hover { border-color: var(--lime); background: rgba(12,32,24,.86); }
+  #lanjie-proto .court-label i {
+    width: 5px; height: 5px; border-radius: 50%; background: var(--lime);
+    box-shadow: 0 0 8px rgba(205,251,90,.6); flex-shrink: 0;
+  }
+  #lanjie-proto .court-label b { display: block; font-size: 8.5px; font-weight: 650; line-height: 1.2; }
+  #lanjie-proto .court-label small { display: block; font-size: 7.5px; color: rgba(255,255,255,.5); line-height: 1.2; margin-top: 1px; }
+  #lanjie-proto .court-label.busy { border-color: rgba(255,255,255,.14); }
+  #lanjie-proto .court-label.busy i { background: #52655B; box-shadow: none; }
+  #lanjie-proto .arena-hint {
+    position: absolute; left: 18px; bottom: 156px; z-index: 4; pointer-events: none;
+    display: flex; align-items: center; gap: 5px; font-size: 8px; color: rgba(255,255,255,.38);
+    transition: opacity .25s ease;
+  }
+  #lanjie-proto .arena-hint svg { width: 11px; height: 11px; }
+  #lanjie-proto .arena-dock {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+    transition: opacity .25s ease, transform .25s ease;
+  }
+  #lanjie-proto .arena-screen.sheet-open .arena-title,
+  #lanjie-proto .arena-screen.sheet-open .arena-hint,
+  #lanjie-proto .arena-screen.sheet-open .arena-dock,
+  #lanjie-proto .arena-screen.sheet-open .court-labels {
+    opacity: 0; pointer-events: none;
+  }
+  #lanjie-proto .arena-screen.sheet-open .arena-title { transform: translateY(-8px); }
+  #lanjie-proto .arena-screen.sheet-open .arena-dock { transform: translateY(14px); }
+
+  #lanjie-proto .arena-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 20;
+    max-height: 66%; overflow-y: auto; padding: 0 16px 12px;
+    border-radius: 26px 26px 0 0; border-top: 1px solid rgba(255,255,255,.1);
+    background: linear-gradient(180deg, rgba(10,24,18,.92), rgba(6,16,11,.985));
+    backdrop-filter: blur(26px); -webkit-backdrop-filter: blur(26px);
+    box-shadow: 0 -24px 70px rgba(0,0,0,.45);
+    transform: translateY(110%); transition: transform .48s cubic-bezier(.2,.8,.2,1);
+    scrollbar-width: none;
+  }
+  #lanjie-proto .arena-sheet::-webkit-scrollbar { display: none; }
+  #lanjie-proto .arena-sheet.open { transform: translateY(0); }
+  #lanjie-proto .sheet-grab {
+    width: 36px; height: 4px; border-radius: 99px; background: rgba(255,255,255,.18);
+    margin: 8px auto 10px; cursor: pointer;
+  }
+  #lanjie-proto .arena-sheet-head {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px;
+  }
+  #lanjie-proto .arena-sheet-head .eyebrow { color: rgba(255,255,255,.4); font-size: 8px; }
+  #lanjie-proto .arena-sheet-head .eyebrow span { color: var(--lime); }
+  #lanjie-proto .arena-sheet-head h2 { margin: 3px 0 0; color: #fff; font-size: 20px; font-weight: 700; letter-spacing: -.03em; }
+  #lanjie-proto .arena-sheet-head p { margin: 2px 0 0; color: rgba(255,255,255,.42); font-size: 8.5px; }
+  #lanjie-proto .sheet-close {
+    width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,.14);
+    background: rgba(255,255,255,.06); color: #fff; display: grid; place-items: center;
+    cursor: pointer; flex-shrink: 0;
+  }
+  #lanjie-proto .sheet-close svg { width: 15px; height: 15px; }
+  #lanjie-proto .arena-dates { margin-bottom: 8px; }
+  #lanjie-proto .arena-sheet .date-seg { background: rgba(255,255,255,.06); }
+  #lanjie-proto .arena-sheet .seg { color: rgba(255,255,255,.5); }
+  #lanjie-proto .arena-sheet .seg b { color: #fff; }
+  #lanjie-proto .arena-sheet .seg.active { background: rgba(205,251,90,.16); color: #fff; box-shadow: none; }
+  #lanjie-proto .arena-sheet .seg.active b { color: var(--lime); }
+  #lanjie-proto .arena-ai {
+    margin: 8px 0; background: rgba(205,251,90,.08); border-color: rgba(205,251,90,.2);
+  }
+  #lanjie-proto .arena-ai b { color: #fff; }
+  #lanjie-proto .arena-ai small { color: rgba(255,255,255,.52); }
+  #lanjie-proto .arena-ai .mini-btn { border-color: rgba(205,251,90,.5); color: var(--lime); }
+  #lanjie-proto .arena-ai .mini-btn:hover { background: var(--lime); color: var(--ink); }
+  #lanjie-proto .arena-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+  #lanjie-proto .arena-slot {
+    min-height: 46px; padding: 6px; border-radius: 11px; border: 1px solid rgba(255,255,255,.08);
+    background: rgba(255,255,255,.045); color: #fff; display: flex; flex-direction: column;
+    align-items: flex-start; gap: 2px; text-align: left; font: inherit; cursor: pointer;
+    transition: background .15s, border-color .15s, transform .15s;
+  }
+  #lanjie-proto .arena-slot b { font-size: 9.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .arena-slot small { font-size: 8px; color: rgba(255,255,255,.42); }
+  #lanjie-proto .arena-slot:hover { border-color: rgba(205,251,90,.4); }
+  #lanjie-proto .arena-slot.booked { opacity: .32; cursor: not-allowed; }
+  #lanjie-proto .arena-slot.held { background: rgba(245,185,66,.12); border-color: rgba(245,185,66,.28); color: #F5B942; }
+  #lanjie-proto .arena-slot.sel {
+    background: var(--lime); border-color: var(--lime); color: var(--ink);
+    box-shadow: 0 6px 18px rgba(205,251,90,.18);
+  }
+  #lanjie-proto .arena-slot.sel small { color: rgba(11,31,23,.62); }
+  #lanjie-proto .arena-price-note {
+    display: flex; flex-wrap: wrap; gap: 5px 10px; align-items: center;
+    padding: 6px 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.04); color: rgba(255,255,255,.4); font-size: 7.5px;
+  }
+  #lanjie-proto .arena-price-note b { color: #fff; font-size: 8px; font-weight: 600; }
+  #lanjie-proto .arena-price-note .price-note-lock { margin-left: auto; color: var(--lime); display: flex; align-items: center; gap: 3px; }
+  #lanjie-proto .arena-price-note .price-note-lock svg { width: 10px; height: 10px; }
+  #lanjie-proto .arena-bar {
+    display: flex; align-items: center; gap: 8px; margin-top: 8px; padding: 9px 10px;
+    border-radius: 16px; background: var(--ink); border: 1px solid rgba(255,255,255,.08);
+    color: #fff; box-shadow: 0 12px 30px rgba(0,0,0,.35);
+  }
+  #lanjie-proto .arena-toast {
+    display: none; margin-top: 6px; text-align: center; font-size: 8px; color: var(--lime);
+  }
+  #lanjie-proto .arena-toast.show { display: block; }
+  #lanjie-proto .arena-fallback {
+    position: absolute; inset: 0; z-index: 2; display: none; place-items: center;
+    padding: 30px; text-align: center; color: rgba(255,255,255,.6); font-size: 11px;
+  }
+  #lanjie-proto .arena-screen.no-webgl .arena-fallback { display: grid; }
+
+
+  /* ---------- v3: pickup ---------- */
+  #lanjie-proto .pickup-screen { background: #07130E; }
+  #lanjie-proto .pickup-head {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 0 18px 10px;
+  }
+  #lanjie-proto .pickup-head b { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
+  #lanjie-proto .pickup-create {
+    display: flex; align-items: center; gap: 3px; border: 0; border-radius: 999px;
+    background: var(--lime); color: var(--ink); font: inherit; font-size: 9.5px;
+    font-weight: 650; padding: 7px 10px; cursor: pointer;
+  }
+  #lanjie-proto .pickup-create svg { width: 12px; height: 12px; }
+  #lanjie-proto .pickup-body {
+    flex: 1; min-height: 0; overflow-y: auto; padding: 0 18px 104px;
+    scrollbar-width: none;
+  }
+  #lanjie-proto .pickup-body::-webkit-scrollbar { display: none; }
+  #lanjie-proto .pickup-body h1 {
+    margin: 8px 0 0; color: #fff; font-size: 30px; line-height: 1.08;
+    letter-spacing: -.045em; font-weight: 700;
+  }
+  #lanjie-proto .pickup-body h1 span { color: var(--lime); }
+  #lanjie-proto .pickup-sub { margin: 8px 0 14px; color: rgba(255,255,255,.45); font-size: 9.5px; line-height: 1.5; }
+  #lanjie-proto .pickup-filters { display: flex; gap: 6px; margin-bottom: 12px; }
+  #lanjie-proto .filter {
+    border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
+    color: rgba(255,255,255,.55); border-radius: 999px; padding: 6px 12px;
+    font: inherit; font-size: 9.5px; cursor: pointer;
+  }
+  #lanjie-proto .filter.active { background: var(--lime); border-color: var(--lime); color: var(--ink); font-weight: 650; }
+  #lanjie-proto .pickup-list { display: flex; flex-direction: column; gap: 9px; }
+  #lanjie-proto .pickup-card {
+    background: linear-gradient(160deg, rgba(255,255,255,.065), rgba(255,255,255,.028));
+    border: 1px solid rgba(255,255,255,.08); border-radius: 18px; padding: 11px 12px;
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  }
+  #lanjie-proto .pickup-top { display: flex; align-items: center; gap: 9px; }
+  #lanjie-proto .pickup-court {
+    width: 32px; height: 32px; border-radius: 10px; background: var(--lime); color: var(--ink);
+    display: grid; place-items: center; font-size: 10.5px; font-weight: 700; flex-shrink: 0;
+  }
+  #lanjie-proto .pickup-when { flex: 1; min-width: 0; }
+  #lanjie-proto .pickup-when b { display: block; color: #fff; font-size: 11px; font-weight: 650; }
+  #lanjie-proto .pickup-when small { display: block; margin-top: 1px; color: rgba(255,255,255,.4); font-size: 8.5px; }
+  #lanjie-proto .pickup-format {
+    margin-left: auto; flex-shrink: 0; font-size: 8.5px; color: var(--lime);
+    background: rgba(205,251,90,.1); border: 1px solid rgba(205,251,90,.25);
+    border-radius: 999px; padding: 3px 7px;
+  }
+  #lanjie-proto .pickup-mid { display: flex; align-items: baseline; justify-content: space-between; margin: 9px 0 8px; }
+  #lanjie-proto .pickup-need { font-size: 9.5px; color: var(--lime); }
+  #lanjie-proto .pickup-need.muted { color: rgba(255,255,255,.35); }
+  #lanjie-proto .pickup-price { color: #fff; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .pickup-price small { font-size: 8px; color: rgba(255,255,255,.35); font-weight: 400; }
+  #lanjie-proto .pickup-bottom { display: flex; align-items: center; gap: 8px; }
+  #lanjie-proto .pickup-faces { display: flex; padding-left: 5px; }
+  #lanjie-proto .pickup-faces span {
+    width: 22px; height: 22px; border-radius: 50%; background: #1B3328;
+    border: 1px solid rgba(255,255,255,.15); color: #fff; font-size: 7.5px;
+    display: grid; place-items: center; margin-left: -5px;
+  }
+  #lanjie-proto .pickup-faces span:last-child { background: rgba(205,251,90,.16); color: var(--lime); }
+  #lanjie-proto .pickup-host { margin-left: auto; font-size: 8px; color: rgba(255,255,255,.32); }
+  #lanjie-proto .join-btn {
+    border: 0; border-radius: 999px; background: var(--lime); color: var(--ink);
+    font: inherit; font-size: 9px; font-weight: 650; padding: 6px 12px; cursor: pointer;
+    flex-shrink: 0;
+  }
+  #lanjie-proto .join-btn.joined { background: transparent; color: var(--lime); border: 1px solid rgba(205,251,90,.35); }
+  #lanjie-proto .join-btn.ghost { background: transparent; color: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.15); }
+  #lanjie-proto .join-btn:disabled { background: rgba(255,255,255,.07); color: rgba(255,255,255,.3); cursor: not-allowed; }
+  #lanjie-proto .pickup-card.full { opacity: .55; }
+  #lanjie-proto .pickup-mine { margin-top: 16px; }
+  #lanjie-proto .pickup-mine .section-head h2 { color: #fff; font-size: 12px; }
+  #lanjie-proto .pickup-mine .text-btn { color: rgba(255,255,255,.45); }
+  #lanjie-proto .pickup-dock { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; }
+  #lanjie-proto .pickup-dock .dock-nav { margin-top: 0; }
+
+  /* ---------- v3: pickup sheet ---------- */
+  #lanjie-proto .page-veil {
+    position: absolute; inset: 0; z-index: 24; background: rgba(0,0,0,.5);
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  #lanjie-proto .page-veil.show { opacity: 1; pointer-events: auto; }
+  #lanjie-proto .pickup-sheet, #lanjie-proto .me-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 26;
+    transform: translateY(110%); transition: transform .42s cubic-bezier(.2,.8,.2,1);
+    border-radius: 26px 26px 0 0; padding: 0 18px 16px;
+  }
+  #lanjie-proto .pickup-sheet {
+    background: linear-gradient(180deg, rgba(12,26,20,.98), rgba(6,16,11,.99));
+    border-top: 1px solid rgba(255,255,255,.1); color: #fff;
+  }
+  #lanjie-proto .me-sheet { background: var(--paper); border-top: 1px solid var(--line); color: var(--ink); }
+  #lanjie-proto .pickup-sheet.open, #lanjie-proto .me-sheet.open { transform: translateY(0); }
+  #lanjie-proto .sheet-head-simple { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+  #lanjie-proto .sheet-head-simple h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -.03em; }
+  #lanjie-proto .me-sheet .sheet-grab { background: #D6E0D4; }
+  #lanjie-proto .me-sheet .sheet-close { border-color: var(--line); background: #fff; color: var(--ink-soft); }
+  #lanjie-proto .form-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  #lanjie-proto .form-row > span { font-size: 9px; color: rgba(255,255,255,.4); flex-shrink: 0; }
+  #lanjie-proto .form-pill {
+    border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05);
+    color: #fff; border-radius: 10px; padding: 7px 9px; font: inherit; font-size: 8.5px; cursor: pointer;
+  }
+  #lanjie-proto .seg-row { display: flex; gap: 5px; }
+  #lanjie-proto .seg-row button {
+    border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
+    color: rgba(255,255,255,.5); border-radius: 8px; padding: 6px 10px;
+    font: inherit; font-size: 9px; cursor: pointer;
+  }
+  #lanjie-proto .seg-row button.on { background: var(--lime); border-color: var(--lime); color: var(--ink); font-weight: 650; }
+  #lanjie-proto .form-price { color: var(--lime); font-size: 13px; font-weight: 700; }
+  #lanjie-proto .publish-btn {
+    width: 100%; border: 0; border-radius: 14px; background: var(--lime); color: var(--ink);
+    font: inherit; font-size: 11px; font-weight: 700; padding: 11px; margin-top: 12px; cursor: pointer;
+  }
+  #lanjie-proto .form-hint { margin: 8px 0 0; text-align: center; font-size: 8px; color: rgba(255,255,255,.32); }
+
+  /* ---------- v3: me ---------- */
+  #lanjie-proto .me-screen { background: var(--paper); }
+  #lanjie-proto .me-head {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px 10px;
+  }
+  #lanjie-proto .me-head b { font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
+  #lanjie-proto .me-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 18px 14px; scrollbar-width: none; }
+  #lanjie-proto .me-body::-webkit-scrollbar { display: none; }
+  #lanjie-proto .me-profile {
+    display: flex; align-items: center; gap: 10px; background: #fff;
+    border: 1px solid var(--line); border-radius: 18px; padding: 12px;
+  }
+  #lanjie-proto .me-avatar {
+    width: 44px; height: 44px; border-radius: 50%; background: var(--ink); color: var(--lime);
+    display: grid; place-items: center; font-size: 15px; font-weight: 700; flex-shrink: 0;
+  }
+  #lanjie-proto .me-profile b { display: block; font-size: 13px; }
+  #lanjie-proto .me-profile small { display: block; margin-top: 2px; font-size: 8.5px; color: var(--muted); }
+  #lanjie-proto .me-level {
+    margin-left: auto; display: flex; align-items: center; gap: 1px; border: 1px solid var(--line);
+    background: var(--paper); border-radius: 999px; padding: 5px 8px;
+    font: inherit; font-size: 8px; color: var(--deep-2); cursor: pointer; flex-shrink: 0;
+  }
+  #lanjie-proto .me-level svg { width: 11px; height: 11px; }
+  #lanjie-proto .wallet-card { margin-top: 10px; background: var(--ink); color: #fff; border-radius: 20px; padding: 14px; }
+  #lanjie-proto .wallet-top { display: flex; align-items: center; justify-content: space-between; font-size: 8.5px; color: rgba(255,255,255,.5); }
+  #lanjie-proto .wallet-top button {
+    border: 0; border-radius: 999px; background: var(--lime); color: var(--ink);
+    font: inherit; font-size: 8.5px; font-weight: 650; padding: 4px 10px; cursor: pointer;
+  }
+  #lanjie-proto .wallet-amount { margin: 6px 0 2px; color: #fff; font-size: 30px; font-weight: 700; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .wallet-amount span { font-size: 14px; color: rgba(255,255,255,.4); }
+  #lanjie-proto .wallet-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; font-size: 8px; color: rgba(255,255,255,.42); }
+  #lanjie-proto .wallet-foot button {
+    display: flex; align-items: center; gap: 2px; border: 0; background: transparent;
+    color: var(--lime); font: inherit; font-size: 8px; cursor: pointer;
+  }
+  #lanjie-proto .asset-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+  #lanjie-proto .asset { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 10px 4px; text-align: center; }
+  #lanjie-proto .asset b { display: block; font-size: 15px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+  #lanjie-proto .asset small { display: block; margin-top: 2px; font-size: 7px; color: var(--muted); }
+  #lanjie-proto .me-orders { margin-top: 14px; }
+  #lanjie-proto .me-orders .section-head { margin: 0 0 7px; }
+  #lanjie-proto .me-orders .section-head h2 { font-size: 12px; }
+  #lanjie-proto .order-tabs { display: flex; gap: 5px; margin-bottom: 8px; overflow-x: auto; scrollbar-width: none; }
+  #lanjie-proto .order-tabs::-webkit-scrollbar { display: none; }
+  #lanjie-proto .order-tabs button {
+    flex-shrink: 0; border: 1px solid var(--line); background: #fff; color: var(--muted);
+    border-radius: 999px; padding: 5px 10px; font: inherit; font-size: 8.5px; cursor: pointer;
+  }
+  #lanjie-proto .order-tabs button.active { background: var(--ink); border-color: var(--ink); color: var(--lime); font-weight: 650; }
+  #lanjie-proto .order-list { display: flex; flex-direction: column; gap: 6px; }
+  #lanjie-proto .order-row {
+    background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 9px 10px;
+  }
+  #lanjie-proto .order-main { display: flex; align-items: center; gap: 8px; }
+  #lanjie-proto .order-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-top: 7px; padding-left: 36px;
+  }
+  #lanjie-proto .order-court {
+    width: 28px; height: 28px; border-radius: 9px; background: var(--ink); color: var(--lime);
+    display: grid; place-items: center; font-size: 8.5px; font-weight: 700; flex-shrink: 0;
+  }
+  #lanjie-proto .order-info { flex: 1; min-width: 0; }
+  #lanjie-proto .order-info b { display: block; font-size: 9px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lanjie-proto .order-info small { display: block; margin-top: 1px; font-size: 7.5px; color: var(--muted); }
+  #lanjie-proto .order-price { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  #lanjie-proto .order-action {
+    display: flex; align-items: center; gap: 3px; border: 0; background: var(--paper);
+    border-radius: 8px; height: 24px; padding: 0 8px; color: var(--deep-2);
+    font: inherit; font-size: 7.5px; cursor: pointer; flex-shrink: 0;
+  }
+  #lanjie-proto .order-action svg { width: 13px; height: 13px; }
+  #lanjie-proto .me-links { margin-top: 14px; display: flex; flex-direction: column; gap: 5px; }
+  #lanjie-proto .me-links button {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 11px; font: inherit; font-size: 9px; color: var(--ink-soft); cursor: pointer;
+  }
+  #lanjie-proto .me-links button span { display: flex; align-items: center; gap: 6px; }
+  #lanjie-proto .me-links svg { width: 13px; height: 13px; }
+  #lanjie-proto .me-tabs {
+    flex-shrink: 0; height: 60px; display: grid; grid-template-columns: repeat(4, 1fr);
+    background: #fff; border-top: 1px solid var(--line); padding: 5px 8px 8px;
+  }
+  #lanjie-proto .me-tabs button {
+    border: 0; background: transparent; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 2px; color: var(--muted);
+    font: inherit; font-size: 8px; cursor: pointer;
+  }
+  #lanjie-proto .me-tabs button.active { color: var(--ink); font-weight: 650; }
+  #lanjie-proto .me-tabs button.active svg { color: var(--deep-2); }
+  #lanjie-proto .me-tabs svg { width: 16px; height: 16px; }
+  #lanjie-proto .recharge-note { margin: 2px 0 10px; font-size: 8.5px; color: var(--muted); line-height: 1.5; }
+  #lanjie-proto .recharge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 12px; }
+  #lanjie-proto .recharge-grid button {
+    border: 1px solid var(--line); background: #fff; border-radius: 12px;
+    padding: 12px 6px; font: inherit; font-size: 13px; font-weight: 700;
+    color: var(--ink); cursor: pointer;
+  }
+  #lanjie-proto .recharge-grid button small { display: block; margin-top: 2px; font-size: 7px; color: var(--deep-2); font-weight: 500; }
+  #lanjie-proto .recharge-grid button.on { background: var(--ink); border-color: var(--ink); color: var(--lime); }
+  #lanjie-proto .recharge-actions { display: flex; gap: 7px; }
+  #lanjie-proto .recharge-actions .publish-btn { flex: 1; width: auto; margin-top: 0; }
+  #lanjie-proto .recharge-cancel {
+    flex: 0 0 82px; border: 1px solid var(--line); background: #fff; border-radius: 14px;
+    color: var(--muted); font: inherit; font-size: 10.5px; cursor: pointer;
+  }
+  #lanjie-proto .qr-modal {
+    position: absolute; inset: 0; z-index: 27; display: grid; place-items: center;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  #lanjie-proto .qr-modal.open { opacity: 1; pointer-events: auto; }
+  #lanjie-proto .qr-card {
+    width: 252px; background: #fff; border-radius: 22px; padding: 14px;
+    box-shadow: 0 24px 60px rgba(11,31,23,.25);
+  }
+  #lanjie-proto .qr-top { display: flex; align-items: center; justify-content: space-between; }
+  #lanjie-proto .qr-top b { font-size: 13px; font-weight: 700; }
+  #lanjie-proto .qr-top button {
+    width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--paper);
+    color: var(--ink-soft); display: grid; place-items: center; cursor: pointer;
+  }
+  #lanjie-proto .qr-grid {
+    width: 184px; height: 184px; margin: 12px auto; padding: 8px;
+    display: grid; grid-template-columns: repeat(21, 1fr);
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+  }
+  #lanjie-proto .qr-grid span { background: #fff; }
+  #lanjie-proto .qr-grid span.on { background: #0B1F17; }
+  #lanjie-proto .qr-info { text-align: center; }
+  #lanjie-proto .qr-info b { display: block; font-size: 9.5px; }
+  #lanjie-proto .qr-info small { display: block; margin-top: 2px; font-size: 7.5px; color: var(--muted); }
+  #lanjie-proto .page-toast {
+    position: absolute; left: 50%; bottom: 94px; transform: translateX(-50%) translateY(6px);
+    z-index: 35; max-width: 88%; background: rgba(11,31,23,.94); color: var(--lime);
+    font-size: 8.5px; padding: 7px 11px; border-radius: 999px; opacity: 0;
+    pointer-events: none; transition: opacity .2s, transform .2s; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  #lanjie-proto .page-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+
+  /* ---------- v3: coach ---------- */
+  #lanjie-proto .coach-screen { background: var(--paper); }
+  #lanjie-proto .coach-head {
+    flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px 8px;
+  }
+  #lanjie-proto .coach-head b { font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
+  #lanjie-proto .coach-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 18px 14px; scrollbar-width: none; }
+  #lanjie-proto .coach-body::-webkit-scrollbar { display: none; }
+  #lanjie-proto .coach-eyebrow { color: var(--muted); }
+  #lanjie-proto .coach-body h1 {
+    margin: 8px 0 0; color: var(--ink); font-size: 28px; line-height: 1.1;
+    letter-spacing: -.045em; font-weight: 700;
+  }
+  #lanjie-proto .coach-body h1 span { color: var(--deep-2); }
+  #lanjie-proto .coach-sub { margin: 7px 0 0; color: var(--muted); font-size: 9.5px; }
+  #lanjie-proto .coach-seg {
+    display: flex; gap: 4px; margin: 12px 0; padding: 4px;
+    background: #E9EEE6; border-radius: 14px;
+  }
+  #lanjie-proto .coach-seg button {
+    flex: 1; border: 0; background: transparent; border-radius: 10px; padding: 7px;
+    font: inherit; font-size: 10px; color: var(--muted); cursor: pointer;
+  }
+  #lanjie-proto .coach-seg button.active {
+    background: #fff; color: var(--ink); font-weight: 650;
+    box-shadow: 0 2px 7px rgba(11,31,23,.08);
+  }
+  #lanjie-proto .coach-list { display: flex; flex-direction: column; gap: 9px; }
+  #lanjie-proto .coach-list[hidden] { display: none; }
+  #lanjie-proto .coach-card {
+    display: grid; grid-template-columns: 42px 1fr auto; grid-template-rows: auto auto;
+    gap: 0 9px; align-items: center; background: #fff;
+    border: 1px solid var(--line); border-radius: 18px; padding: 12px;
+  }
+  #lanjie-proto .coach-avatar {
+    width: 42px; height: 42px; border-radius: 50%; grid-row: span 2;
+    background: linear-gradient(135deg, var(--deep-2), var(--ink));
+    color: var(--lime); display: grid; place-items: center; font-size: 14px; font-weight: 700;
+  }
+  #lanjie-proto .coach-info b { display: block; font-size: 12.5px; font-weight: 650; }
+  #lanjie-proto .coach-info small { display: block; margin-top: 1px; font-size: 8.5px; color: var(--muted); }
+  #lanjie-proto .coach-tags {
+    display: inline-block; margin-top: 3px; font-size: 7px; color: var(--deep-2);
+    background: var(--paper); border-radius: 999px; padding: 2px 6px;
+  }
+  #lanjie-proto .coach-right { text-align: right; }
+  #lanjie-proto .coach-right b { font-size: 15px; font-weight: 700; color: var(--deep-2); font-variant-numeric: tabular-nums; }
+  #lanjie-proto .coach-right small { display: block; margin-top: 1px; font-size: 7px; color: var(--muted); }
+  #lanjie-proto .coach-foot {
+    grid-column: 1 / -1; display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line-2);
+  }
+  #lanjie-proto .coach-foot > span { font-size: 8px; color: var(--muted); }
+  #lanjie-proto .coach-foot > b { margin-left: auto; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .coach-foot > b small { font-size: 7.5px; color: var(--muted); font-weight: 400; }
+  #lanjie-proto .coach-foot button {
+    border: 0; border-radius: 999px; background: var(--ink); color: var(--lime);
+    font: inherit; font-size: 8.5px; font-weight: 650; padding: 6px 11px; cursor: pointer; flex-shrink: 0;
+  }
+  #lanjie-proto .group-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 11px 12px; }
+  #lanjie-proto .group-top { display: flex; align-items: center; justify-content: space-between; }
+  #lanjie-proto .group-date { font-size: 9px; color: var(--deep-2); font-weight: 650; }
+  #lanjie-proto .group-card > b { display: block; margin-top: 6px; font-size: 11px; }
+  #lanjie-proto .group-card > small { display: block; margin-top: 2px; font-size: 8px; color: var(--muted); }
+  #lanjie-proto .group-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+  #lanjie-proto .group-foot > span { font-size: 15px; font-weight: 700; }
+  #lanjie-proto .group-foot > span small { font-size: 7.5px; color: var(--muted); font-weight: 400; }
+  #lanjie-proto .group-foot .join-btn { background: var(--ink); color: var(--lime); }
+  #lanjie-proto .group-foot .join-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+  #lanjie-proto .coach-tabs button.active svg { color: var(--deep-2); }
+
+  /* coach booking sheet */
+  #lanjie-proto .coach-sheet-eyebrow { color: rgba(255,255,255,.4); }
+  #lanjie-proto .coach-sheet-meta { margin: 2px 0 0; font-size: 8.5px; color: rgba(255,255,255,.45); }
+  #lanjie-proto .coach-packages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0 2px; }
+  #lanjie-proto .coach-pack {
+    border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04);
+    color: rgba(255,255,255,.6); border-radius: 11px; padding: 8px 4px;
+    font: inherit; font-size: 9px; cursor: pointer;
+  }
+  #lanjie-proto .coach-pack small { display: block; margin-top: 2px; font-size: 7.5px; color: rgba(255,255,255,.4); font-weight: 400; }
+  #lanjie-proto .coach-pack.on { background: var(--lime); border-color: var(--lime); color: var(--ink); font-weight: 650; }
+  #lanjie-proto .coach-pack.on small { color: rgba(11,31,23,.6); }
+  #lanjie-proto .coach-bar {
+    display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  #lanjie-proto .coach-bar > div { flex: 1; min-width: 0; }
+  #lanjie-proto .coach-bar b { display: block; color: #fff; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lanjie-proto .coach-bar small { display: block; margin-top: 1px; color: rgba(255,255,255,.4); font-size: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #lanjie-proto .coach-bar > span { color: var(--lime); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #lanjie-proto .coach-bar .publish-btn { width: auto; margin-top: 0; padding: 9px 14px; }
+
+</style>
+
+<div class="proto-head">
+  <div class="proto-brand"><span class="proto-mark"></span><span>篮界 · 原型 v3</span></div>
+  <div class="proto-tabs" role="group" aria-label="原型页面">
+    <button class="proto-tab active" data-view="home" aria-pressed="true">手机 · 首页</button>
+    <button class="proto-tab" data-view="court" aria-pressed="false">手机 · 球场详情</button>
+    <button class="proto-tab" data-view="book" aria-pressed="false">手机 · 订场</button>
+    <button class="proto-tab" data-view="coach" aria-pressed="false">手机 · 教练</button>
+    <button class="proto-tab" data-view="ai" aria-pressed="false">手机 · AI 前台</button>
+    <button class="proto-tab" data-view="pickup" aria-pressed="false">手机 · 拼场</button>
+    <button class="proto-tab" data-view="me" aria-pressed="false">手机 · 我的</button>
+    <button class="proto-tab" data-view="desk" aria-pressed="false">桌面 · 今日看板</button>
+  </div>
+</div>
+
+<div class="proto-stage">
+
+  <!-- ========== 手机 3D 球馆 ========== -->
+  <section class="proto-view active" id="view-arena" aria-label="手机 3D 球馆">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen screen-dark arena-screen" id="arenaScreen">
+          <div class="statusbar statusbar-dark">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <canvas id="arenaCanvas" aria-label="3D 球馆场景"></canvas>
+          <div class="arena-vignette" aria-hidden="true"></div>
+
+          <header class="home-top arena-top">
+            <div class="brand-lockup">
+              <span class="brand-orb" aria-hidden="true"></span>
+              <div><b>篮界</b><small>LANJIE</small></div>
+            </div>
+            <button class="glass-pill" aria-label="选择日期">
+              <i data-lucide="calendar-days"></i><span>今天 · 11/06</span><i data-lucide="chevron-down"></i>
+            </button>
+          </header>
+
+          <div class="home-title arena-title" id="arenaTitle">
+            <div class="eyebrow"><span class="pulse-dot"></span>城东体育馆 · 余量实时</div>
+            <h1>今晚，<span>3 片场</span><br>空着</h1>
+            <p>拖动旋转 · 单击球场，镜头会飞过去</p>
+          </div>
+
+          <div class="court-labels" id="courtLabels" aria-label="球场"></div>
+
+          <div class="arena-hint" id="arenaHint">
+            <i data-lucide="move-3d"></i><span>拖动旋转 · 双指缩放</span>
+          </div>
+
+          <div class="home-dock arena-dock" id="arenaDock">
+            <button class="ai-orb" data-go="ai">
+              <span class="orb"><i data-lucide="sparkles"></i></span>
+              <span class="orb-copy"><b>AI 前台</b><small>问一句就能订</small></span>
+              <span class="orb-arrow"><i data-lucide="arrow-up-right"></i></span>
+            </button>
+            <nav class="dock-nav" aria-label="手机导航">
+              <button class="dock-item active" data-go="home"><i data-lucide="home"></i><span>首页</span></button>
+              <button class="dock-item" data-go="coach"><i data-lucide="dumbbell"></i><span>教练</span></button>
+              <button class="dock-item" data-go="pickup"><i data-lucide="users"></i><span>拼场</span></button>
+              <button class="dock-item" data-go="me"><i data-lucide="user-round"></i><span>我的</span></button>
+            </nav>
+          </div>
+
+          <section class="arena-sheet" id="arenaSheet" aria-hidden="true" aria-label="球场时段">
+            <div class="sheet-grab" id="arenaGrab" aria-hidden="true"></div>
+            <div class="arena-sheet-head">
+              <div>
+                <div class="eyebrow">COURT <span id="arenaCourtNo">01</span> · 木地板</div>
+                <h2 id="arenaCourtName">1 号场</h2>
+                <p id="arenaCourtMeta">今天 还剩 11 个时段 · 4 片全场</p>
+              </div>
+              <button class="sheet-close" id="arenaClose" aria-label="返回全场">
+                <i data-lucide="x"></i>
+              </button>
+            </div>
+
+            <div class="date-seg arena-dates" role="group" aria-label="选择日期">
+              <button class="seg active" data-arena-day="11-06">今天 <b>6</b></button>
+              <button class="seg" data-arena-day="11-07">明天 <b>7</b></button>
+              <button class="seg" data-arena-day="11-08">后天 <b>8</b></button>
+            </div>
+
+            <div class="ai-suggest arena-ai">
+              <span class="ai-suggest-icon"><i data-lucide="sparkles"></i></span>
+              <div><b>AI 建议</b><small>周六 20:00–22:00 最划算，2 小时 ¥320；拼场还差 2 人</small></div>
+              <button class="mini-btn" data-arena-suggest>用这个</button>
+            </div>
+
+            <div class="arena-slots" id="arenaSlots" role="grid" aria-label="球场时段"></div>
+
+            <div class="arena-price-note">
+              <span>10:00–18:00 <b id="arenaDayPrice">¥120/时</b></span>
+              <span>18:00–22:00 <b>¥160/时</b></span>
+              <span class="price-note-lock"><i data-lucide="shield-check"></i>锁位 15 分钟</span>
+            </div>
+
+            <div class="arena-bar" id="arenaBar" aria-live="polite">
+              <div class="bb-main">
+                <b class="bb-title">选一个时段</b>
+                <small class="bb-sub">点上面的时段，可连选</small>
+              </div>
+              <span class="bb-price">—</span>
+              <button class="bb-btn" disabled>去支付</button>
+            </div>
+            <div class="arena-toast" id="arenaToast" role="status"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 手机拼场 ========== -->
+  <section class="proto-view" id="view-pickup" aria-label="手机拼场">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen screen-dark pickup-screen">
+          <div class="statusbar statusbar-dark">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <div class="pickup-head">
+            <button class="glass-round" data-go="home" aria-label="返回"><i data-lucide="arrow-left"></i></button>
+            <b>拼场</b>
+            <button class="pickup-create" id="pickupCreate"><i data-lucide="plus"></i>发起</button>
+          </div>
+
+          <div class="pickup-body">
+            <div class="eyebrow"><span class="pulse-dot"></span>今晚 · 城东体育馆</div>
+            <h1>找个人，<br><span>一起打</span></h1>
+            <p class="pickup-sub">3v3 / 4v4 / 5v5，按人头 AA；缺人的局都在这。</p>
+
+            <div class="pickup-filters" role="group" aria-label="赛制筛选">
+              <button class="filter active" data-format="all">全部</button>
+              <button class="filter" data-format="3v3">3v3</button>
+              <button class="filter" data-format="4v4">4v4</button>
+              <button class="filter" data-format="5v5">5v5</button>
+            </div>
+
+            <div class="pickup-list">
+              <article class="pickup-card" data-card-format="3v3">
+                <div class="pickup-top">
+                  <span class="pickup-court">01</span>
+                  <div class="pickup-when"><b>1 号场</b><small>今晚 20:00–22:00</small></div>
+                  <span class="pickup-format">3v3</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need">缺 2 人</span>
+                  <span class="pickup-price">¥53<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>杰</span><span>林</span><span>+2</span></div>
+                  <span class="pickup-host">阿杰 发起</span>
+                  <button class="join-btn" data-join>加入</button>
+                </div>
+              </article>
+
+              <article class="pickup-card" data-card-format="5v5">
+                <div class="pickup-top">
+                  <span class="pickup-court">04</span>
+                  <div class="pickup-when"><b>4 号场</b><small>今晚 19:00–21:00</small></div>
+                  <span class="pickup-format">5v5</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need">缺 3 人</span>
+                  <span class="pickup-price">¥32<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>雨</span><span>凯</span><span>周</span><span>+4</span></div>
+                  <span class="pickup-host">小雨 发起</span>
+                  <button class="join-btn" data-join>加入</button>
+                </div>
+              </article>
+
+              <article class="pickup-card" data-card-format="4v4">
+                <div class="pickup-top">
+                  <span class="pickup-court">02</span>
+                  <div class="pickup-when"><b>2 号场</b><small>明天 19:00–21:00</small></div>
+                  <span class="pickup-format">4v4</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need">缺 1 人</span>
+                  <span class="pickup-price">¥40<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>陈</span><span>吴</span><span>许</span><span>+5</span></div>
+                  <span class="pickup-host">老陈 发起</span>
+                  <button class="join-btn" data-join>加入</button>
+                </div>
+              </article>
+
+              <article class="pickup-card full" data-card-format="3v3">
+                <div class="pickup-top">
+                  <span class="pickup-court">03</span>
+                  <div class="pickup-when"><b>3 号场</b><small>明天 20:00–22:00</small></div>
+                  <span class="pickup-format">3v3</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need muted">已满</span>
+                  <span class="pickup-price">¥53<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>北</span><span>张</span><span>李</span><span>王</span><span>赵</span><span>钱</span></div>
+                  <span class="pickup-host">小北 发起</span>
+                  <button class="join-btn" disabled>已满</button>
+                </div>
+              </article>
+            </div>
+
+            <div class="pickup-mine">
+              <div class="section-head"><h2>我发起的</h2><button class="text-btn" data-pickup-link>全部 <i data-lucide="chevron-right"></i></button></div>
+              <article class="pickup-card mine-card">
+                <div class="pickup-top">
+                  <span class="pickup-court">04</span>
+                  <div class="pickup-when"><b>4 号场</b><small>今晚 19:00–21:00</small></div>
+                  <span class="pickup-format">5v5</span>
+                </div>
+                <div class="pickup-mid">
+                  <span class="pickup-need">已 7/10</span>
+                  <span class="pickup-price">¥32<small>/人</small></span>
+                </div>
+                <div class="pickup-bottom">
+                  <div class="pickup-faces"><span>林</span><span>杰</span><span>凯</span><span>+4</span></div>
+                  <span class="pickup-host">我发起的</span>
+                  <button class="join-btn ghost" data-pickup-manage>管理</button>
+                </div>
+              </article>
+            </div>
+          </div>
+
+          <div class="home-dock pickup-dock">
+            <nav class="dock-nav" aria-label="手机导航">
+              <button class="dock-item" data-go="home"><i data-lucide="home"></i><span>首页</span></button>
+              <button class="dock-item" data-go="coach"><i data-lucide="dumbbell"></i><span>教练</span></button>
+              <button class="dock-item active" data-go="pickup"><i data-lucide="users"></i><span>拼场</span></button>
+              <button class="dock-item" data-go="me"><i data-lucide="user-round"></i><span>我的</span></button>
+            </nav>
+          </div>
+
+          <div class="page-toast" aria-live="polite"></div>
+          <div class="page-veil" id="pickupVeil"></div>
+
+          <section class="pickup-sheet" id="pickupSheet" aria-hidden="true" aria-label="发起拼场">
+            <div class="sheet-grab" data-pickup-close></div>
+            <div class="sheet-head-simple">
+              <h2>发起拼场</h2>
+              <button class="sheet-close" id="pickupCancel" aria-label="关闭"><i data-lucide="x"></i></button>
+            </div>
+            <div class="form-row"><span>场地 / 时间</span><button class="form-pill" data-pickup-link>1 号场 · 今晚 20:00–22:00</button></div>
+            <div class="form-row"><span>赛制</span><div class="seg-row"><button class="on" data-pickup-option>3v3</button><button data-pickup-option>4v4</button><button data-pickup-option>5v5</button></div></div>
+            <div class="form-row"><span>还差几人</span><div class="seg-row"><button data-pickup-option>1</button><button class="on" data-pickup-option>2</button><button data-pickup-option>3</button></div></div>
+            <div class="form-row"><span>每人费用</span><b class="form-price">¥53</b></div>
+            <button class="publish-btn" id="publishPickup">发布拼场</button>
+            <p class="form-hint">拼场挂在你的场地订单上；开场前 24 小时可退。</p>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 手机我的 ========== -->
+  <section class="proto-view" id="view-me" aria-label="手机我的">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen me-screen">
+          <div class="statusbar">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <div class="me-head">
+            <b>我的</b>
+            <button class="icon-btn" data-me-settings aria-label="设置"><i data-lucide="settings"></i></button>
+          </div>
+
+          <div class="me-body">
+            <div class="me-profile">
+              <span class="me-avatar">林</span>
+              <div><b>林一</b><small>黄金会员 · 订场 95 折</small></div>
+              <button class="me-level" data-me-link>会员中心 <i data-lucide="chevron-right"></i></button>
+            </div>
+
+            <div class="wallet-card">
+              <div class="wallet-top"><span>账户余额</span><button data-recharge>充值</button></div>
+              <div class="wallet-amount" id="walletAmount" data-value="240">¥240<span>.00</span></div>
+              <div class="wallet-foot"><span>场地次卡 6 次 · 教练课包 4 节</span><button data-wallet-detail>明细 <i data-lucide="chevron-right"></i></button></div>
+            </div>
+
+            <div class="asset-grid">
+              <div class="asset"><b>6</b><small>场地次卡</small></div>
+              <div class="asset"><b>4</b><small>教练课包</small></div>
+              <div class="asset"><b>3</b><small>优惠券</small></div>
+              <div class="asset"><b>1280</b><small>积分</small></div>
+            </div>
+
+            <div class="me-orders">
+              <div class="section-head"><h2>我的订单</h2><button class="text-btn" data-me-link>全部 <i data-lucide="chevron-right"></i></button></div>
+              <div class="order-tabs" role="group" aria-label="订单筛选">
+                <button class="active" data-order-filter="all">全部</button>
+                <button data-order-filter="pay">待支付</button>
+                <button data-order-filter="soon">待到店</button>
+                <button data-order-filter="done">已完成</button>
+              </div>
+              <div class="order-list">
+                <div class="order-row" data-status="soon">
+                  <div class="order-main">
+                    <span class="order-court">01</span>
+                    <div class="order-info"><b>1 号场 · 20:00–22:00</b><small>11 月 7 日 周六 · 2 小时</small></div>
+                    <span class="order-price">¥320</span>
+                  </div>
+                  <div class="order-foot">
+                    <span class="status soon">待到店</span>
+                    <button class="order-action" data-qr><i data-lucide="qr-code"></i>出示二维码</button>
+                  </div>
+                </div>
+                <div class="order-row" data-status="soon">
+                  <div class="order-main">
+                    <span class="order-court">教</span>
+                    <div class="order-info"><b>张教练 · 私教</b><small>11 月 8 日 周日 · 19:00–20:00</small></div>
+                    <span class="order-price">¥300</span>
+                  </div>
+                  <div class="order-foot">
+                    <span class="status soon">已预约</span>
+                    <button class="order-action" data-me-link>详情</button>
+                  </div>
+                </div>
+                <div class="order-row" data-status="pay">
+                  <div class="order-main">
+                    <span class="order-court">02</span>
+                    <div class="order-info"><b>2 号场 · 19:00–21:00</b><small>11 月 9 日 周一 · 2 小时</small></div>
+                    <span class="order-price">¥320</span>
+                  </div>
+                  <div class="order-foot">
+                    <span class="status pay">待支付</span>
+                    <button class="order-action" data-me-link>去支付</button>
+                  </div>
+                </div>
+                <div class="order-row" data-status="done">
+                  <div class="order-main">
+                    <span class="order-court">03</span>
+                    <div class="order-info"><b>3 号场 · 18:00–20:00</b><small>11 月 2 日 周日 · 已完成</small></div>
+                    <span class="order-price">¥320</span>
+                  </div>
+                  <div class="order-foot">
+                    <span class="status done">已完成</span>
+                    <button class="order-action" data-me-link>再来一单</button>
+                  </div>
+                </div>
+              </div>
+
+            <div class="me-links">
+              <button data-go="pickup"><span><i data-lucide="users"></i>我的拼场</span><i data-lucide="chevron-right"></i></button>
+              <button data-me-link><span><i data-lucide="receipt"></i>发票与报销</span><i data-lucide="chevron-right"></i></button>
+              <button data-me-link><span><i data-lucide="headphones"></i>联系客服</span><i data-lucide="chevron-right"></i></button>
+            </div>
+          </div>
+
+          <nav class="me-tabs" aria-label="手机导航">
+            <button data-go="home"><i data-lucide="home"></i><span>首页</span></button>
+            <button data-go="coach"><i data-lucide="dumbbell"></i><span>教练</span></button>
+            <button data-go="pickup"><i data-lucide="users"></i><span>拼场</span></button>
+            <button class="active" data-go="me"><i data-lucide="user-round"></i><span>我的</span></button>
+          </nav>
+
+          <div class="page-toast" aria-live="polite"></div>
+          <div class="page-veil" id="rechargeVeil"></div>
+          <section class="me-sheet" id="rechargeSheet" aria-hidden="true" aria-label="充值">
+            <div class="sheet-grab" id="rechargeGrab"></div>
+            <div class="sheet-head-simple">
+              <h2>充值</h2>
+              <button class="sheet-close" id="rechargeCancel" aria-label="关闭"><i data-lucide="x"></i></button>
+            </div>
+            <p class="recharge-note">充 1000 送 100；赠送金不可退，消费时优先使用赠送金。</p>
+            <div class="recharge-grid">
+              <button data-amount="100">¥100</button>
+              <button class="on" data-amount="500">¥500</button>
+              <button data-amount="1000">¥1000<small>送 100</small></button>
+            </div>
+            <div class="recharge-actions">
+              <button class="recharge-cancel" id="rechargeCancel2">取消</button>
+              <button class="publish-btn" id="doRecharge">确认充值</button>
+            </div>
+          </section>
+
+          <div class="qr-modal" id="qrModal" aria-hidden="true">
+            <div class="qr-card">
+              <div class="qr-top"><b>到店出示</b><button id="qrClose" aria-label="关闭"><i data-lucide="x"></i></button></div>
+              <div class="qr-grid" id="qrGrid" aria-label="核销二维码"></div>
+              <div class="qr-info"><b>1 号场 · 11/07 20:00–22:00</b><small>订单号 BK20261107001</small></div>
+            </div>
+          </div>
+          <div class="page-veil" id="qrVeil"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========== 手机约教练 ========== -->
+  <section class="proto-view" id="view-coach" aria-label="手机约教练">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen coach-screen">
+          <div class="statusbar">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <div class="coach-head">
+            <b>约教练</b>
+            <button class="icon-btn" data-coach-link aria-label="筛选"><i data-lucide="sliders-horizontal"></i></button>
+          </div>
+
+          <div class="coach-body">
+            <div class="eyebrow coach-eyebrow"><span class="pulse-dot"></span>城东体育馆 · 3 位教练</div>
+            <h1>动作练对，<br><span>少走两年弯路</span></h1>
+            <p class="coach-sub">私教或团课，按你的时间约。</p>
+
+            <div class="coach-seg" role="group" aria-label="课程类型">
+              <button class="active" data-coach-tab="private">私教</button>
+              <button data-coach-tab="group">团课</button>
+            </div>
+
+            <div class="coach-list" data-coach-list="private">
+              <article class="coach-card">
+                <span class="coach-avatar">张</span>
+                <div class="coach-info"><b>张教练</b><small>前省队 · 基础 / 步法</small><span class="coach-tags">5 / 10 / 20 节包</span></div>
+                <div class="coach-right"><b>4.9</b><small>128 人</small></div>
+                <div class="coach-foot">
+                  <span>今晚 19:00 · 20:00</span>
+                  <b>¥300<small>/节</small></b>
+                  <button data-coach="张教练" data-meta="前省队 · 基础 / 步法 · 4.9" data-price="300">查看档期</button>
+                </div>
+              </article>
+
+              <article class="coach-card">
+                <span class="coach-avatar">李</span>
+                <div class="coach-info"><b>李教练</b><small>投篮专项 · 出手节奏</small><span class="coach-tags">5 / 10 / 20 节包</span></div>
+                <div class="coach-right"><b>4.8</b><small>96 人</small></div>
+                <div class="coach-foot">
+                  <span>明天 18:00 · 19:00</span>
+                  <b>¥280<small>/节</small></b>
+                  <button data-coach="李教练" data-meta="投篮专项 · 出手节奏 · 4.8" data-price="280">查看档期</button>
+                </div>
+              </article>
+
+              <article class="coach-card">
+                <span class="coach-avatar">王</span>
+                <div class="coach-info"><b>王教练</b><small>青少年 · 体能与协调</small><span class="coach-tags">5 / 10 / 20 节包</span></div>
+                <div class="coach-right"><b>4.9</b><small>74 人</small></div>
+                <div class="coach-foot">
+                  <span>周六 10:00</span>
+                  <b>¥260<small>/节</small></b>
+                  <button data-coach="王教练" data-meta="青少年 · 体能与协调 · 4.9" data-price="260">查看档期</button>
+                </div>
+              </article>
+            </div>
+
+            <div class="coach-list" data-coach-list="group" hidden>
+              <article class="group-card">
+                <div class="group-top"><span class="group-date">周六 10:00</span><span class="pickup-format">团课</span></div>
+                <b>张教练 · 基础团课</b>
+                <small>4 人开班 · 还差 2 人 · 含场地</small>
+                <div class="group-foot"><span>¥80<small>/人</small></span><button class="join-btn" data-group="2">报名</button></div>
+              </article>
+              <article class="group-card">
+                <div class="group-top"><span class="group-date">周日 15:00</span><span class="pickup-format">团课</span></div>
+                <b>李教练 · 投篮团课</b>
+                <small>4 人开班 · 已满 · 含场地</small>
+                <div class="group-foot"><span>¥80<small>/人</small></span><button class="join-btn ghost" data-group="0">候补</button></div>
+              </article>
+            </div>
+          </div>
+
+          <nav class="me-tabs coach-tabs" aria-label="手机导航">
+            <button data-go="home"><i data-lucide="home"></i><span>首页</span></button>
+            <button class="active" data-go="coach"><i data-lucide="dumbbell"></i><span>教练</span></button>
+            <button data-go="pickup"><i data-lucide="users"></i><span>拼场</span></button>
+            <button data-go="me"><i data-lucide="user-round"></i><span>我的</span></button>
+          </nav>
+
+          <div class="page-toast" aria-live="polite"></div>
+          <div class="page-veil" id="coachVeil"></div>
+
+          <section class="pickup-sheet coach-sheet" id="coachSheet" aria-hidden="true" aria-label="教练档期">
+            <div class="sheet-grab" data-coach-close></div>
+            <div class="sheet-head-simple">
+              <div>
+                <div class="eyebrow coach-sheet-eyebrow">PRIVATE COACH</div>
+                <h2 id="coachSheetName">张教练</h2>
+                <p class="coach-sheet-meta" id="coachSheetMeta">前省队 · 基础 / 步法 · 4.9</p>
+              </div>
+              <button class="sheet-close" id="coachCancel" aria-label="关闭"><i data-lucide="x"></i></button>
+            </div>
+
+            <div class="coach-packages" id="coachPackages">
+              <button class="coach-pack on" data-pack="1">单节<small>¥300</small></button>
+              <button class="coach-pack" data-pack="5">5 节<small>¥1425</small></button>
+              <button class="coach-pack" data-pack="10">10 节<small>¥2700</small></button>
+              <button class="coach-pack" data-pack="20">20 节<small>¥5100</small></button>
+            </div>
+
+            <div class="form-row"><span>日期</span><div class="seg-row"><button class="on" data-coach-day="今天">今天</button><button data-coach-day="明天">明天</button><button data-coach-day="周六">周六</button></div></div>
+            <div class="form-row"><span>时间</span><div class="seg-row"><button class="on" data-coach-time="19:00">19:00</button><button data-coach-time="20:00">20:00</button><button data-coach-time="21:00">21:00</button></div></div>
+            <div class="form-row"><span>场地</span><div class="seg-row"><button class="on" data-coach-court="含场地">含场地</button><button data-coach-court="自带">自带场地</button></div></div>
+            <p class="form-hint">提前 24 小时免费改 / 取消；24 小时内扣 1 次课时。</p>
+
+            <div class="coach-bar">
+              <div><b id="coachBarTitle">张教练 · 单节</b><small id="coachBarSub">今天 19:00 · 含场地</small></div>
+              <span id="coachBarPrice">¥300</span>
+              <button class="publish-btn" id="coachReserve">预约</button>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========== 手机订场 ========== -->
+  <section class="proto-view" id="view-book" aria-label="手机订场表">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen">
+          <div class="statusbar">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <div class="sub-head">
+            <button class="icon-btn" data-go="home" aria-label="返回"><i data-lucide="arrow-left"></i></button>
+            <b>订场</b>
+            <button class="icon-btn" aria-label="扫码"><i data-lucide="scan-line"></i></button>
+          </div>
+
+          <div class="book-body">
+            <div class="date-strip" aria-label="选择日期">
+              <button class="date-chip" data-day="11-06"><small>今天</small><b>6</b></button>
+              <button class="date-chip active" data-day="11-07"><small>明天</small><b>7</b></button>
+              <button class="date-chip" data-day="11-08"><small>后天</small><b>8</b></button>
+              <button class="date-chip" data-day="11-09"><small>周一</small><b>9</b></button>
+            </div>
+
+            <div class="book-summary">
+              <div><b id="bookDate">11 月 7 日 周六</b><small>4 片全场 · 10:00–22:00</small></div>
+              <button class="ai-chip" data-ai="帮我选一个周六晚上的场"><i data-lucide="sparkles"></i> AI 帮我选</button>
+            </div>
+
+            <div class="grid-scroll" id="gridScroll">
+              <div class="grid-table" id="gridTable" role="grid" aria-label="场地时段表"></div>
+            </div>
+
+            <div class="grid-legend">
+              <span><i class="lg free"></i>可订</span>
+              <span><i class="lg booked"></i>已订</span>
+              <span><i class="lg held"></i>待支付</span>
+              <span><i class="lg sel"></i>已选</span>
+            </div>
+
+            <div class="book-rule">
+              <div class="rule-row"><span>10:00–18:00</span><b>¥140/时</b></div>
+              <div class="rule-row"><span>18:00–22:00</span><b>¥160/时</b></div>
+            </div>
+
+            <div class="book-note">
+              <i data-lucide="shield-check"></i>
+              <div><b>锁位 15 分钟</b><small>未支付自动释放；开场前 24 小时可全额退</small></div>
+            </div>
+          </div>
+
+          <div class="book-bar" id="bookBar" aria-live="polite">
+            <div class="bb-main">
+              <b class="bb-title">1 号场 · 2 小时</b>
+              <small class="bb-sub">11 月 7 日 周六 · 20:00–22:00</small>
+            </div>
+            <span class="bb-price">¥320</span>
+            <button class="bb-btn">去支付</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 手机 AI 前台 ========== -->
+  <section class="proto-view" id="view-ai" aria-label="手机 AI 前台">
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-screen">
+          <div class="statusbar">
+            <span>21:08</span>
+            <span class="status-icons">
+              <i data-lucide="signal"></i><i data-lucide="wifi"></i><i data-lucide="battery-full"></i>
+            </span>
+          </div>
+
+          <div class="ai-head">
+            <button class="icon-btn" data-go="home" aria-label="返回"><i data-lucide="arrow-left"></i></button>
+            <span class="ai-avatar"><i data-lucide="sparkles"></i></span>
+            <div class="ai-id"><b>AI 前台</b><small>在线 · 平均 1.8 秒</small></div>
+          </div>
+
+          <div class="chat" id="chat">
+            <div class="chat-date">今天 21:08</div>
+            <div class="msg ai"><div class="bubble">晚上好，我是篮界前台。订场、约教练、拼场，直接说就行。</div></div>
+            <div class="msg user"><div class="bubble">周六晚上想打两小时，5v5，预算 400 以内</div></div>
+
+            <div class="msg ai">
+              <div class="tool-card">
+                <div class="tool-row"><i data-lucide="check"></i><span>查 11/07 20:00–22:00 空场</span><em>3 个方案</em></div>
+                <div class="tool-row"><i data-lucide="check"></i><span>算价 · 周末 ¥160/时</span><em>¥320</em></div>
+                <div class="tool-row"><i data-lucide="check"></i><span>匹配 5v5 · 10 人</span><em>刚好</em></div>
+              </div>
+            </div>
+
+            <div class="msg ai"><div class="bubble">周六 20:00 后还有 3 个方案，都符合你的预算：</div></div>
+
+            <div class="options" id="options">
+              <button class="option" data-court="1 号场" data-time="20:00–22:00" data-price="320">
+                <span class="opt-mini" aria-hidden="true"><span></span></span>
+                <span class="opt-main"><b>1 号场</b><small>20:00–22:00 · 2 小时</small></span>
+                <span class="opt-side"><b>¥320</b><span class="opt-tag">最划算</span></span>
+              </button>
+              <button class="option" data-court="4 号场" data-time="19:00–21:00" data-price="320">
+                <span class="opt-mini" aria-hidden="true"><span></span></span>
+                <span class="opt-main"><b>4 号场</b><small>19:00–21:00 · 2 小时</small></span>
+                <span class="opt-side"><b>¥320</b><span class="opt-tag">离入口近</span></span>
+              </button>
+              <button class="option" data-court="3 号场" data-time="20:00–22:00" data-price="320">
+                <span class="opt-mini" aria-hidden="true"><span></span></span>
+                <span class="opt-main"><b>3 号场</b><small>20:00–22:00 · 2 小时</small></span>
+                <span class="opt-side"><b>¥320</b><span class="opt-tag">靠窗</span></span>
+              </button>
+            </div>
+
+            <div class="msg ai"><div class="bubble">1 号场最合适。要我帮你锁到 20:00 吗？锁位 15 分钟，付款你自己点。</div></div>
+
+            <div class="quick-replies">
+              <button class="quick-reply" data-reply="lock">就 1 号场</button>
+              <button class="quick-reply" data-reply="refund">能退吗</button>
+            </div>
+          </div>
+
+          <div class="chat-input">
+            <button class="ci-btn" aria-label="更多"><i data-lucide="plus"></i></button>
+            <input id="aiInput" type="text" placeholder="问空场、约教练、拼场…" aria-label="给 AI 前台发消息">
+            <button class="ci-send" id="aiSend" aria-label="发送"><i data-lucide="arrow-up"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 桌面今日看板 ========== -->
+  <section class="proto-view" id="view-desk" aria-label="桌面今日看板">
+    <div class="desk">
+      <aside class="desk-side">
+        <div>
+          <div class="desk-logo"><span class="desk-mark"></span><span>篮界</span></div>
+          <div class="desk-venue">城东体育馆 · 4 片全场</div>
+        </div>
+
+        <nav class="desk-nav" aria-label="管理端导航">
+          <button class="nav-item active" aria-current="page"><i data-lucide="layout-dashboard"></i><span class="nav-text">今日</span></button>
+          <button class="nav-item" aria-disabled="true"><i data-lucide="calendar-days"></i><span class="nav-text">排期</span></button>
+          <button class="nav-item" aria-disabled="true"><i data-lucide="clipboard-list"></i><span class="nav-text">订单</span></button>
+          <button class="nav-item" aria-disabled="true"><i data-lucide="scan-line"></i><span class="nav-text">核销</span></button>
+          <button class="nav-item" aria-disabled="true"><i data-lucide="dumbbell"></i><span class="nav-text">教练</span></button>
+          <button class="nav-item" aria-disabled="true"><i data-lucide="users"></i><span class="nav-text">会员</span></button>
+          <button class="nav-item" aria-disabled="true"><i data-lucide="ticket"></i><span class="nav-text">营销</span></button>
+          <button class="nav-item" aria-disabled="true"><i data-lucide="brain-circuit"></i><span class="nav-text">AI 观测台</span><span class="badge">NEW</span></button>
+        </nav>
+
+        <div class="desk-user">
+          <span class="avatar">王</span>
+          <span class="user-text"><b>王姐</b><small>前台</small></span>
+        </div>
+        <div class="desk-version">原型 v1 · 2026-11-06</div>
+      </aside>
+
+      <main class="desk-main">
+        <div class="desk-top">
+          <div>
+            <div class="desk-title">今日</div>
+            <div class="desk-sub">11 月 6 日 周五 · 10:00–22:00 · 城东体育馆</div>
+          </div>
+          <div class="desk-actions">
+            <div class="search"><i data-lucide="search"></i><span>搜订单 / 手机号</span></div>
+            <button class="btn-dark" data-tooltip="原型未包含"><i data-lucide="plus"></i>新建预约</button>
+            <span class="avatar">王</span>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi">
+            <div class="label"><i data-lucide="calendar-days"></i>今日场次</div>
+            <div class="value">18</div>
+            <div class="delta">12 已核销 · 6 待到店</div>
+          </div>
+          <div class="kpi">
+            <div class="label"><i data-lucide="scan-line"></i>待核销</div>
+            <div class="value">6</div>
+            <div class="delta">最近一场 19:00</div>
+          </div>
+          <div class="kpi">
+            <div class="label"><i data-lucide="wallet"></i>实收</div>
+            <div class="value">¥2,860</div>
+            <div class="delta up">+12% 对比上周五</div>
+          </div>
+          <div class="kpi">
+            <div class="label"><i data-lucide="rotate-ccw"></i>退款</div>
+            <div class="value">¥120</div>
+            <div class="delta">1 笔 · 已原路退回</div>
+          </div>
+          <div class="kpi">
+            <div class="label"><i data-lucide="activity"></i>空场率</div>
+            <div class="value">22%</div>
+            <div class="delta">19:00 后只剩 2 片</div>
+          </div>
+        </div>
+
+        <div class="desk-grid">
+          <section class="panel timeline-panel">
+            <div class="panel-head">
+              <div class="panel-title"><i data-lucide="calendar-clock"></i>今日场地时间轴</div>
+              <button class="panel-action" data-tooltip="原型未包含">查看排期 <i data-lucide="chevron-right"></i></button>
+            </div>
+
+            <div class="tl-hours" aria-hidden="true">
+              <span></span><span>10</span><span>11</span><span>12</span><span>13</span><span>14</span><span>15</span>
+              <span>16</span><span>17</span><span>18</span><span>19</span><span>20</span><span>21</span>
+            </div>
+
+            <div class="tl-row">
+              <span class="tl-label">1 号场</span>
+              <div class="tl-track">
+                <span class="blk done" style="left:0%;width:16.6667%" data-tooltip="1 号场 · 10:00–12:00 · 李昂 · 已核销">10:00 李昂</span>
+                <span class="blk soon" style="left:33.3333%;width:16.6667%" data-tooltip="1 号场 · 14:00–16:00 · 周可 · 待到店">14:00 周可</span>
+                <span class="blk pay" style="left:83.3333%;width:16.6667%" data-tooltip="1 号场 · 20:00–22:00 · 陈默 · 待支付">20:00 陈默</span>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <span class="tl-label">2 号场</span>
+              <div class="tl-track">
+                <span class="blk done" style="left:8.3333%;width:16.6667%" data-tooltip="2 号场 · 11:00–13:00 · 王野 · 已核销">11:00 王野</span>
+                <span class="blk soon" style="left:41.6667%;width:16.6667%" data-tooltip="2 号场 · 15:00–17:00 · 林一 · 待到店">15:00 林一</span>
+                <span class="blk done" style="left:66.6667%;width:16.6667%" data-tooltip="2 号场 · 18:00–20:00 · 赵宇 · 已核销">18:00 赵宇</span>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <span class="tl-label">3 号场</span>
+              <div class="tl-track">
+                <span class="blk soon" style="left:0%;width:8.3333%" data-tooltip="3 号场 · 10:00–11:00 · 孙浩 · 待到店">孙浩</span>
+                <span class="blk done" style="left:50%;width:16.6667%" data-tooltip="3 号场 · 16:00–18:00 · 何川 · 已核销">16:00 何川</span>
+                <span class="blk pay" style="left:75%;width:8.3333%" data-tooltip="3 号场 · 19:00–20:00 · 郑凯 · 待支付">郑凯</span>
+              </div>
+            </div>
+
+            <div class="tl-row">
+              <span class="tl-label">4 号场</span>
+              <div class="tl-track">
+                <span class="blk done" style="left:25%;width:16.6667%" data-tooltip="4 号场 · 13:00–15:00 · 吴迪 · 已核销">13:00 吴迪</span>
+                <span class="blk soon" style="left:58.3333%;width:16.6667%" data-tooltip="4 号场 · 17:00–19:00 · 顾言 · 待到店">17:00 顾言</span>
+                <span class="blk done" style="left:83.3333%;width:16.6667%" data-tooltip="4 号场 · 20:00–22:00 · 许晨 · 已核销">20:00 许晨</span>
+              </div>
+            </div>
+
+            <div class="tl-legend">
+              <span><i class="lg-dot done"></i>已核销</span>
+              <span><i class="lg-dot soon"></i>待到店</span>
+              <span><i class="lg-dot pay"></i>待支付</span>
+              <span><i class="lg-dot empty"></i>空闲</span>
+            </div>
+          </section>
+
+          <aside class="side-col">
+            <section class="panel">
+              <div class="panel-head">
+                <div class="panel-title"><i data-lucide="inbox"></i>待办</div>
+                <span class="count">7</span>
+              </div>
+              <div class="todo-item">
+                <span class="todo-icon"><i data-lucide="clock"></i></span>
+                <div><b>3 笔待支付</b><small>12 分钟后自动释放</small></div>
+                <button class="todo-action" data-tooltip="原型未包含">查看</button>
+              </div>
+              <div class="todo-item">
+                <span class="todo-icon"><i data-lucide="rotate-ccw"></i></span>
+                <div><b>1 笔退款申请</b><small>距开场 26 小时 · 全额退</small></div>
+                <button class="todo-action" data-tooltip="原型未包含">处理</button>
+              </div>
+              <div class="todo-item">
+                <span class="todo-icon"><i data-lucide="graduation-cap"></i></span>
+                <div><b>2 位学员待确认</b><small>张教练 · 19:00 私教</small></div>
+                <button class="todo-action" data-tooltip="原型未包含">提醒</button>
+              </div>
+              <div class="todo-item">
+                <span class="todo-icon"><i data-lucide="alert-circle"></i></span>
+                <div><b>1 条 AI 转人工</b><small>退款争议 · 等待前台接手</small></div>
+                <button class="todo-action" data-tooltip="原型未包含">接手</button>
+              </div>
+            </section>
+
+            <section class="ai-panel">
+              <div class="panel-head">
+                <div class="panel-title"><i data-lucide="sparkles"></i>AI 前台今日</div>
+                <span class="live">LIVE</span>
+              </div>
+              <div class="ai-stats">
+                <div class="ai-stat"><b>32</b><small>接待</small></div>
+                <div class="ai-stat"><b>18</b><small>锁位</small></div>
+                <div class="ai-stat"><b>2</b><small>转人工</small></div>
+              </div>
+              <div class="ai-bars" aria-hidden="true">
+                <span style="height:35%"></span><span style="height:55%"></span><span style="height:42%"></span>
+                <span style="height:70%"></span><span style="height:58%"></span><span style="height:86%" class="hot"></span>
+                <span style="height:64%"></span>
+              </div>
+              <div class="ai-foot"><span>平均 1.8s · ¥0.42</span><span>评测 94%</span></div>
+              <button class="ai-link" data-tooltip="原型未包含">查看观测台 <i data-lucide="arrow-up-right"></i></button>
+            </section>
+          </aside>
+        </div>
+
+        <section class="panel table-panel">
+          <div class="panel-head">
+            <div class="panel-title"><i data-lucide="clipboard-list"></i>最近预约</div>
+            <button class="panel-action" data-tooltip="原型未包含">全部 <i data-lucide="chevron-right"></i></button>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr><th>时间</th><th>场地</th><th>用户</th><th>金额</th><th>状态</th><th class="table-hide">操作</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>20:00–22:00</td><td>1 号场</td><td>陈默</td><td>¥320</td><td><span class="status pay">待支付</span></td><td class="table-hide"><button class="todo-action" data-tooltip="原型未包含">催付</button></td></tr>
+                <tr><td>15:00–17:00</td><td>2 号场</td><td>林一</td><td>¥320</td><td><span class="status soon">待到店</span></td><td class="table-hide"><button class="todo-action" data-tooltip="原型未包含">核销</button></td></tr>
+                <tr><td>16:00–18:00</td><td>3 号场</td><td>何川</td><td>¥320</td><td><span class="status done">已核销</span></td><td class="table-hide"><button class="todo-action" data-tooltip="原型未包含">详情</button></td></tr>
+                <tr><td>17:00–19:00</td><td>4 号场</td><td>顾言</td><td>¥320</td><td><span class="status soon">待到店</span></td><td class="table-hide"><button class="todo-action" data-tooltip="原型未包含">核销</button></td></tr>
+                <tr><td>12:00–14:00</td><td>3 号场</td><td>沈言</td><td>¥120</td><td><span class="status refund">退款 ¥120</span></td><td class="table-hide"><button class="todo-action" data-tooltip="原型未包含">查看</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  var root = document.getElementById('lanjie-proto');
+  if (!root) return;
+  if (document.startViewTransition && window.CSS && CSS.supports && CSS.supports('view-transition-name: none')) {
+    root.classList.add('vt-supported');
+  }
+
+  var DAYS = [
+    { key: '11-06', label: '今天', date: '11 月 6 日', week: '周五', weekend: false },
+    { key: '11-07', label: '明天', date: '11 月 7 日', week: '周六', weekend: true },
+    { key: '11-08', label: '后天', date: '11 月 8 日', week: '周日', weekend: true },
+    { key: '11-09', label: '周一', date: '11 月 9 日', week: '周一', weekend: false }
+  ];
+  var HOURS = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21];
+  var COURTS = [1, 2, 3, 4];
+
+  var GRID = {
+    '11-06': { booked: { '1': [18], '2': [19, 20, 21], '3': [20], '4': [18] }, held: {} },
+    '11-07': { booked: { '2': [19, 20], '3': [18, 19], '4': [16, 17] }, held: { '4': [21] } },
+    '11-08': { booked: { '1': [19], '2': [20, 21], '3': [17, 18], '4': [19, 20] }, held: { '3': [21] } },
+    '11-09': { booked: { '1': [10, 11], '2': [14], '3': [18, 19, 20], '4': [20] }, held: {} }
+  };
+
+  var state = { day: '11-07', sel: { court: 1, hours: [20, 21] } };
+
+  var gridScroll = root.querySelector('#gridScroll');
+  var gridTable = root.querySelector('#gridTable');
+  var bookBar = root.querySelector('#bookBar');
+  var bookDate = root.querySelector('#bookDate');
+  var chat = root.querySelector('#chat');
+  var chatInput = root.querySelector('#aiInput');
+  var deck = root.querySelector('#deck');
+  var bookScrollInit = false;
+
+  function refreshIcons() {
+    if (window.lucide && window.lucide.createIcons) {
+      window.lucide.createIcons({ attrs: { width: 16, height: 16 } });
+    }
+  }
+
+  function setProtoTab(name) {
+    root.querySelectorAll('.proto-tab').forEach(function (b) {
+      var on = b.dataset.view === name;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+
+  function showView(name) {
+    var viewId = (name === 'home' || name === 'court') ? 'view-arena' : 'view-' + name;
+    var current = root.querySelector('.proto-view.active');
+    var same = current && current.id === viewId;
+    var update = function () {
+      root.querySelectorAll('.proto-view').forEach(function (v) {
+        v.classList.toggle('active', v.id === viewId);
+      });
+      setProtoTab(name);
+      if (name === 'book') {
+        requestAnimationFrame(function () {
+          if (!bookScrollInit) {
+            gridScroll.scrollLeft = 8 * 64;
+            bookScrollInit = true;
+          }
+        });
+      }
+      if (name === 'ai') requestAnimationFrame(scrollChat);
+      if ((name === 'home' || name === 'court') && window.lanjieArena) {
+        window.lanjieArena.setMode(name);
+      }
+    };
+    if (same) { update(); return; }
+    if (root.classList.contains('vt-supported') && document.startViewTransition) {
+      try { document.startViewTransition(update); return; } catch (e) { /* fall back */ }
+    }
+    update();
+  }
+
+  window.addEventListener('lanjie:mode', function (e) {
+    var mode = e.detail && e.detail.mode;
+    if (!mode) return;
+    root.querySelectorAll('.proto-view').forEach(function (v) {
+      v.classList.toggle('active', v.id === 'view-arena');
+    });
+    setProtoTab(mode);
+  });
+
+  function scrollChat() {
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function priceFor(day, hour) {
+    if (hour >= 18) return 160;
+    return day.weekend ? 140 : 120;
+  }
+
+  window.LANJIE_DATA = { DAYS: DAYS, HOURS: HOURS, GRID: GRID, priceFor: priceFor };
+
+  function renderGrid() {
+    var day = DAYS.filter(function (d) { return d.key === state.day; })[0];
+    var data = GRID[state.day] || { booked: {}, held: {} };
+    var html = '<div class="corner">场地</div>';
+    HOURS.forEach(function (h) {
+      html += '<div class="time-head">' + h + ':00</div>';
+    });
+    COURTS.forEach(function (c) {
+      html += '<div class="court-head">' + c + ' 号场</div>';
+      HOURS.forEach(function (h) {
+        var booked = (data.booked[String(c)] || []).indexOf(h) >= 0;
+        var held = (data.held[String(c)] || []).indexOf(h) >= 0;
+        var sel = !booked && !held && state.sel.court === c && state.sel.hours.indexOf(h) >= 0;
+        var cls = booked ? 'booked' : held ? 'held' : sel ? 'sel' : 'free';
+        var price = priceFor(day, h);
+        var label = booked ? '已订' : held ? '待支付' : '空';
+        var inner = booked ? '<b>已订</b><small>—</small>' : held ? '<b>待支付</b><small>14:32</small>' : '<b>¥' + price + '</b><small>' + label + '</small>';
+        html += '<button class="cell ' + cls + '" data-court="' + c + '" data-hour="' + h + '"' +
+          (booked || held ? ' disabled' : '') + ' aria-pressed="' + (sel ? 'true' : 'false') +
+          '" aria-label="' + c + ' 号场 ' + h + ':00，' + label + '，' + price + ' 元">' + inner + '</button>';
+      });
+    });
+    gridTable.innerHTML = html;
+    bookDate.textContent = day.date + ' ' + day.week;
+    root.querySelectorAll('.date-chip').forEach(function (chip) {
+      chip.classList.toggle('active', chip.dataset.day === state.day);
+    });
+  }
+
+  function renderBar() {
+    var day = DAYS.filter(function (d) { return d.key === state.day; })[0];
+    var title = bookBar.querySelector('.bb-title');
+    var sub = bookBar.querySelector('.bb-sub');
+    var price = bookBar.querySelector('.bb-price');
+    var btn = bookBar.querySelector('.bb-btn');
+    var hours = state.sel.hours.slice().sort(function (a, b) { return a - b; });
+    if (!state.sel.court || !hours.length) {
+      title.textContent = '选一个时段开始';
+      sub.textContent = '支持连选，最多 4 小时';
+      price.textContent = '—';
+      btn.disabled = true;
+      return;
+    }
+    var total = hours.reduce(function (s, h) { return s + priceFor(day, h); }, 0);
+    var contiguous = hours.every(function (h, i) { return i === 0 || h === hours[i - 1] + 1; });
+    var range = contiguous
+      ? hours[0] + ':00–' + (hours[hours.length - 1] + 1) + ':00'
+      : hours.map(function (h) { return h + ':00'; }).join('、');
+    title.textContent = state.sel.court + ' 号场 · ' + hours.length + ' 小时';
+    sub.textContent = day.date + ' ' + day.week + ' · ' + range;
+    price.textContent = '¥' + total;
+    btn.disabled = false;
+  }
+
+  function toggleCell(court, hour) {
+    if (state.sel.court !== court) {
+      state.sel = { court: court, hours: [hour] };
+    } else {
+      var i = state.sel.hours.indexOf(hour);
+      if (i >= 0) state.sel.hours.splice(i, 1);
+      else state.sel.hours.push(hour);
+      if (!state.sel.hours.length) state.sel = { court: null, hours: [] };
+    }
+    renderGrid();
+    renderBar();
+  }
+
+  function goBook(dayKey, court, start, count) {
+    state.day = dayKey;
+    state.sel = { court: court, hours: [] };
+    for (var i = 0; i < count; i++) state.sel.hours.push(start + i);
+    showView('book');
+    renderGrid();
+    renderBar();
+    bookScrollInit = true;
+    requestAnimationFrame(function () {
+      gridScroll.scrollLeft = Math.max(0, (start - 10) * 64 - 64);
+    });
+  }
+
+  function appendRaw(kind, html) {
+    var wrap = document.createElement('div');
+    wrap.className = 'msg ' + kind;
+    wrap.innerHTML = html;
+    chat.appendChild(wrap);
+    refreshIcons();
+    scrollChat();
+  }
+
+  function appendMsg(kind, text) {
+    appendRaw(kind, '<div class="bubble">' + text + '</div>');
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function policyHtml() {
+    return '可以。开场前 24 小时全额退；2–24 小时退 70%；2 小时内不退。退款原路返回。' +
+      '<span class="cite"><i data-lucide="book-open"></i>退款规则 v2 §2</span>';
+  }
+
+  function replyFor(text) {
+    var t = String(text);
+    if (t.indexOf('人工') >= 0) {
+      return '已通知前台王姐，她会在 1 分钟内接手。你也可以直接去前台。';
+    }
+    if (t.indexOf('退') >= 0) return policyHtml();
+    if (t.indexOf('私教') >= 0 || t.indexOf('教练') >= 0) {
+      return '周五 19:00 张教练还有档期，私教 300 元/节，含场地。要帮你锁到 19:00 吗？';
+    }
+    if (t.indexOf('拼') >= 0) {
+      return '周五 20:00 1 号场有一个 3v3 局，缺 2 人；加入后每人约 ¥53。要帮你占一个位置吗？';
+    }
+    if (t.indexOf('余额') >= 0 || t.indexOf('课包') >= 0 || t.indexOf('卡') >= 0) {
+      return '你现在有 6 次场地次卡、余额 ¥240，教练课包还剩 4 节。这单可以用次卡，差额从余额扣。';
+    }
+    if (t.indexOf('订') >= 0 || t.indexOf('场') >= 0) {
+      return '晚上 20:00 后 1 号场和 4 号场都空着，2 小时 ¥320。要我帮你锁 1 号场吗？付款你自己点。';
+    }
+    return '我可以帮你订场、约教练、拼场，也能查余额和规则。你想先办哪件？';
+  }
+
+  function selectOption(btn) {
+    root.querySelectorAll('.option').forEach(function (o) { o.classList.toggle('sel', o === btn); });
+    var court = btn.dataset.court;
+    var time = btn.dataset.time;
+    var price = btn.dataset.price;
+    appendMsg('user', '就 ' + court);
+    setTimeout(function () {
+      appendRaw('ai',
+        '<div class="lock-card">' +
+          '<div class="lock-top"><span class="lock-ring"><span>14:32</span></span><span>已锁位 · 11/07 周六</span></div>' +
+          '<div class="lock-body"><b>' + court + '</b><span>' + time + ' · 2 小时</span></div>' +
+          '<div class="lock-foot"><span>¥' + price + '</span><button class="pay-btn" data-pay>去支付</button></div>' +
+          '<p class="lock-note">付款由你本人确认，AI 不会扣款</p>' +
+        '</div>');
+    }, 450);
+  }
+
+  function handleQuickReply(kind) {
+    if (kind === 'lock') {
+      var opt = root.querySelector('.option');
+      if (opt) selectOption(opt);
+      return;
+    }
+    if (kind === 'refund') {
+      appendMsg('user', '能退吗？');
+      setTimeout(function () { appendMsg('ai', policyHtml()); }, 400);
+      return;
+    }
+  }
+
+  function sendCanned(text) {
+    showView('ai');
+    appendMsg('user', esc(text));
+    setTimeout(function () { appendMsg('ai', replyFor(text)); }, 500);
+  }
+
+  function sendChat() {
+    var text = chatInput.value.trim();
+    if (!text) return;
+    chatInput.value = '';
+    appendMsg('user', esc(text));
+    setTimeout(function () { appendMsg('ai', replyFor(text)); }, 450);
+  }
+
+  /* ---------- 3D 视角 ---------- */
+  var angles = [
+    'translate(-50%, -50%) rotateX(58deg) rotateZ(-32deg)',
+    'translate(-50%, -50%) rotateX(52deg) rotateZ(-8deg)',
+    'translate(-50%, -50%) rotateX(62deg) rotateZ(-48deg)'
+  ];
+  var angleIndex = 0;
+  var angleBtn = root.querySelector('#angleBtn');
+  if (angleBtn) {
+    angleBtn.addEventListener('click', function () {
+      angleIndex = (angleIndex + 1) % angles.length;
+      deck.style.transform = angles[angleIndex];
+    });
+  }
+
+  /* ---------- 事件 ---------- */
+  root.addEventListener('click', function (e) {
+    var viewBtn = e.target.closest('[data-view]');
+    if (viewBtn) { showView(viewBtn.dataset.view); return; }
+
+    var go = e.target.closest('[data-go]');
+    if (go) { showView(go.dataset.go); return; }
+
+    var ai = e.target.closest('[data-ai]');
+    if (ai) { sendCanned(ai.dataset.ai); return; }
+
+    var book = e.target.closest('[data-book]');
+    if (book) {
+      var parts = book.dataset.book.split(',');
+      goBook(parts[0], Number(parts[1]), Number(parts[2]), Number(parts[3]));
+      return;
+    }
+
+    var chip = e.target.closest('[data-day]');
+    if (chip) {
+      state.day = chip.dataset.day;
+      state.sel = { court: null, hours: [] };
+      renderGrid();
+      renderBar();
+      return;
+    }
+
+    var opt = e.target.closest('.option');
+    if (opt) { selectOption(opt); return; }
+
+    var reply = e.target.closest('[data-reply]');
+    if (reply) { handleQuickReply(reply.dataset.reply); return; }
+
+    var pay = e.target.closest('[data-pay]');
+    if (pay) {
+      appendMsg('ai', '支付页会在真实产品里打开。付款这一步只能你本人确认，AI 不会扣款。');
+      return;
+    }
+
+    var cell = e.target.closest('.cell');
+    if (cell && !cell.disabled) {
+      toggleCell(Number(cell.dataset.court), Number(cell.dataset.hour));
+      return;
+    }
+
+  });
+
+  var sendBtn = root.querySelector('#aiSend');
+  if (sendBtn) sendBtn.addEventListener('click', sendChat);
+  if (chatInput) {
+    chatInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); sendChat(); }
+    });
+  }
+
+  var payBar = bookBar.querySelector('.bb-btn');
+  if (payBar) {
+    payBar.addEventListener('click', function () {
+      if (payBar.disabled) return;
+      showView('ai');
+      appendMsg('ai', '这单已锁位。支付页会在真实产品里打开，付款这一步必须你本人确认。');
+    });
+  }
+
+
+  renderGrid();
+  renderBar();
+  refreshIcons();
+})();
+</script>
+<script>
+(function () {
+  var root = document.getElementById('lanjie-proto');
+  var pickup = document.getElementById('view-pickup');
+  var me = document.getElementById('view-me');
+  if (!root || !pickup || !me) return;
+
+  function toast(view, msg) {
+    var el = view.querySelector('.page-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._toastTimer);
+    el._toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2300);
+  }
+
+  /* pickup filters */
+  pickup.querySelectorAll('[data-format]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var format = btn.dataset.format;
+      pickup.querySelectorAll('[data-format]').forEach(function (b) {
+        b.classList.toggle('active', b === btn);
+      });
+      pickup.querySelectorAll('[data-card-format]').forEach(function (card) {
+        card.style.display = (format === 'all' || card.dataset.cardFormat === format) ? '' : 'none';
+      });
+    });
+  });
+
+  /* join */
+  pickup.querySelectorAll('[data-join]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (btn.classList.contains('joined')) return;
+      btn.classList.add('joined');
+      btn.textContent = '已加入';
+      toast(pickup, '已加入；开场前 24 小时可退');
+    });
+  });
+
+  /* create sheet */
+  var pickupSheet = document.getElementById('pickupSheet');
+  var pickupVeil = document.getElementById('pickupVeil');
+  function openCreate() {
+    pickupSheet.classList.add('open');
+    pickupSheet.setAttribute('aria-hidden', 'false');
+    pickupVeil.classList.add('show');
+  }
+  function closeCreate() {
+    pickupSheet.classList.remove('open');
+    pickupSheet.setAttribute('aria-hidden', 'true');
+    pickupVeil.classList.remove('show');
+  }
+  document.getElementById('pickupCreate').addEventListener('click', openCreate);
+  pickupVeil.addEventListener('click', closeCreate);
+  document.getElementById('pickupCancel').addEventListener('click', closeCreate);
+  pickupSheet.querySelector('[data-pickup-close]').addEventListener('click', closeCreate);
+  document.getElementById('publishPickup').addEventListener('click', function () {
+    closeCreate();
+    toast(pickup, '已发布：1 号场 今晚 20:00–22:00，缺 2 人');
+  });
+  pickupSheet.querySelectorAll('[data-pickup-option]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var group = btn.parentElement;
+      group.querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('on', b === btn);
+      });
+    });
+  });
+  pickup.querySelectorAll('[data-pickup-link]').forEach(function (btn) {
+    btn.addEventListener('click', function () { toast(pickup, '选场在正式版里从这里展开'); });
+  });
+  pickup.querySelectorAll('[data-pickup-manage]').forEach(function (btn) {
+    btn.addEventListener('click', function () { toast(pickup, '管理拼场在正式版里展开'); });
+  });
+
+  /* recharge */
+  var meSheet = document.getElementById('rechargeSheet');
+  var rechargeVeil = document.getElementById('rechargeVeil');
+  function openRecharge() {
+    meSheet.classList.add('open');
+    meSheet.setAttribute('aria-hidden', 'false');
+    rechargeVeil.classList.add('show');
+  }
+  function closeRecharge() {
+    meSheet.classList.remove('open');
+    meSheet.setAttribute('aria-hidden', 'true');
+    rechargeVeil.classList.remove('show');
+  }
+  me.querySelectorAll('[data-recharge]').forEach(function (btn) {
+    btn.addEventListener('click', openRecharge);
+  });
+  rechargeVeil.addEventListener('click', closeRecharge);
+  ['rechargeCancel', 'rechargeCancel2', 'rechargeGrab'].forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', closeRecharge);
+  });
+
+  var rechargeAmount = 500;
+  meSheet.querySelectorAll('[data-amount]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      rechargeAmount = Number(btn.dataset.amount);
+      meSheet.querySelectorAll('[data-amount]').forEach(function (b) {
+        b.classList.toggle('on', b === btn);
+      });
+    });
+  });
+  document.getElementById('doRecharge').addEventListener('click', function () {
+    closeRecharge();
+    var el = document.getElementById('walletAmount');
+    var credit = rechargeAmount >= 1000 ? rechargeAmount + 100 : rechargeAmount;
+    var next = (Number(el.dataset.value) || 240) + credit;
+    el.dataset.value = String(next);
+    el.innerHTML = '¥' + next + '<span>.00</span>';
+    toast(me, '充值成功，余额 ¥' + next + '.00' + (credit > rechargeAmount ? '（含赠送 ¥100）' : ''));
+  });
+
+  /* me links */
+  me.querySelectorAll('[data-me-link]').forEach(function (btn) {
+    btn.addEventListener('click', function () { toast(me, '这个入口在正式版里展开'); });
+  });
+  me.querySelectorAll('[data-me-settings]').forEach(function (btn) {
+    btn.addEventListener('click', function () { toast(me, '设置页在正式版里展开'); });
+  });
+  me.querySelectorAll('[data-wallet-detail]').forEach(function (btn) {
+    btn.addEventListener('click', function () { toast(me, '钱包明细在正式版里展开'); });
+  });
+
+  /* order filters */
+  me.querySelectorAll('[data-order-filter]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var filter = btn.dataset.orderFilter;
+      me.querySelectorAll('[data-order-filter]').forEach(function (b) {
+        b.classList.toggle('active', b === btn);
+      });
+      me.querySelectorAll('.order-row').forEach(function (row) {
+        row.style.display = (filter === 'all' || row.dataset.status === filter) ? '' : 'none';
+      });
+    });
+  });
+
+  /* qr */
+  var qrModal = document.getElementById('qrModal');
+  var qrVeil = document.getElementById('qrVeil');
+  function openQr() {
+    qrModal.classList.add('open');
+    qrModal.setAttribute('aria-hidden', 'false');
+    qrVeil.classList.add('show');
+  }
+  function closeQr() {
+    qrModal.classList.remove('open');
+    qrModal.setAttribute('aria-hidden', 'true');
+    qrVeil.classList.remove('show');
+  }
+  me.querySelectorAll('[data-qr]').forEach(function (btn) {
+    btn.addEventListener('click', openQr);
+  });
+  qrVeil.addEventListener('click', closeQr);
+  document.getElementById('qrClose').addEventListener('click', closeQr);
+
+  /* fake qr grid */
+  var qrGrid = document.getElementById('qrGrid');
+  if (qrGrid) {
+    function finder(x, y, ox, oy) {
+      var dx = x - ox, dy = y - oy;
+      if (dx < 0 || dy < 0 || dx > 6 || dy > 6) return null;
+      if (dx === 0 || dx === 6 || dy === 0 || dy === 6) return 1;
+      if (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4) return 1;
+      return 0;
+    }
+    for (var y = 0; y < 21; y++) {
+      for (var x = 0; x < 21; x++) {
+        var f = finder(x, y, 0, 0);
+        if (f === null) f = finder(x, y, 14, 0);
+        if (f === null) f = finder(x, y, 0, 14);
+        var on = f === null ? (((x * 7 + y * 11 + x * y) % 7) < 3) : f === 1;
+        var cell = document.createElement('span');
+        if (on) cell.className = 'on';
+        qrGrid.appendChild(cell);
+      }
+    }
+  }
+})();
+
+</script>
+<script>
+(function () {
+  var page = document.getElementById('view-coach');
+  if (!page) return;
+
+  function toast(msg) {
+    var el = page.querySelector('.page-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._toastTimer);
+    el._toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2400);
+  }
+
+  page.querySelectorAll('[data-coach-tab]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      page.querySelectorAll('[data-coach-tab]').forEach(function (b) {
+        b.classList.toggle('active', b === btn);
+      });
+      page.querySelectorAll('[data-coach-list]').forEach(function (list) {
+        list.hidden = list.dataset.coachList !== btn.dataset.coachTab;
+      });
+    });
+  });
+
+  var sheet = document.getElementById('coachSheet');
+  var veil = document.getElementById('coachVeil');
+  var state = { coach: '张教练', meta: '前省队 · 基础 / 步法 · 4.9', price: 300, pack: 1, day: '今天', time: '19:00', court: '含场地' };
+
+  function packPrice(pack) {
+    if (pack === 1) return state.price;
+    var rate = pack === 5 ? 0.95 : pack === 10 ? 0.9 : 0.85;
+    return Math.round(state.price * pack * rate);
+  }
+
+  function render() {
+    document.getElementById('coachSheetName').textContent = state.coach;
+    document.getElementById('coachSheetMeta').textContent = state.meta;
+    page.querySelectorAll('[data-pack]').forEach(function (btn) {
+      var pack = Number(btn.dataset.pack);
+      btn.querySelector('small').textContent = '¥' + packPrice(pack);
+      btn.classList.toggle('on', pack === state.pack);
+    });
+    page.querySelectorAll('[data-coach-day]').forEach(function (btn) {
+      btn.classList.toggle('on', btn.dataset.coachDay === state.day);
+    });
+    page.querySelectorAll('[data-coach-time]').forEach(function (btn) {
+      btn.classList.toggle('on', btn.dataset.coachTime === state.time);
+    });
+    page.querySelectorAll('[data-coach-court]').forEach(function (btn) {
+      btn.classList.toggle('on', btn.dataset.coachCourt === state.court);
+    });
+    var label = state.pack === 1 ? '单节' : state.pack + ' 节包';
+    document.getElementById('coachBarTitle').textContent = state.coach + ' · ' + label;
+    document.getElementById('coachBarSub').textContent = state.day + ' ' + state.time + ' · ' + state.court;
+    document.getElementById('coachBarPrice').textContent = '¥' + packPrice(state.pack);
+  }
+
+  function open(coach, meta, price) {
+    state.coach = coach;
+    state.meta = meta;
+    state.price = price;
+    state.pack = 1;
+    state.day = '今天';
+    state.time = '19:00';
+    state.court = '含场地';
+    render();
+    sheet.classList.add('open');
+    sheet.setAttribute('aria-hidden', 'false');
+    veil.classList.add('show');
+  }
+
+  function close() {
+    sheet.classList.remove('open');
+    sheet.setAttribute('aria-hidden', 'true');
+    veil.classList.remove('show');
+  }
+
+  page.querySelectorAll('[data-coach]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      open(btn.dataset.coach, btn.dataset.meta, Number(btn.dataset.price));
+    });
+  });
+  page.querySelector('[data-coach-close]').addEventListener('click', close);
+  document.getElementById('coachCancel').addEventListener('click', close);
+  veil.addEventListener('click', close);
+
+  page.querySelectorAll('[data-pack]').forEach(function (btn) {
+    btn.addEventListener('click', function () { state.pack = Number(btn.dataset.pack); render(); });
+  });
+  page.querySelectorAll('[data-coach-day]').forEach(function (btn) {
+    btn.addEventListener('click', function () { state.day = btn.dataset.coachDay; render(); });
+  });
+  page.querySelectorAll('[data-coach-time]').forEach(function (btn) {
+    btn.addEventListener('click', function () { state.time = btn.dataset.coachTime; render(); });
+  });
+  page.querySelectorAll('[data-coach-court]').forEach(function (btn) {
+    btn.addEventListener('click', function () { state.court = btn.dataset.coachCourt; render(); });
+  });
+
+  document.getElementById('coachReserve').addEventListener('click', function () {
+    close();
+    if (state.pack === 1) toast('已锁位 15 分钟；提前 24 小时可免费取消');
+    else toast('已预约 ' + state.pack + ' 节包；提前 24 小时可免费改 / 取消');
+  });
+
+  page.querySelectorAll('[data-group]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var wait = btn.dataset.group === '0';
+      btn.classList.add('joined');
+      btn.textContent = wait ? '已候补' : '已报名';
+      toast(wait ? '已加入候补；有人退会通知你' : '已报名；4 人开班，未满提前 24h 取消');
+    });
+  });
+
+  page.querySelectorAll('[data-coach-link]').forEach(function (btn) {
+    btn.addEventListener('click', function () { toast('筛选在正式版里展开'); });
+  });
+})();
+
+</script>
+<script type="module">
+let pendingMode = null;
+window.lanjieArena = { setMode: function (mode) { pendingMode = mode; } };
+
+const screen = document.getElementById('arenaScreen');
+const canvas = document.getElementById('arenaCanvas');
+const labelsEl = document.getElementById('courtLabels');
+const sheet = document.getElementById('arenaSheet');
+const slotsEl = document.getElementById('arenaSlots');
+const bar = document.getElementById('arenaBar');
+const toastEl = document.getElementById('arenaToast');
+
+const D = window.LANJIE_DATA;
+const DAYS = D.DAYS;
+const HOURS = D.HOURS;
+const GRID = D.GRID;
+const priceFor = D.priceFor;
+
+const state = { court: 1, day: '11-06', sel: [] };
+let lastCourt = 1;
+let toastTimer = 0;
+
+function dayObj() {
+  return DAYS.filter(function (d) { return d.key === state.day; })[0];
+}
+
+function dataFor(court) {
+  const d = GRID[state.day] || { booked: {}, held: {} };
+  return {
+    booked: d.booked[String(court)] || [],
+    held: d.held[String(court)] || []
+  };
+}
+
+function renderSheet() {
+  const day = dayObj();
+  const data = dataFor(state.court);
+  const free = HOURS.length - data.booked.length - data.held.length;
+  document.getElementById('arenaCourtNo').textContent = '0' + state.court;
+  document.getElementById('arenaCourtName').textContent = state.court + ' 号场';
+  document.getElementById('arenaCourtMeta').textContent = day.label + ' 还剩 ' + free + ' 个时段 · 4 片全场';
+  document.getElementById('arenaDayPrice').textContent = '¥' + (day.weekend ? 140 : 120) + '/时';
+  document.querySelectorAll('[data-arena-day]').forEach(function (b) {
+    b.classList.toggle('active', b.dataset.arenaDay === state.day);
+  });
+  let html = '';
+  HOURS.forEach(function (h) {
+    const booked = data.booked.indexOf(h) >= 0;
+    const held = data.held.indexOf(h) >= 0;
+    const sel = state.sel.indexOf(h) >= 0;
+    const price = priceFor(day, h);
+    const cls = booked ? 'booked' : held ? 'held' : sel ? 'sel' : '';
+    const status = booked ? '已订' : held ? '待支付' : '空';
+    html += '<button class="arena-slot ' + cls + '" data-arena-hour="' + h + '"' +
+      (booked || held ? ' disabled' : '') + ' aria-pressed="' + (sel ? 'true' : 'false') + '">' +
+      '<b>' + h + ':00</b><small>¥' + price + ' · ' + status + '</small></button>';
+  });
+  slotsEl.innerHTML = html;
+  renderBar();
+}
+
+function renderBar() {
+  const day = dayObj();
+  const title = bar.querySelector('.bb-title');
+  const sub = bar.querySelector('.bb-sub');
+  const price = bar.querySelector('.bb-price');
+  const btn = bar.querySelector('.bb-btn');
+  const hours = state.sel.slice().sort(function (a, b) { return a - b; });
+  if (!hours.length) {
+    title.textContent = '选一个时段';
+    sub.textContent = '点上面的时段，可连选';
+    price.textContent = '—';
+    btn.disabled = true;
+    return;
+  }
+  const total = hours.reduce(function (s, h) { return s + priceFor(day, h); }, 0);
+  const contiguous = hours.every(function (h, i) { return i === 0 || h === hours[i - 1] + 1; });
+  const range = contiguous
+    ? hours[0] + ':00–' + (hours[hours.length - 1] + 1) + ':00'
+    : hours.map(function (h) { return h + ':00'; }).join('、');
+  title.textContent = state.court + ' 号场 · ' + hours.length + ' 小时';
+  sub.textContent = day.date + ' ' + day.week + ' · ' + range;
+  price.textContent = '¥' + total;
+  btn.disabled = false;
+}
+
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
+}
+
+sheet.addEventListener('click', function (e) {
+  const dayBtn = e.target.closest('[data-arena-day]');
+  if (dayBtn) {
+    state.day = dayBtn.dataset.arenaDay;
+    state.sel = [];
+    renderSheet();
+    return;
+  }
+  const slot = e.target.closest('[data-arena-hour]');
+  if (slot && !slot.disabled) {
+    const h = Number(slot.dataset.arenaHour);
+    const i = state.sel.indexOf(h);
+    if (i >= 0) state.sel.splice(i, 1);
+    else state.sel.push(h);
+    renderSheet();
+    return;
+  }
+  const sug = e.target.closest('[data-arena-suggest]');
+  if (sug) {
+    state.day = '11-07';
+    state.sel = [20, 21];
+    renderSheet();
+    return;
+  }
+  const pay = e.target.closest('.bb-btn');
+  if (pay && !pay.disabled) showToast('已锁位 15 分钟；付款由你本人确认');
+});
+
+const gl = canvas.getContext('webgl', { antialias: true, alpha: false });
+if (!gl) {
+  screen.classList.add('no-webgl');
+  screen.insertAdjacentHTML('beforeend', '<div class="arena-fallback">这个浏览器没有开启 WebGL</div>');
+  window.lanjieArena = { setMode: function () {} };
+} else {
+  initArena();
+}
+
+function initArena() {
+  const courtZ = { 1: -4.95, 2: -1.65, 3: 1.65, 4: 4.95 };
+  const FOV = 58;
+  let aspect = 1;
+  let proj = perspective(FOV, aspect, 0.1, 120);
+  let viewMat = null;
+  const camera = { eye: [11, 12, 11], target: [0, 0.2, 0] };
+  let cameraUp = [0, 1, 0];
+  const view = { az: 0.72, pol: 1.08, dist: 18.5, target: [0, 0.8, 0] };
+  const defaultView = { az: 0.72, pol: 1.08, dist: 18.5 };
+  let fly = null;
+  let intro = { t: 0, dur: 1.6, from: { az: 0.5, pol: 1.2, dist: 25 }, to: { az: 0.72, pol: 1.08, dist: 18.5 } };
+  let lastTime = performance.now();
+
+  const C = {
+    bg: [0.024, 0.063, 0.043],
+    arena: [0.031, 0.075, 0.055],
+    wood1: [0.63, 0.39, 0.23],
+    wood2: [0.56, 0.34, 0.20],
+    wood3: [0.69, 0.43, 0.25],
+    line: [0.91, 0.96, 0.85],
+    lime: [0.804, 0.984, 0.353],
+    steel: [0.145, 0.215, 0.175],
+    board: [0.82, 0.89, 0.83],
+    rim: [0.96, 0.72, 0.26],
+    stand: [0.09, 0.15, 0.12],
+    ball: [0.85, 0.47, 0.18],
+    light: [1.0, 0.96, 0.86],
+    lightEmi: [0.85, 0.72, 0.45]
+  };
+
+  // ---------- math ----------
+  function perspective(fov, aspect, near, far) {
+    const f = 1 / Math.tan(fov * Math.PI / 360);
+    const nf = 1 / (near - far);
+    return new Float32Array([
+      f / aspect, 0, 0, 0,
+      0, f, 0, 0,
+      0, 0, (far + near) * nf, -1,
+      0, 0, 2 * far * near * nf, 0
+    ]);
+  }
+  function vsub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+  function vcross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+  function vdot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function vnorm(a) {
+    const l = Math.hypot(a[0], a[1], a[2]) || 1;
+    return [a[0] / l, a[1] / l, a[2] / l];
+  }
+  function lookAt(eye, center, up) {
+    const z = vnorm(vsub(eye, center));
+    const x = vnorm(vcross(up, z));
+    const y = vcross(z, x);
+    return new Float32Array([
+      x[0], y[0], z[0], 0,
+      x[1], y[1], z[1], 0,
+      x[2], y[2], z[2], 0,
+      -vdot(x, eye), -vdot(y, eye), -vdot(z, eye), 1
+    ]);
+  }
+  function mul(a, b) {
+    const out = new Float32Array(16);
+    for (let c = 0; c < 4; c++) {
+      for (let r = 0; r < 4; r++) {
+        out[c * 4 + r] =
+          a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1] +
+          a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3];
+      }
+    }
+    return out;
+  }
+  function translation(x, y, z) {
+    const m = new Float32Array(16);
+    m[0] = 1; m[5] = 1; m[10] = 1; m[15] = 1;
+    m[12] = x; m[13] = y; m[14] = z;
+    return m;
+  }
+  function projectPoint(x, y, z) {
+    const m = mul(proj, lookAt(camera.eye, camera.target, cameraUp));
+    const X = m[0] * x + m[4] * y + m[8] * z + m[12];
+    const Y = m[1] * x + m[5] * y + m[9] * z + m[13];
+    const W = m[3] * x + m[7] * y + m[11] * z + m[15];
+    if (W <= 0) return null;
+    return { x: (X / W * 0.5 + 0.5) * screen.clientWidth, y: (-Y / W * 0.5 + 0.5) * screen.clientHeight, w: W };
+  }
+
+  // ---------- geometry builders ----------
+  function Builder() { this.p = []; this.n = []; this.c = []; this.e = []; this.i = []; }
+  Builder.prototype.vert = function (x, y, z, nx, ny, nz, col, emi) {
+    const idx = this.p.length / 3;
+    this.p.push(x, y, z);
+    this.n.push(nx, ny, nz);
+    this.c.push(col[0], col[1], col[2]);
+    const e = emi || [0, 0, 0];
+    this.e.push(e[0], e[1], e[2]);
+    return idx;
+  };
+  Builder.prototype.quad = function (a, b, c, d, col, emi, normal) {
+    let nx, ny, nz;
+    if (normal) {
+      nx = normal[0]; ny = normal[1]; nz = normal[2];
+    } else {
+      const u = vsub(b, a), v = vsub(d, a);
+      const n = vnorm(vcross(u, v));
+      nx = n[0]; ny = n[1]; nz = n[2];
+    }
+    const i0 = this.vert(a[0], a[1], a[2], nx, ny, nz, col, emi);
+    const i1 = this.vert(b[0], b[1], b[2], nx, ny, nz, col, emi);
+    const i2 = this.vert(c[0], c[1], c[2], nx, ny, nz, col, emi);
+    const i3 = this.vert(d[0], d[1], d[2], nx, ny, nz, col, emi);
+    this.i.push(i0, i1, i2, i0, i2, i3);
+  };
+  Builder.prototype.box = function (cx, cy, cz, w, h, d, col, emi) {
+    const x0 = cx - w / 2, x1 = cx + w / 2;
+    const y0 = cy - h / 2, y1 = cy + h / 2;
+    const z0 = cz - d / 2, z1 = cz + d / 2;
+    this.quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], col, emi, [1, 0, 0]);
+    this.quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], col, emi, [-1, 0, 0]);
+    this.quad([x0, y1, z1], [x1, y1, z1], [x1, y1, z0], [x0, y1, z0], col, emi, [0, 1, 0]);
+    this.quad([x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1], col, emi, [0, -1, 0]);
+    this.quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], col, emi, [0, 0, 1]);
+    this.quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], col, emi, [0, 0, -1]);
+  };
+  Builder.prototype.cylinder = function (cx, cy, cz, r, h, seg, col, emi) {
+    const y0 = cy - h / 2, y1 = cy + h / 2;
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2;
+      const a1 = (i + 1) / seg * Math.PI * 2;
+      const x0 = cx + Math.cos(a0) * r, z0 = cz + Math.sin(a0) * r;
+      const x1 = cx + Math.cos(a1) * r, z1 = cz + Math.sin(a1) * r;
+      const n0 = [Math.cos(a0), 0, Math.sin(a0)];
+      const n1 = [Math.cos(a1), 0, Math.sin(a1)];
+      const n = vnorm([n0[0] + n1[0], 0, n0[2] + n1[2]]);
+      this.quad([x0, y0, z0], [x1, y0, z1], [x1, y1, z1], [x0, y1, z0], col, emi, n);
+      const t0 = this.vert(cx, y1, cz, 0, 1, 0, col, emi);
+      const t1 = this.vert(x0, y1, z0, 0, 1, 0, col, emi);
+      const t2 = this.vert(x1, y1, z1, 0, 1, 0, col, emi);
+      this.i.push(t0, t1, t2);
+      const b0 = this.vert(cx, y0, cz, 0, -1, 0, col, emi);
+      const b1 = this.vert(x1, y0, z1, 0, -1, 0, col, emi);
+      const b2 = this.vert(x0, y0, z0, 0, -1, 0, col, emi);
+      this.i.push(b0, b1, b2);
+    }
+  };
+  Builder.prototype.sphere = function (cx, cy, cz, r, seg, rings, col, emi) {
+    const index = [];
+    for (let j = 0; j <= rings; j++) {
+      const phi = j / rings * Math.PI;
+      const y = Math.cos(phi) * r;
+      const rr = Math.sin(phi) * r;
+      for (let i = 0; i <= seg; i++) {
+        const theta = i / seg * Math.PI * 2;
+        const x = Math.cos(theta) * rr;
+        const z = Math.sin(theta) * rr;
+        const n = vnorm([x, y, z]);
+        index.push(this.vert(cx + x, cy + y, cz + z, n[0], n[1], n[2], col, emi));
+      }
+    }
+    for (let j = 0; j < rings; j++) {
+      for (let i = 0; i < seg; i++) {
+        const a = j * (seg + 1) + i;
+        const b = a + seg + 1;
+        this.i.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+    }
+  };
+  Builder.prototype.torus = function (cx, cy, cz, R, r, seg, ring, col, emi) {
+    const base = this.p.length / 3;
+    for (let i = 0; i <= seg; i++) {
+      const a = i / seg * Math.PI * 2;
+      const ca = Math.cos(a), sa = Math.sin(a);
+      for (let j = 0; j <= ring; j++) {
+        const b = j / ring * Math.PI * 2;
+        const cb = Math.cos(b), sb = Math.sin(b);
+        const nx = ca * cb, ny = sb, nz = sa * cb;
+        const x = cx + ca * (R + r * cb);
+        const y = cy + r * sb;
+        const z = cz + sa * (R + r * cb);
+        this.vert(x, y, z, nx, ny, nz, col, emi);
+      }
+    }
+    for (let i = 0; i < seg; i++) {
+      for (let j = 0; j < ring; j++) {
+        const a = base + i * (ring + 1) + j;
+        const b = a + ring + 1;
+        this.i.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+    }
+  };
+  function upload(b) {
+    const pos = new Float32Array(b.p);
+    const nrm = new Float32Array(b.n);
+    const col = new Float32Array(b.c);
+    const emi = new Float32Array(b.e);
+    const idx = new Uint16Array(b.i);
+    function buf(data, target) {
+      const x = gl.createBuffer();
+      gl.bindBuffer(target, x);
+      gl.bufferData(target, data, gl.STATIC_DRAW);
+      return x;
+    }
+    return {
+      pos: buf(pos, gl.ARRAY_BUFFER),
+      nrm: buf(nrm, gl.ARRAY_BUFFER),
+      col: buf(col, gl.ARRAY_BUFFER),
+      emi: buf(emi, gl.ARRAY_BUFFER),
+      idx: buf(idx, gl.ELEMENT_ARRAY_BUFFER),
+      count: idx.length
+    };
+  }
+
+  // ---------- shaders ----------
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function program(vs, fs, attrs, uniforms) {
+    const p = gl.createProgram();
+    gl.attachShader(p, compile(gl.VERTEX_SHADER, vs));
+    gl.attachShader(p, compile(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+    const out = { p: p };
+    attrs.forEach(function (a) { out[a] = gl.getAttribLocation(p, a); });
+    uniforms.forEach(function (u) { out[u] = gl.getUniformLocation(p, u); });
+    return out;
+  }
+
+  const main = program(
+    'attribute vec3 aPos; attribute vec3 aNormal; attribute vec3 aColor; attribute vec3 aEmi;' +
+    'uniform mat4 uProj; uniform mat4 uView; uniform mat4 uModel; uniform vec3 uCam;' +
+    'varying vec3 vColor; varying float vFog;' +
+    'void main(){ vec4 w = uModel * vec4(aPos, 1.0); vec3 n = normalize(aNormal);' +
+    ' float diff = max(dot(n, normalize(vec3(-0.35, 0.92, 0.4))), 0.0);' +
+    ' float rim = pow(1.0 - max(dot(n, normalize(uCam - w.xyz)), 0.0), 2.0);' +
+    ' vColor = aColor * (0.33 + 0.72 * diff) + aEmi + rim * 0.05;' +
+    ' vFog = clamp((length(w.xyz - uCam) - 12.0) / 26.0, 0.0, 0.72);' +
+    ' gl_Position = uProj * uView * w; }',
+    'precision mediump float; varying vec3 vColor; varying float vFog;' +
+    'void main(){ gl_FragColor = vec4(mix(vColor, vec3(0.024,0.063,0.043), vFog), 1.0); }',
+    ['aPos', 'aNormal', 'aColor', 'aEmi'],
+    ['uProj', 'uView', 'uModel', 'uCam']
+  );
+
+  const lineProg = program(
+    'attribute vec3 aPos; attribute vec3 aColor; uniform mat4 uProj; uniform mat4 uView; varying vec3 vC;' +
+    'void main(){ vC = aColor; gl_Position = uProj * uView * vec4(aPos, 1.0); }',
+    'precision mediump float; varying vec3 vC; void main(){ gl_FragColor = vec4(vC, 1.0); }',
+    ['aPos', 'aColor'],
+    ['uProj', 'uView']
+  );
+
+  const pointProg = program(
+    'attribute vec3 aPos; attribute vec3 aColor; uniform mat4 uProj; uniform mat4 uView; uniform float uSize; varying vec3 vC;' +
+    'void main(){ vC = aColor; gl_Position = uProj * uView * vec4(aPos, 1.0); gl_PointSize = uSize; }',
+    'precision mediump float; varying vec3 vC; void main(){ gl_FragColor = vec4(vC, 1.0); }',
+    ['aPos', 'aColor'],
+    ['uProj', 'uView', 'uSize']
+  );
+
+  const beamProg = program(
+    'attribute vec3 aPos; uniform mat4 uProj; uniform mat4 uView;' +
+    'void main(){ gl_Position = uProj * uView * vec4(aPos, 1.0); }',
+    'precision mediump float; uniform vec4 uColor; void main(){ gl_FragColor = uColor; }',
+    ['aPos'],
+    ['uProj', 'uView', 'uColor']
+  );
+
+  // ---------- scene ----------
+  const B = new Builder();
+  const L = { p: [], c: [] };
+  const P = { p: [], c: [] };
+
+  function line(a, b, col) {
+    L.p.push(a[0], a[1], a[2], b[0], b[1], b[2]);
+    L.c.push(col[0], col[1], col[2], col[0], col[1], col[2]);
+  }
+  function circle(cx, cz, r, y, col, seg) {
+    for (let i = 0; i < seg; i++) {
+      const a0 = i / seg * Math.PI * 2, a1 = (i + 1) / seg * Math.PI * 2;
+      line([cx + Math.cos(a0) * r, y, cz + Math.sin(a0) * r], [cx + Math.cos(a1) * r, y, cz + Math.sin(a1) * r], col);
+    }
+  }
+  function rect(x0, z0, x1, z1, y, col) {
+    line([x0, y, z0], [x1, y, z0], col);
+    line([x1, y, z0], [x1, y, z1], col);
+    line([x1, y, z1], [x0, y, z1], col);
+    line([x0, y, z1], [x0, y, z0], col);
+  }
+  function seat(x, y, z, col) {
+    P.p.push(x, y, z);
+    P.c.push(col[0], col[1], col[2]);
+  }
+
+  // arena floor
+  B.quad([-5.5, 0, -8.5], [-5.5, 0, 8.5], [5.5, 0, 8.5], [5.5, 0, -8.5], C.arena, [0, 0, 0], [0, 1, 0]);
+
+  Object.keys(courtZ).forEach(function (key) {
+    const court = Number(key);
+    const cz = courtZ[court];
+    for (let i = 0; i < 12; i++) {
+      const x = -2.2 + i * 0.4;
+      const col = i % 3 === 0 ? C.wood1 : i % 3 === 1 ? C.wood2 : C.wood3;
+      B.quad([x - 0.2, 0.02, cz - 1.35], [x - 0.2, 0.02, cz + 1.35], [x + 0.2, 0.02, cz + 1.35], [x + 0.2, 0.02, cz - 1.35], col, [0, 0, 0], [0, 1, 0]);
+    }
+    rect(-2.4, cz - 1.35, 2.4, cz + 1.35, 0.045, C.line);
+    line([0, 0.045, cz - 1.35], [0, 0.045, cz + 1.35], C.lime);
+    circle(0, cz, 0.45, 0.045, C.line, 28);
+    rect(1.35, cz - 0.5, 2.4, cz + 0.5, 0.045, C.line);
+    rect(-2.4, cz - 0.5, -1.35, cz + 0.5, 0.045, C.line);
+    circle(1.35, cz, 0.4, 0.045, C.line, 22);
+    circle(-1.35, cz, 0.4, 0.045, C.line, 22);
+
+    [-1, 1].forEach(function (side) {
+      B.box(side * 2.62, 0.55, cz, 0.09, 1.1, 0.09, C.steel, [0.01, 0.015, 0.01]);
+      B.box(side * 2.5, 1.0, cz, 0.3, 0.05, 0.05, C.steel, [0.01, 0.015, 0.01]);
+      B.box(side * 2.4, 1.05, cz, 0.05, 0.48, 0.68, C.board, [0.06, 0.08, 0.065]);
+      B.torus(side * 2.26, 0.92, cz, 0.15, 0.012, 14, 5, C.rim, [0.28, 0.14, 0.03]);
+      line([side * 2.37, 0.81, cz - 0.34], [side * 2.37, 0.81, cz + 0.34], C.lime);
+      line([side * 2.37, 0.81, cz + 0.34], [side * 2.37, 1.29, cz + 0.34], C.lime);
+      line([side * 2.37, 1.29, cz + 0.34], [side * 2.37, 1.29, cz - 0.34], C.lime);
+      line([side * 2.37, 1.29, cz - 0.34], [side * 2.37, 0.81, cz - 0.34], C.lime);
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2;
+        line([side * 2.26 + Math.cos(a) * 0.15, 0.905, cz + Math.sin(a) * 0.15],
+             [side * 2.26 + Math.cos(a) * 0.1, 0.64, cz + Math.sin(a) * 0.1], [0.7, 0.76, 0.7]);
+      }
+    });
+  });
+
+  // stands
+  [-1, 1].forEach(function (side) {
+    for (let row = 0; row < 3; row++) {
+      B.box(side * (4.75 + row * 0.42), 0.16 + row * 0.32, 0, 0.55, 0.32, 15, C.stand, [0.005, 0.008, 0.006]);
+      for (let i = 0; i < 54; i++) {
+        const z = -7.3 + i * 0.275;
+        seat(side * (4.75 + row * 0.42), 0.36 + row * 0.32, z, Math.random() < 0.13 ? C.lime : [0.36, 0.46, 0.4]);
+      }
+    }
+  });
+  for (let row = 0; row < 2; row++) {
+    B.box(0, 0.15 + row * 0.3, -7.9, 9.5, 0.3, 0.5, C.stand, [0.005, 0.008, 0.006]);
+    for (let i = 0; i < 48; i++) seat(-4.6 + i * 0.195, 0.32 + row * 0.3, -7.9, [0.36, 0.46, 0.4]);
+  }
+
+  // light discs (overview only)
+  const topB = new Builder();
+  Object.keys(courtZ).forEach(function (key) {
+    topB.cylinder(0, 6.85, courtZ[Number(key)], 0.32, 0.07, 20, C.light, C.lightEmi);
+  });
+
+  // far wall + suspended lights
+  B.box(0, 3, -8.6, 11.2, 6, 0.3, C.stand, [0.004, 0.007, 0.005]);
+  line([-5.4, 1.2, -8.44], [5.4, 1.2, -8.44], [0.42, 0.52, 0.43]);
+
+  // ball
+  const ballB = new Builder();
+  ballB.sphere(0, 0, 0, 0.09, 12, 8, C.ball, [0.03, 0.015, 0.005]);
+  const ballMesh = upload(ballB);
+  const ball = { x: 1.55, y: 0.09, z: courtZ[4] - 0.25 };
+
+  const staticMesh = upload(B);
+  const topMesh = upload(topB);
+  const lineMesh = (function () {
+    const pos = new Float32Array(L.p), col = new Float32Array(L.c);
+    function buf(d) { const x = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, x); gl.bufferData(gl.ARRAY_BUFFER, d, gl.STATIC_DRAW); return x; }
+    return { pos: buf(pos), col: buf(col), count: pos.length / 3 };
+  })();
+  const pointMesh = (function () {
+    const pos = new Float32Array(P.p), col = new Float32Array(P.c);
+    function buf(d) { const x = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, x); gl.bufferData(gl.ARRAY_BUFFER, d, gl.STATIC_DRAW); return x; }
+    return { pos: buf(pos), col: buf(col), count: pos.length / 3 };
+  })();
+
+  const wirePos = [], wireCol = [];
+  Object.keys(courtZ).forEach(function (key) {
+    wirePos.push(0, 6.88, courtZ[Number(key)], 0, 9.4, courtZ[Number(key)]);
+    wireCol.push(0.22, 0.28, 0.24, 0.22, 0.28, 0.24);
+  });
+  const wireMesh = (function () {
+    function buf(d) { const x = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, x); gl.bufferData(gl.ARRAY_BUFFER, d, gl.STATIC_DRAW); return x; }
+    return { pos: buf(new Float32Array(wirePos)), col: buf(new Float32Array(wireCol)), count: wirePos.length / 3 };
+  })();
+
+  const beamPos = [];
+  Object.keys(courtZ).forEach(function (key) {
+    const cz = courtZ[Number(key)];
+    const N = 12;
+    for (let i = 0; i < N; i++) {
+      const a0 = i / N * Math.PI * 2, a1 = (i + 1) / N * Math.PI * 2;
+      const t0 = [Math.cos(a0) * 0.32, 6.8, cz + Math.sin(a0) * 0.32];
+      const t1 = [Math.cos(a1) * 0.32, 6.8, cz + Math.sin(a1) * 0.32];
+      const b0 = [Math.cos(a0) * 2.5, 0, cz + Math.sin(a0) * 2.5];
+      const b1 = [Math.cos(a1) * 2.5, 0, cz + Math.sin(a1) * 2.5];
+      beamPos.push(t0[0], t0[1], t0[2], b0[0], b0[1], b0[2], b1[0], b1[1], b1[2]);
+      beamPos.push(t0[0], t0[1], t0[2], b1[0], b1[1], b1[2], t1[0], t1[1], t1[2]);
+    }
+  });
+  const beamBuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, beamBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(beamPos), gl.STATIC_DRAW);
+
+  // ---------- camera ----------
+  function eyeFromView() {
+    const sp = Math.sin(view.pol), cp = Math.cos(view.pol);
+    return [
+      view.target[0] + view.dist * sp * Math.sin(view.az),
+      view.target[1] + view.dist * cp,
+      view.target[2] + view.dist * sp * Math.cos(view.az)
+    ];
+  }
+  function applyCamera() {
+    camera.eye = eyeFromView();
+    camera.target = view.target.slice();
+    cameraUp = [0, 1, 0];
+  }
+  function defaultPos() {
+    const sp = Math.sin(defaultView.pol), cp = Math.cos(defaultView.pol);
+    return [
+      defaultView.dist * sp * Math.sin(defaultView.az),
+      0.8 + defaultView.dist * cp,
+      defaultView.dist * sp * Math.cos(defaultView.az)
+    ];
+  }
+  function flyTo(eye, target, dur, up) {
+    fly = {
+      fromE: camera.eye.slice(), fromT: camera.target.slice(), fromUp: cameraUp.slice(),
+      toE: eye.slice(), toT: target.slice(), toUp: (up || [0, 1, 0]).slice(),
+      t: 0, dur: dur || 0.95
+    };
+  }
+
+  // ---------- labels ----------
+  function labelStatus(court) {
+    const data = GRID['11-06'] || { booked: {}, held: {} };
+    const booked = (data.booked[String(court)] || []).concat(data.held[String(court)] || []);
+    const freeEvening = HOURS.filter(function (h) { return h >= 18 && booked.indexOf(h) < 0; });
+    if (!freeEvening.length) {
+      const freeDay = HOURS.filter(function (h) { return h < 18 && booked.indexOf(h) < 0; });
+      return freeDay.length ? '白天可订' : '已订满';
+    }
+    return freeEvening[0] + ':00 后空';
+  }
+  const labelEls = {};
+  [1, 2, 3, 4].forEach(function (court) {
+    const b = document.createElement('button');
+    b.className = 'court-label' + (labelStatus(court) === '已订满' ? ' busy' : '');
+    b.type = 'button';
+    b.innerHTML = '<i></i><span><b>' + court + ' 号场</b><small>' + labelStatus(court) + '</small></span>';
+    b.addEventListener('click', function (e) { e.stopPropagation(); selectCourt(court); });
+    labelsEl.appendChild(b);
+    labelEls[court] = b;
+  });
+
+  // ---------- sheet / mode ----------
+  function selectCourt(court) {
+    if (sheet.classList.contains('open') && state.court === court) return;
+    lastCourt = court;
+    state.court = court;
+    state.day = '11-06';
+    state.sel = [];
+    renderSheet();
+    sheet.classList.add('open');
+    sheet.setAttribute('aria-hidden', 'false');
+    screen.classList.add('sheet-open');
+    intro = null;
+    const cz = courtZ[court];
+    flyTo([0, 9.4, cz + 2.4], [0, 0.02, cz + 2.4], 0.95, [0, 0, -1]);
+    window.dispatchEvent(new CustomEvent('lanjie:mode', { detail: { mode: 'court', court: court } }));
+  }
+  function closeSheet(dispatch) {
+    if (!sheet.classList.contains('open')) return;
+    sheet.classList.remove('open');
+    sheet.setAttribute('aria-hidden', 'true');
+    screen.classList.remove('sheet-open');
+    view.az = defaultView.az;
+    view.pol = defaultView.pol;
+    view.dist = defaultView.dist;
+    view.target = [0, 0.8, 0];
+    intro = null;
+    flyTo(defaultPos(), [0, 0.8, 0], 0.95, [0, 1, 0]);
+    if (dispatch !== false) window.dispatchEvent(new CustomEvent('lanjie:mode', { detail: { mode: 'home' } }));
+  }
+  window.lanjieArena = {
+    setMode: function (mode) {
+      if (mode === 'court') {
+        if (!sheet.classList.contains('open')) selectCourt(lastCourt || 1);
+      } else {
+        closeSheet(false);
+      }
+    }
+  };
+  document.getElementById('arenaClose').addEventListener('click', function () { closeSheet(true); });
+  document.getElementById('arenaGrab').addEventListener('click', function () { closeSheet(true); });
+  if (pendingMode === 'court') selectCourt(1);
+  pendingMode = null;
+
+  // ---------- interaction ----------
+  const pointers = new Map();
+  let dragging = false, lastX = 0, lastY = 0, downX = 0, downY = 0, moved = false, pinchDist = 0;
+
+  canvas.addEventListener('pointerdown', function (e) {
+    if (sheet.classList.contains('open')) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) {
+      dragging = true; moved = false;
+      lastX = e.clientX; lastY = e.clientY;
+      downX = e.clientX; downY = e.clientY;
+      intro = null; fly = null;
+      canvas.setPointerCapture(e.pointerId);
+    } else if (pointers.size === 2) {
+      const pts = Array.from(pointers.values());
+      pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      dragging = false; moved = true;
+    }
+  });
+  canvas.addEventListener('pointermove', function (e) {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2) {
+      const pts = Array.from(pointers.values());
+      const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (pinchDist > 0) {
+        view.dist = Math.max(11, Math.min(30, view.dist * (pinchDist / d)));
+        applyCamera();
+      }
+      pinchDist = d;
+      return;
+    }
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    if (Math.abs(e.clientX - downX) + Math.abs(e.clientY - downY) > 6) moved = true;
+    view.az -= dx * 0.006;
+    view.pol = Math.max(0.45, Math.min(1.22, view.pol - dy * 0.004));
+    applyCamera();
+  });
+  function release(e) {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchDist = 0;
+    if (!dragging) return;
+    dragging = false;
+    if (!moved && !sheet.classList.contains('open')) pickCourt(e.clientX, e.clientY);
+  }
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release);
+  canvas.addEventListener('wheel', function (e) {
+    if (sheet.classList.contains('open')) return;
+    e.preventDefault();
+    view.dist = Math.max(11, Math.min(30, view.dist + e.deltaY * 0.012));
+    applyCamera();
+  }, { passive: false });
+
+  function pickCourt(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const ndcX = ((clientX - rect.left) / rect.width) * 2 - 1;
+    const ndcY = -((clientY - rect.top) / rect.height) * 2 + 1;
+    const fwd = vnorm(vsub(camera.target, camera.eye));
+    const right = vnorm(vcross(fwd, cameraUp));
+    const up = vcross(right, fwd);
+    const th = Math.tan(FOV * Math.PI / 360);
+    const dir = vnorm([
+      fwd[0] + right[0] * ndcX * th * aspect + up[0] * ndcY * th,
+      fwd[1] + right[1] * ndcX * th * aspect + up[1] * ndcY * th,
+      fwd[2] + right[2] * ndcX * th * aspect + up[2] * ndcY * th
+    ]);
+    if (Math.abs(dir[1]) < 1e-4) return;
+    const t = (0.02 - camera.eye[1]) / dir[1];
+    if (t <= 0) return;
+    const px = camera.eye[0] + dir[0] * t;
+    const pz = camera.eye[2] + dir[2] * t;
+    const found = [1, 2, 3, 4].filter(function (court) {
+      const cz = courtZ[court];
+      return px >= -2.4 && px <= 2.4 && pz >= cz - 1.35 && pz <= cz + 1.35;
+    })[0];
+    if (found) selectCourt(found);
+  }
+
+  function resize() {
+    const w = screen.clientWidth, h = screen.clientHeight;
+    if (!w || !h) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    aspect = w / h;
+    proj = perspective(FOV, aspect, 0.1, 120);
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(screen);
+  window.addEventListener('resize', resize);
+  resize();
+
+  function updateLabels() {
+    if (sheet.classList.contains('open')) return;
+    const w = screen.clientWidth, h = screen.clientHeight;
+    [1, 2, 3, 4].forEach(function (court) {
+      const el = labelEls[court];
+      const p = projectPoint(0, 0.62, courtZ[court]);
+      if (!p) { el.style.display = 'none'; return; }
+      const show = p.x > 26 && p.x < w - 26 && p.y > 128 && p.y < h - 174;
+      el.style.display = show ? 'flex' : 'none';
+      el.style.transform = 'translate(-50%,-50%) translate(' + p.x + 'px,' + p.y + 'px)';
+    });
+  }
+
+  function bind(mesh) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.pos); gl.vertexAttribPointer(main.aPos, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.nrm); gl.vertexAttribPointer(main.aNormal, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.col); gl.vertexAttribPointer(main.aColor, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.emi); gl.vertexAttribPointer(main.aEmi, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.idx);
+  }
+  function drawMain(mesh, model) {
+    bind(mesh);
+    gl.uniformMatrix4fv(main.uModel, false, model);
+    gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
+  }
+  function render() {
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(C.bg[0], C.bg[1], C.bg[2], 1);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.enable(gl.DEPTH_TEST);
+    gl.disable(gl.CULL_FACE);
+
+    viewMat = lookAt(camera.eye, camera.target, cameraUp);
+    const vp = mul(proj, viewMat);
+    const overview = !sheet.classList.contains('open');
+
+    gl.useProgram(main.p);
+    gl.uniformMatrix4fv(main.uProj, false, proj);
+    gl.uniformMatrix4fv(main.uView, false, viewMat);
+    gl.uniform3fv(main.uCam, camera.eye);
+    gl.enableVertexAttribArray(main.aPos);
+    gl.enableVertexAttribArray(main.aNormal);
+    gl.enableVertexAttribArray(main.aColor);
+    gl.enableVertexAttribArray(main.aEmi);
+    drawMain(staticMesh, translation(0, 0, 0));
+    if (overview) drawMain(topMesh, translation(0, 0, 0));
+    drawMain(ballMesh, translation(ball.x, ball.y, ball.z));
+
+
+    if (overview) {
+      gl.useProgram(beamProg.p);
+      gl.uniformMatrix4fv(beamProg.uProj, false, proj);
+      gl.uniformMatrix4fv(beamProg.uView, false, viewMat);
+      gl.uniform4f(beamProg.uColor, 0.72, 0.9, 0.55, 0.018);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+      gl.depthMask(false);
+      gl.enableVertexAttribArray(beamProg.aPos);
+      gl.bindBuffer(gl.ARRAY_BUFFER, beamBuf);
+      gl.vertexAttribPointer(beamProg.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.TRIANGLES, 0, beamPos.length / 3);
+      gl.depthMask(true);
+      gl.disable(gl.BLEND);
+    }
+
+    gl.useProgram(lineProg.p);
+    gl.uniformMatrix4fv(lineProg.uProj, false, proj);
+    gl.uniformMatrix4fv(lineProg.uView, false, viewMat);
+    gl.enableVertexAttribArray(lineProg.aPos);
+    gl.enableVertexAttribArray(lineProg.aColor);
+    gl.bindBuffer(gl.ARRAY_BUFFER, lineMesh.pos); gl.vertexAttribPointer(lineProg.aPos, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, lineMesh.col); gl.vertexAttribPointer(lineProg.aColor, 3, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.LINES, 0, lineMesh.count);
+    if (overview) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, wireMesh.pos); gl.vertexAttribPointer(lineProg.aPos, 3, gl.FLOAT, false, 0, 0);
+      gl.bindBuffer(gl.ARRAY_BUFFER, wireMesh.col); gl.vertexAttribPointer(lineProg.aColor, 3, gl.FLOAT, false, 0, 0);
+      gl.drawArrays(gl.LINES, 0, wireMesh.count);
+    }
+
+    gl.useProgram(pointProg.p);
+    gl.uniformMatrix4fv(pointProg.uProj, false, proj);
+    gl.uniformMatrix4fv(pointProg.uView, false, viewMat);
+    gl.uniform1f(pointProg.uSize, 3.0 * Math.min(window.devicePixelRatio || 1, 2));
+    gl.enableVertexAttribArray(pointProg.aPos);
+    gl.enableVertexAttribArray(pointProg.aColor);
+    gl.bindBuffer(gl.ARRAY_BUFFER, pointMesh.pos); gl.vertexAttribPointer(pointProg.aPos, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, pointMesh.col); gl.vertexAttribPointer(pointProg.aColor, 3, gl.FLOAT, false, 0, 0);
+    gl.drawArrays(gl.POINTS, 0, pointMesh.count);
+  }
+
+  function loop() {
+    requestAnimationFrame(loop);
+    if (!document.getElementById('view-arena').classList.contains('active')) return;
+    const now = performance.now();
+    const dt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+    const t = now / 1000;
+
+    if (intro) {
+      intro.t += dt / intro.dur;
+      const k = Math.min(1, intro.t);
+      const e = 1 - Math.pow(1 - k, 3);
+      view.az = intro.from.az + (intro.to.az - intro.from.az) * e;
+      view.pol = intro.from.pol + (intro.to.pol - intro.from.pol) * e;
+      view.dist = intro.from.dist + (intro.to.dist - intro.from.dist) * e;
+      applyCamera();
+      if (k >= 1) intro = null;
+    }
+    if (fly) {
+      fly.t += dt / fly.dur;
+      const k = Math.min(1, fly.t);
+      const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      camera.eye = [
+        fly.fromE[0] + (fly.toE[0] - fly.fromE[0]) * e,
+        fly.fromE[1] + (fly.toE[1] - fly.fromE[1]) * e,
+        fly.fromE[2] + (fly.toE[2] - fly.fromE[2]) * e
+      ];
+      camera.target = [
+        fly.fromT[0] + (fly.toT[0] - fly.fromT[0]) * e,
+        fly.fromT[1] + (fly.toT[1] - fly.fromT[1]) * e,
+        fly.fromT[2] + (fly.toT[2] - fly.fromT[2]) * e
+      ];
+      cameraUp = vnorm([
+        fly.fromUp[0] + (fly.toUp[0] - fly.fromUp[0]) * e,
+        fly.fromUp[1] + (fly.toUp[1] - fly.fromUp[1]) * e,
+        fly.fromUp[2] + (fly.toUp[2] - fly.fromUp[2]) * e
+      ]);
+      if (k >= 1) fly = null;
+    }
+
+    ball.y = 0.09 + Math.abs(Math.sin(t * 2.4)) * 0.45;
+    ball.x = 1.55 + Math.sin(t * 0.6) * 0.25;
+    updateLabels();
+    render();
+  }
+
+  applyCamera();
+  updateLabels();
+  loop();
+}
+
+</script>
+</div></body></html>
