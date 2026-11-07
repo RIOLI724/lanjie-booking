@@ -5,7 +5,7 @@ export async function ensureLucide(): Promise<void> {
   if ((window as any).lucide) return
   await new Promise<void>((resolve, reject) => {
     const script = document.createElement('script')
-    script.src = '/demo/lucide-1.17.0.js'
+    script.src = '/lucide-1.17.0.js'
     script.onload = () => resolve()
     script.onerror = () => reject(new Error('icon script failed'))
     document.head.appendChild(script)

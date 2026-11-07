@@ -102,7 +102,6 @@ AI_PROVIDER=glm GLM_API_KEY=你的key mvn spring-boot:run
 backend/                 Spring Boot API（订场/支付/退款/教练/团课/拼场/会员/AI/管理端）
 frontend-mobile/         手机端（Vue3 + Vite，3D 球馆、订场、教练、AI、拼场、我的）
 frontend-pc/             PC 前台工作台（今日看板、排期、订单、教练/团课、财务、审计）
-frontend-mobile/public/demo/  视觉原型（mock 数据，供设计对照）
 sql/schema.sql           45 张业务表
 docs/product-brief.md    产品说明与冻结基线
 docs/api.md              接口清单
