@@ -1585,3 +1585,13 @@
 .demo-pickup .page-error { color: #ffb4ab; font-size: 11px; margin: 6px 0; }
 .demo-pickup .form-row-top { align-items: flex-start; }
 .demo-pickup .slot-select { flex: 1; }
+
+/* ---- 正式 App 我的 ---- */
+.demo-me { position: fixed; inset: 0; background: var(--paper); }
+.demo-me .phone-screen {
+  width: 100%; height: 100dvh; border-radius: 0;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.demo-me .me-head { padding-top: calc(10px + env(safe-area-inset-top)); }
+.demo-me .me-body { flex: 1; overflow-y: auto; }
+.demo-me .me-tabs { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
